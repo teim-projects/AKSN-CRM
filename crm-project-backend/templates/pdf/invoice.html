@@ -1,0 +1,457 @@
+{% load static %} 
+{% load humanize %}
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        font-size: 12px;
+        margin: 0;
+        padding: 0;
+      }
+
+      .page-border {
+        border: 1px solid #000;
+        padding: 10px;
+        min-height: 1050px;
+      }
+
+      /* HEADER */
+      .company-header {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+
+      .company-header img {
+        width: 110px;
+        height: auto;
+        display: block;
+        margin: 0;
+        padding: 0;
+      }
+
+      /* PO TITLE */
+      .po-title {
+        position: absolute;
+        margin-top: 35px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-weight: bold;
+        font-size: 16px;
+        text-align: center;
+      }
+
+      /* INFO TABLE */
+      .info-table {
+        width: 100%;
+        margin-top: 20px;
+        border-collapse: collapse;
+      }
+
+      .info-table td {
+        border: 1px solid #000;
+        padding: 4px;
+        vertical-align: top;
+      }
+
+      /* ITEM TABLE */
+
+      .items-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 5px;
+      }
+
+      .items-table th,
+      .items-table td {
+        border: 1px solid #000;
+        padding: 4px;
+      }
+
+      .items-table th {
+        text-align: center;
+      }
+
+      /* TOTAL SECTION */
+
+      .total-table {
+        width: 100%;
+        margin-left: auto;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+
+      .total-table td {
+        border: 1px solid #000;
+        padding: 4px;
+      }
+
+      .right {
+        text-align: right;
+      }
+
+      /* TERMS */
+
+      .terms {
+        border: 1px solid #000;
+        margin-top: 10px;
+        padding: 5px;
+      }
+
+      /* FOOTER */
+
+      .footer {
+        border: 1px solid #8d8b8b;
+        margin-top: 20px;
+        padding: 5px;
+      }
+
+      .signature {
+        margin-top: 40px;
+      }
+
+      @page {
+        size: A4;
+        margin: 20px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="page-border">
+      <!-- COMPANY HEADER -->
+
+      <div class="company-header">
+        <img src="file:///app/static/images/ka-logo.png" />
+        <div class="po-title">Tax Invoice</div>
+      </div>
+
+      <!-- PO INFORMATION -->
+
+      <table class="info-table">
+        <tr>
+          <!-- LEFT SIDE -->
+          <td width="30%" valign="top">
+            <br />
+            <b>{{ invoice.branch.name }}</b><br />
+            {{ invoice.branch.email|default:"-" }} , 
+            {{ invoice.branch.primary_contact|default:"-" }} <br />
+            {{ invoice.branch.address|default:"-" }},{{invoice.branch.city}}, 
+            {{ invoice.branch.state|default:"-" }} - {{invoice.branch.state_code|default:"-" }} , {{ invoice.branch.pincode}}<br />
+            GST NO : {{ invoice.branch.gst_no|default:"-" }} | PAN NO : {{ invoice.branch.company_pan|default:"-" }} <br />
+            MSME UAN : {{ invoice.branch.msme_number|default:"-" }} <br />
+            <br />
+            <br />
+            <!-- <hr> -->
+
+            <!-- Kind Attention : {{ po.vendor.office_poc_name|default:"-" }}<br> -->
+            <!-- Contact No : {{ po.vendor.office_poc_phone|default:"-" }} -->
+            <hr />
+            <br />
+            <b>Buyer,</b> <br />
+            <br />
+            <b>{{ invoice.customer.name }}</b> <br />
+            {{ invoice.customer.email|default:"-" }} , {{ invoice.customer.contact_number|default:"-" }} | {{ invoice.customer.land_line_no|default:"-" }} <br />
+            {{ invoice.customer.address }}, {{invoice.customer.city}}, {{ invoice.buyer_state|default:"-" }} - {{ invoice.buyer_state_code|default:"-" }}, {{ invoice.customer.pin_code}}<br />
+            GST NO : {{ invoice.buyer_gstin|default:"-" }} <br> <br>
+            <!-- PAN NO : {{ invoice.branch.pan_details|default:"-" }} -->
+            <b>Site :</b> {{ invoice.site.site_shortcut|default:"-" }} <br />
+            <!-- <hr> -->
+
+            <br />
+          </td>
+
+          <!-- RIGHT SIDE -->
+          <td width="70%" style="padding: 0" valign="top">
+            <table style="width: 100%; border-collapse: collapse">
+              <tr>
+                <td style="border-bottom: 1px solid #2c2c2c; padding: 5px">
+                  <b>Invoice No </b> <br> {{ invoice.invoice_no }}
+                </td>
+                <td style="border-bottom: 1px solid #2c2c2c; padding: 5px">
+                  <b>Invoice Date </b> <br> {{ invoice.invoice_date }}
+                </td>
+              </tr>
+
+             
+              <tr>
+                <td style="border-bottom: 1px solid #2c2c2c; padding: 5px">
+                  <b>Delivery Note</b> <br> {{ invoice.delivery_note|default:"-" }}
+                </td>
+                <td style="border-bottom: 1px solid #2c2c2c; padding: 5px;">
+                    <b >Mode/Terms of Payment</b><br>
+
+                    {% for term in invoice_payment_terms %}
+                        <span style="font-size:10.5px; line-height:1.2;">
+                            {{ term.terms }}
+                        </span>
+                        {% if not forloop.last %}, <br> {% endif %}
+                    {% empty %}
+                        <span style="font-size:10px;">-</span>
+                    {% endfor %}
+                </td>
+              </tr>
+
+              <tr>
+                <td style="padding: 5px">
+                  <b>Supplier's Ref.</b> <br>{{ invoice.supplier_ref|default:"-" }}
+                </td>
+                <td style="padding: 5px">
+                  <b>Other Reference(s)</b> <br>{{ invoice.other_references|default:"-" }}
+                </td>
+              </tr>
+
+               <tr>
+                <td style="padding: 5px">
+                  <b>Buyer's Order No.</b> <br>{{ invoice.buyer_order_no|default:"-" }}
+                </td>
+                <td style="padding: 5px">
+                  <b>Dated</b> <br>{{ invoice.buyer_dated|default:"-" }}
+                </td>
+              </tr>
+
+              <tr>
+                <td style="padding: 5px">
+                  <b>Despatch Document No.</b> <br>{{ invoice.dispatch_doc_no|default:"-" }}
+                </td>
+                <td style="padding: 5px">
+                  <b>Delivery Note Date</b> <br>{{ invoice.delivery_note_date|default:"-" }}
+                </td>
+              </tr>
+
+              <tr>
+                <td style="padding: 5px">
+                  <b>Despatched through</b> <br>{{ invoice.dispatched_through|default:"-" }}
+                </td>
+                <td style="padding: 5px">
+                  <b>Destination</b> <br>{{ invoice.destination|default:"-" }}
+                </td>
+              </tr>
+
+              <tr>
+                <td colspan="2" style="padding: 5px">
+                  <b>Terms of Delivery</b> <br>
+                    {% for term in invoice_delivery_terms %}
+                        <span style="font-size:10.5px; line-height:1.2;">
+                            {{ term.terms }}
+                        </span>
+                        {% if not forloop.last %}, <br> {% endif %}
+                    {% empty %}
+                        <span style="font-size:10px;">-</span>
+                    {% endfor %}
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <!-- ITEMS -->
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th>S.N.</th>
+            <th>Description of <br> Goods and Services</th>
+            <th>HSN/SAC</th>
+            <th>GST Rate</th>
+            <th>Qty</th>
+            <th>Rate</th>
+            <th>Per</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+      
+        <tbody>
+          {% for p in products %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+          
+            <td>
+              {% if p.item %}
+                {{ p.item.item_code }}
+              {% elif p.product_variant %}
+                {{ p.product_variant.sku }}
+              {% endif %}
+              <br>
+              {{ p.description }}
+            </td>
+          
+            <td>{{ p.hsn_sac|default:"-" }}</td>
+            <td>{{ p.gst_percent|floatformat:0 }}%</td>
+            <td>{{ p.quantity|floatformat:2 }}</td>
+            <td class="right">{{ p.rate|floatformat:2 }}</td>
+            <td>{{ p.unit }}</td>
+            <td class="right">{{ p.amount|floatformat:2|intcomma }}</td>
+          </tr>
+          
+          {% empty %}
+
+          <tr>
+            <td colspan="8" style="text-align:center;">No Products</td>
+          </tr>
+          {% endfor %}
+          <tr>
+            <td colspan="4" class="right"><b>Total</b></td>
+            <td class="right"><b>{{ total_qty|floatformat:2 }}</b></td>
+            <td></td>
+            <td></td>
+            <td class="right"><b>{{ invoice.taxable_value|floatformat:2|intcomma }}</b></td>
+          </tr>
+          {% if invoice.gst_type == "CGST_SGST" %}
+
+          <tr>
+            <td colspan="7" class="right">
+              <b>Output CGST @ {{ cgst|floatformat:0 }}% :</b>
+            </td>
+            <td class="right">{{ invoice.cgst_amount|floatformat:2|intcomma }}</td>
+          </tr>
+
+          <tr>
+            <td colspan="7" class="right">
+              <b>Output SGST @ {{ sgst|floatformat:0 }}% :</b>
+            </td>
+            <td class="right">{{ invoice.sgst_amount|floatformat:2|intcomma }}</td>
+          </tr>
+
+          {% elif invoice.gst_type == "IGST" %}
+
+          <tr>
+            <td colspan="7" class="right">
+              <b>GST @ {{ igst|floatformat:0 }}% :</b>
+            </td>
+            <td class="right">{{ invoice.igst_amount|floatformat:2|intcomma }}</td>
+          </tr>
+
+          {% endif %}
+
+          <tr>
+            <td colspan="7" class="right"><b>Grand Total</b></td>
+            <td class="right"><b>RS {{ invoice.grand_total|floatformat:2|intcomma }}</b></td>
+          </tr>
+          <tr>
+            <td colspan="7" style="border-right: none;">Amount Chargeable (in words) : <b>{{ invoice.amount_in_words}} </b></td>
+            <td style="border-left: none;" class="right">
+             E. &amp; O.E
+            </td>
+          </tr>
+          <tr>
+            <th rowspan="2" colspan="2">Taxable Value</th>
+            <th colspan="2">Central Tax</th>
+            <th colspan="2">State Tax</th>
+            <th rowspan="2" colspan="2">Total <br> Tax Amount</th>
+          </tr>
+
+          <tr>
+            <th>Rate</th>
+            <th>Amount</th>
+            <th>Rate</th>
+            <th>Amount</th>
+          </tr>
+          <tr>
+            <td style="border-right: none;"></td>
+            <td  style="text-align:left; border-left: none;">
+              {{ invoice.taxable_value|floatformat:2|intcomma }}
+            </td>
+            <td style="text-align:center;">
+              {{ cgst|floatformat:0 }}%
+            </td>
+          
+            <td style="text-align:right;">
+              {{ invoice.cgst_amount|floatformat:2|intcomma }}
+            </td>
+          
+            <td style="text-align:center;">
+              {{ sgst|floatformat:0 }}%
+            </td>
+          
+            <td style="text-align:right;">
+              {{ invoice.sgst_amount|floatformat:2|intcomma }}
+            </td>
+          
+            <td colspan="2" style="text-align:right;">
+              {{ invoice.total_tax|floatformat:2|intcomma }}
+            </td>
+          </tr>
+          <tr>
+            <td  class="left"><b>Total</b></td>
+            <td class="center"> {{ invoice.taxable_value|floatformat:2|intcomma }} </td>
+            <td></td>
+            <td class="right">
+              <b>{{ invoice.cgst_amount|floatformat:2|intcomma }}</b>
+            </td>
+          
+            <td></td>
+            <td class="right">
+              <b>{{ invoice.sgst_amount|floatformat:2|intcomma }}</b>
+            </td>
+          
+            <td colspan="2" class="right">
+              <b>{{ invoice.total_tax|floatformat:2|intcomma }}</b>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="8">
+              Tax Amount (in words) : <b>{{ total_tax_in_words }} </b>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+    
+      
+      <!-- FOOTER -->
+      <div style="display:flex; justify-content:space-between; margin-top: 10px; border: #000 solid 1px; padding: 5px;">
+
+        <!-- Left Part -->
+        <div style="width:50%;">
+          <b>Declaration</b><br>
+          <p>We declare that this invoice shows the actual price of the goods.</p>
+        </div>
+        
+        <!-- Right Part -->
+        <div style="width:40%;">
+          <b>Company's Bank Details</b><br>
+          <p>
+            Bank Name : {{ invoice.bank_name }}<br>
+            A/C No : {{ invoice.account_no }}<br>
+            IFSC : {{ invoice.ifsc_code }} <br>
+            Branch : {{ invoice.branch_name }}
+          </p>
+        </div>
+      
+      </div>
+      <br>
+      <div style="margin-top:10px; border:1px solid #000; border-bottom:none; padding:5px;">
+  <table style="width:100%; border-collapse:collapse;">
+    <tr>
+      
+      <!-- Left Part -->
+      <td style="width:50%; vertical-align:top;">
+        <p>Customer's Seal and Signature</p>
+      </td>
+
+      <!-- Right Part -->
+      <td style="width:50%; text-align:right; vertical-align:top;">
+        <b>For Krisna Airconditioning.</b><br><br><br>
+        <p>Authorised Signatory</p>
+        <br><br><br>
+        
+      </td>
+      
+    </tr>
+  
+  </table>
+    <p style="text-align:center;">
+          This is a Computer Generated Invoice
+        </p>
+</div>
+    </div>
+  </body>
+</html>
