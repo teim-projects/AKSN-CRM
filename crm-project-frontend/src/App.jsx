@@ -52,9 +52,12 @@ function AppRoutes() {
       <Route path="/customer" element={<Customer />} />
       <Route path="/leads" element={<Lead />} />
       
+      {/* ✅ Keep only this one route for Quotation */}
       <Route path="/quotation" element={<Quotation />} />
-      <Route path="/quotation/add" element={<Quotation />} />
-      <Route path="/quotation/edit/:id" element={<Quotation />} />
+      
+      {/* ❌ Remove these - they're redundant */}
+      {/* <Route path="/quotation/add" element={<Quotation />} /> */}
+      {/* <Route path="/quotation/edit/:id" element={<Quotation />} /> */}
 
       {/* Product Routes */}
       <Route path="/products" element={<ProductList />} />
@@ -68,7 +71,6 @@ function AppRoutes() {
       <Route path="/follow-up" element={<FollowUp />} />
       
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      
     </Routes>
   );
 

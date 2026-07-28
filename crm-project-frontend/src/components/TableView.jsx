@@ -14,6 +14,7 @@ import { MdOutlineNavigateNext, MdOutlineNavigateBefore } from "react-icons/md";
  * - onPageChange: fn(newPage)
  * - pageSize: number (for Sr.No calculation)
  * - actions: function(row) => ReactNode (optional actions column)
+ * - renderExpandedRow: function(row) => ReactNode (optional nested/expanded row)
  * - emptyMessage: string
  */
 export default function TableView({
@@ -26,6 +27,7 @@ export default function TableView({
   onPageChange = () => {},
   pageSize = 10,
   actions = null,
+  renderExpandedRow = null,
   emptyMessage = "No records",
   rowClassName,
 }) {
@@ -55,21 +57,26 @@ export default function TableView({
                   </td>
                 </tr>
               ) : rows.map((row, idx) => (
-                <tr key={row.id ?? idx} className={`border-b hover:bg-gray-50 ${rowClassName ? rowClassName(row) : ''}`}>
-                  {columns.map(col => (
-                    <td key={col.key} className="py-2 px-3 text-center">
-                      {col.render ? col.render(row, idx) : (row[col.key] ?? "")}
-                    </td>
-                  ))}
+                <React.Fragment key={row.id ?? idx}>
+                  <tr className={`border-b hover:bg-gray-50 ${rowClassName ? rowClassName(row) : ''}`}>
+                    {columns.map(col => (
+                      <td key={col.key} className="py-2 px-3 text-center">
+                        {col.render ? col.render(row, idx) : (row[col.key] ?? "")}
+                      </td>
+                    ))}
 
-                  {actions && (
-                    <td className="py-2 px-3">
-                      <div className="flex items-center justify-center text-center gap-2">
-                        {actions(row)}
-                      </div>
-                    </td>
-                  )}
-                </tr>
+                    {actions && (
+                      <td className="py-2 px-3">
+                        <div className="flex items-center justify-center text-center gap-2">
+                          {actions(row)}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+
+                  {/* Render inline expanded version row directly underneath if passed */}
+                  {renderExpandedRow && renderExpandedRow(row)}
+                </React.Fragment>
               ))}
             </tbody>
           </table>

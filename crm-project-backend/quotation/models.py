@@ -1,51 +1,114 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.core.validators import MinValueValidator, MaxValueValidator
+from decimal import Decimal
 
 User = get_user_model()
 
-# Create your models here.
 class Quotation(models.Model):
+    # Quotation Number: AKSN-001, AKSN-002, etc.
     quotation_no = models.CharField(max_length=50, unique=True)
-
-    customer = models.ForeignKey(
-        "lead_management.Customer",
+    
+    # ✅ Only lead field - removed customer
+    lead = models.ForeignKey(
+        "lead_management.lead_management",
         on_delete=models.PROTECT,
-        related_name="quotations"
+        related_name="quotations",
+        null=True,
+        blank=True
     )
-
-    # Removed branch and site fields
-
-    subject = models.CharField(max_length=255)
-    site_name = models.CharField(max_length=255, blank=True, null=True)
-    thank_you_note = models.TextField(max_length=400)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.quotation_no
-
-
-class QuotationVersion(models.Model):
+    
+    # Direct lead fields (can be edited independently)
+    company_name = models.CharField(max_length=255, verbose_name="Company Name", null=True, blank=True)
+    contact_person = models.CharField(max_length=200, verbose_name="Contact Person", null=True, blank=True)
+    mobile_number = models.CharField(max_length=20, verbose_name="Mobile Number", null=True, blank=True)
+    email_address = models.EmailField(blank=True, null=True, verbose_name="Email Address")
+    linkedin_profile_url = models.URLField(max_length=500, blank=True, null=True, verbose_name="LinkedIn Profile URL")
+    state = models.CharField(max_length=100, blank=True, null=True, verbose_name="State")
+    city = models.CharField(max_length=100, blank=True, null=True, verbose_name="City")
+    industry_type = models.CharField(max_length=50, blank=True, null=True, verbose_name="Industry Type")
+    
+    # ✅ NEW FIELDS
+    gst_number = models.CharField(max_length=15, blank=True, null=True, verbose_name="GST Number")
+    pan_number = models.CharField(max_length=10, blank=True, null=True, verbose_name="PAN Number")
+    msme_number = models.CharField(max_length=20, blank=True, null=True, verbose_name="MSME Number")
+    
+    # Quotation Details
+    subject = models.CharField(max_length=255, verbose_name="Subject", null=True, blank=True)
+    quotation_date = models.DateField(auto_now_add=True, verbose_name="Quotation Date")
+    
+    # GST Type
     GST_TYPE_CHOICES = (
         ("CGST_SGST", "CGST + SGST"),
         ("IGST", "IGST"),
     )
+    gst_type = models.CharField(
+        max_length=20,
+        choices=GST_TYPE_CHOICES,
+        default="CGST_SGST",
+        verbose_name="GST Type"
+    )
+    
+    # Thank You Note
+    thank_you_note = models.TextField(max_length=400, verbose_name="Thank You Note", null=True, blank=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='quotations_created'
+    )
+    
+    def __str__(self):
+        return self.quotation_no
+    
+    def generate_quotation_no(self):
+        """Generate quotation number like AKSN-001"""
+        last = Quotation.objects.all().order_by('-id').first()
+        if last and last.quotation_no:
+            try:
+                last_number = int(last.quotation_no.split('-')[-1])
+                new_number = last_number + 1
+            except (ValueError, IndexError):
+                new_number = 1
+        else:
+            new_number = 1
+        return f"AKSN-{str(new_number).zfill(3)}"
+    
+    def save(self, *args, **kwargs):
+        if not self.quotation_no:
+            self.quotation_no = self.generate_quotation_no()
+        super().save(*args, **kwargs)
+    
+    class Meta:
+        ordering = ['-created_at']
 
+
+
+
+class QuotationVersion(models.Model):
     quotation = models.ForeignKey(
         Quotation,
         related_name="versions",
         on_delete=models.CASCADE
     )
-
-    version_no = models.CharField(max_length=100)
-    is_active = models.BooleanField(default=True)
-
+    
+    version_no = models.CharField(max_length=100, verbose_name="Version Number")
+    is_active = models.BooleanField(default=True, verbose_name="Is Active")
+    
+    # GST Type for this version
     gst_type = models.CharField(
         max_length=20,
-        choices=GST_TYPE_CHOICES,
-        default="CGST_SGST"
+        choices=Quotation.GST_TYPE_CHOICES,
+        default="CGST_SGST",
+        verbose_name="GST Type"
     )
-
+    
+    # Totals
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     cgst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     sgst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -53,13 +116,27 @@ class QuotationVersion(models.Model):
     gst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     grand_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-
+    
     created_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='quotation_versions_created'
     )
-
     created_at = models.DateTimeField(auto_now_add=True)
-
+    
+    def generate_version_no(self):
+        """Generate version number like AKSN-001-R1"""
+        versions = QuotationVersion.objects.filter(quotation=self.quotation)
+        count = versions.count() + 1
+        return f"{self.quotation.quotation_no}-R{count}"
+    
+    def save(self, *args, **kwargs):
+        if not self.version_no:
+            self.version_no = self.generate_version_no()
+        super().save(*args, **kwargs)
+    
     class Meta:
         constraints = [
             models.UniqueConstraint(
@@ -67,116 +144,60 @@ class QuotationVersion(models.Model):
                 name="unique_quotation_version"
             )
         ]
+        ordering = ['-created_at']
 
 
-class QuotationHighSideItem(models.Model):
+class QuotationItem(models.Model):
     quotation_version = models.ForeignKey(
         QuotationVersion,
-        related_name="high_side_items",
+        related_name="items",
         on_delete=models.CASCADE
     )
-
-    # Store product data as JSON snapshot - NO FOREIGN KEY
-    product_data = models.JSONField(default=dict)  # Stores: {id, name, sku, price, category, hsn, gst_percentage}
     
-    quantity = models.PositiveIntegerField()
-    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
-    gst_percent = models.DecimalField(max_digits=5, decimal_places=2, default=18)
-    unit = models.CharField(max_length=20, default="NOS")
-
-    mathadi_charges = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    transportation_charges = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    description = models.TextField(blank=True, null=True)
-    hsn_sac = models.CharField(max_length=50, null=True, blank=True)
-
+    # Product information (snapshot from product master)
+    product_id = models.IntegerField(null=True, blank=True, verbose_name="Product ID")
+    product_name = models.CharField(max_length=255, verbose_name="Product Name")
+    product_code = models.CharField(max_length=50, blank=True, null=True, verbose_name="Product Code")
+    category = models.CharField(max_length=100, blank=True, null=True, verbose_name="Category")
+    hsn_sac_code = models.CharField(max_length=20, blank=True, null=True, verbose_name="HSN/SAC Code")
+    
+    # Item details (editable in quotation)
+    description = models.TextField(blank=True, null=True, verbose_name="Description")
+    quantity = models.DecimalField(
+    max_digits=10, 
+    decimal_places=2, 
+    default=1,
+    validators=[MinValueValidator(Decimal('0.01'))],  # ✅ Use Decimal
+    verbose_name="Quantity"
+)
+    unit = models.CharField(max_length=20, default="NOS", verbose_name="Unit")
+    unit_price = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        default=0,
+        validators=[MinValueValidator(0)],
+        verbose_name="Unit Price"
+    )
+    gst_percentage = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        default=18,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        verbose_name="GST %"
+    )
+    
     # Calculated fields
     base_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     gst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total_with_gst = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-
-    def __str__(self):
-        return f"{self.product_data.get('sku', 'N/A')} - {self.quantity}"
-
-
-class QuotationLowSideItem(models.Model):
-    quotation_version = models.ForeignKey(
-        QuotationVersion,
-        related_name="low_side_items",
-        on_delete=models.CASCADE
-    )
-
-    # Store item data as JSON snapshot - NO FOREIGN KEY
-    item_data = models.JSONField(default=dict)  # Stores: {id, item_code, name, description, material_type, item_type, etc.}
-
-    quantity = models.PositiveIntegerField()
-    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
-    unit = models.CharField(max_length=20, default="NOS") 
-    hsn_sac = models.CharField(max_length=50, null=True, blank=True)
-    mathadi_charges = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    description = models.TextField(blank=True, null=True)
-
-    # Calculated fields
-    base_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    gst_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
-    gst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    total_with_gst = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-
-    def __str__(self):
-        return f"{self.item_data.get('item_code', 'N/A')} - {self.quantity}"
-
-
-class ServiceMaster(models.Model):
-    SERVICE_TYPES = [
-        ('MATERIAL', 'Material Based'),
-        ('LABOR', 'Labor Only'),
-    ]
-    
-    category = models.CharField(max_length=200)
-    subcategory = models.CharField(max_length=200, blank=True, null=True)
-    name = models.CharField(max_length=300)
-    description = models.TextField(blank=True, null=True)
-    service_type = models.CharField(max_length=10, choices=SERVICE_TYPES, default='LABOR')
-    items = models.JSONField(default=list, blank=True)  # Store item snapshots as JSON
-    unit = models.CharField(max_length=50, blank=True, null=True)
-    labor_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    sequence = models.IntegerField(default=0)
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        ordering = ['sequence', 'name']
-    
-    def __str__(self):
-        return self.name
-
-
-class QuotationServiceItem(models.Model):
-    quotation_version = models.ForeignKey('QuotationVersion', on_delete=models.CASCADE, related_name='service_items')
-    service = models.ForeignKey(ServiceMaster, on_delete=models.CASCADE)
-    
-    # Quantities and pricing
-    quantity = models.DecimalField(max_digits=10, decimal_places=2)
-    unit = models.CharField(max_length=50)
-    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
-    description = models.TextField(blank=True, null=True)
-    
-    # Calculated amounts (same as high/low side items)
-    base_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    gst_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=18)
-    gst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    mathadi_charges = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    transportation_charges = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    total_with_gst = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
     
     def save(self, *args, **kwargs):
         self.base_amount = self.quantity * self.unit_price
         self.gst_amount = (self.base_amount * self.gst_percentage) / 100
-        self.total_with_gst = self.base_amount + self.gst_amount + self.mathadi_charges + self.transportation_charges
+        self.total_with_gst = self.base_amount + self.gst_amount
         super().save(*args, **kwargs)
     
     def __str__(self):
-        return f"{self.service.name} - {self.quantity} {self.unit}"
+        return f"{self.product_name} - {self.quantity} {self.unit}"

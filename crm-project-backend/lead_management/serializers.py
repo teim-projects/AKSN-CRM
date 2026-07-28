@@ -145,6 +145,7 @@ class LeadFollowUpSerializer(serializers.ModelSerializer):
             "next_followup_mode_display",
             "additional_remarks",
             "ready_to_send_quotation",
+            "products_interested",
             # System fields
             "status",
             "created_by",
@@ -157,30 +158,43 @@ class LeadFollowUpSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         request = self.context.get("request")
         faq_data = validated_data.pop("faq_answers", [])
-
+        
         if request and request.user.is_authenticated:
             validated_data["created_by"] = request.user
-
+            
         followup = LeadFollowUp.objects.create(**validated_data)
-
+        
+        # ✅ Update lead's products if provided
+        if followup.products_interested is not None:
+            lead = followup.lead
+            lead.product_interested = followup.products_interested
+            lead.save(update_fields=['product_interested'])
+        
         for item in faq_data:
             LeadFollowUpFAQAnswer.objects.create(followup=followup, **item)
-
+        
         return followup
 
     @transaction.atomic
     def update(self, instance, validated_data):
         faq_data = validated_data.pop("faq_answers", None)
-
+        
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+        
         instance.save()
-
+        
+        # ✅ Update lead's products if provided
+        if instance.products_interested is not None:
+            lead = instance.lead
+            lead.product_interested = instance.products_interested
+            lead.save(update_fields=['product_interested'])
+        
         if faq_data is not None:
             instance.faq_answers.all().delete()
             for item in faq_data:
                 LeadFollowUpFAQAnswer.objects.create(followup=instance, **item)
-
+        
         return instance
 
 
@@ -243,6 +257,9 @@ class LeadSerializer(serializers.ModelSerializer):
             "remarks",
             "status",
             "status_display",
+            "gst_number",
+            "pan_number",
+            "msme_number",
             "created_by",
             "created_by_details",
             "created_at",

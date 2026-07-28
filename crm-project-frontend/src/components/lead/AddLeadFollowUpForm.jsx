@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from "react";
 import Swal from "sweetalert2";
+import Select from "react-select";
 
-// Followup History Modal - Fully aligned to typography weights, tints, and card shadows
+// Followup History Modal
 const FollowupHistoryModal = ({ open, onClose, lead }) => {
   if (!open || !lead) return null;
 
@@ -42,7 +43,6 @@ const FollowupHistoryModal = ({ open, onClose, lead }) => {
                     </div>
                   </div>
                   
-                  {/* Executive Name & Followup Number Block */}
                   <div className="flex justify-between items-center border-b border-slate-50 pb-3 mb-4">
                     <p className="text-xs text-slate-400 font-semibold">
                       By {fu.created_by?.full_name || "User"} · {fu.contact_person || "Contact"}
@@ -52,6 +52,20 @@ const FollowupHistoryModal = ({ open, onClose, lead }) => {
                     </span>
                   </div>
 
+                  {/* Show products from this follow-up */}
+                  {fu.products_interested && fu.products_interested.length > 0 && (
+                    <div className="mb-4 p-3 bg-blue-50/50 border border-blue-100 rounded-xl">
+                      <span className="text-xs font-bold text-blue-700 block mb-2">Products Discussed</span>
+                      <div className="flex flex-wrap gap-2">
+                        {fu.products_interested.map((product, idx) => (
+                          <span key={idx} className="px-3 py-1 bg-white border border-blue-200 rounded-full text-xs font-medium text-blue-700">
+                            {product}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Discussion Summary */}
                   <div className="text-sm text-slate-600 mb-5 font-normal leading-relaxed">
                     {fu.discussion_summary || fu.remarks || "No discussion notes recorded."}
@@ -60,23 +74,22 @@ const FollowupHistoryModal = ({ open, onClose, lead }) => {
                   {/* Client & Our Commitments */}
                   {(fu.commitment_client || fu.commitment_us) && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                      {fu.commitment_client ? (
+                      {fu.commitment_client && (
                         <div className="p-4 bg-[#f4fbf7] border border-[#e2f6eb] rounded-xl">
                           <span className="text-xs font-bold tracking-wide text-[#2b7352] block mb-1.5 uppercase">
                             Client Commitment
                           </span>
                           <span className="text-sm text-slate-700 font-bold">{fu.commitment_client}</span>
                         </div>
-                      ) : <div />}
-                      
-                      {fu.commitment_us ? (
+                      )}
+                      {fu.commitment_us && (
                         <div className="p-4 bg-[#f4f7fe] border border-[#e8effd] rounded-xl">
                           <span className="text-xs font-bold tracking-wide text-[#2b52dd] block mb-1.5 uppercase">
                             Our Commitment
                           </span>
                           <span className="text-sm text-slate-700 font-bold">{fu.commitment_us}</span>
                         </div>
-                      ) : <div />}
+                      )}
                     </div>
                   )}
 
@@ -163,6 +176,11 @@ export default function AddLeadFollowUpForm({
   const [leadData, setLeadData] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
 
+  // Product related state - same as AddLeadForm
+  const [productInterested, setProductInterested] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+
   const token = useMemo(
     () =>
       localStorage.getItem("access") ||
@@ -172,6 +190,8 @@ export default function AddLeadFollowUpForm({
       "",
     []
   );
+
+  const PRODUCT_API_URL = `${BASE_API.replace(/\/$/, "")}/product/products/`;
 
   const followupModeOptions = [
     { value: "call", label: "Call" },
@@ -245,6 +265,7 @@ export default function AddLeadFollowUpForm({
     setLeadData(null);
     setIsEditMode(false);
     setShowHistory(false);
+    setProductInterested([]);
   };
 
   const handleChange = (e) => {
@@ -255,6 +276,65 @@ export default function AddLeadFollowUpForm({
     }));
   };
 
+  // Handle product multi-select - same as AddLeadForm
+  const handleMultiSelectChange = (selected) => {
+    const values = selected ? selected.map((opt) => opt.value) : [];
+    setProductInterested(values);
+  };
+
+  // Get product options for react-select - same as AddLeadForm
+  const productSelectOptions = useMemo(() => {
+    return products.map((p) => ({
+      value: p.id,
+      label: p.name,
+    }));
+  }, [products]);
+
+  // Get selected product options for react-select - same as AddLeadForm
+  const selectedProductOptions = useMemo(() => {
+    return productSelectOptions.filter(option =>
+      productInterested.includes(option.value)
+    );
+  }, [productSelectOptions, productInterested]);
+
+  // Fetch products when form opens - same as AddLeadForm
+  useEffect(() => {
+    if (!open) return;
+
+    const controller = new AbortController();
+    setLoadingProducts(true);
+
+    fetch(PRODUCT_API_URL, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      signal: controller.signal,
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const txt = await res.text().catch(() => "");
+          throw new Error(`${res.status} ${res.statusText} ${txt}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        const items = Array.isArray(data) ? data : data.results ?? [];
+        setProducts(items);
+      })
+      .catch((err) => {
+        if (err?.name !== "AbortError") {
+          console.error("Failed to fetch products:", err);
+          setProducts([]);
+        }
+      })
+      .finally(() => setLoadingProducts(false));
+
+    return () => controller.abort();
+  }, [open, PRODUCT_API_URL, token]);
+
+  // Fetch lead data
   useEffect(() => {
     if (!open || !leadId) return;
 
@@ -272,6 +352,13 @@ export default function AddLeadFollowUpForm({
         const data = await res.json();
         setLeadData(data);
         
+        // Load products from lead - storing product IDs
+        if (data.product_interested && Array.isArray(data.product_interested)) {
+          // If product_interested contains product names, we need to find their IDs
+          // For now, we'll store the names and match later
+          setProductInterested(data.product_interested);
+        }
+        
         if (data.pipeline_stage && !followup) {
           setFormData(prev => ({ ...prev, current_stage: data.pipeline_stage }));
         }
@@ -284,6 +371,7 @@ export default function AddLeadFollowUpForm({
     fetchLead();
   }, [open, leadId, BASE_API, token, followup]);
 
+  // Load followup data for editing
   useEffect(() => {
     if (followup) {
       setIsEditMode(true);
@@ -310,6 +398,11 @@ export default function AddLeadFollowUpForm({
         ready_to_send_quotation: followup.ready_to_send_quotation || false,
         status: followup.status || "open",
       });
+
+      // Load products from followup
+      if (followup.products_interested && Array.isArray(followup.products_interested)) {
+        setProductInterested(followup.products_interested);
+      }
 
       if (followup.faq_answers?.length) {
         const initial = {};
@@ -430,6 +523,8 @@ export default function AddLeadFollowUpForm({
         commitment_client: formData.commitment_client.trim(),
         commitment_us: formData.commitment_us.trim(),
         additional_remarks: formData.additional_remarks.trim(),
+        // ✅ Send product IDs or names - backend expects product names
+        products_interested: productInterested,
       };
 
       if (faqPayload.length) {
@@ -646,6 +741,59 @@ export default function AddLeadFollowUpForm({
                       </button>
                     ))}
                   </div>
+                </div>
+              </div>
+
+              {/* PRODUCTS SECTION - Same as AddLeadForm */}
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 pb-1 border-b border-slate-200">
+                  PRODUCTS INTERESTED <span className="font-normal text-slate-400">(Optional)</span>
+                </h3>
+                
+                <div className="space-y-2">
+                  <Select
+                    isMulti
+                    options={productSelectOptions}
+                    value={selectedProductOptions}
+                    onChange={handleMultiSelectChange}
+                    placeholder={loadingProducts ? "Loading products..." : "Select products..."}
+                    className="text-sm mt-0.5"
+                    isLoading={loadingProducts}
+                    noOptionsMessage={() => loadingProducts ? "Loading products..." : "No products found"}
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        minHeight: '38px',
+                        borderColor: '#e2e8f0',
+                        borderRadius: '0.5rem',
+                        '&:hover': { borderColor: '#e2e8f0' },
+                      }),
+                      multiValue: (base) => ({
+                        ...base,
+                        backgroundColor: '#eff6ff',
+                        borderRadius: '0.375rem',
+                      }),
+                      multiValueLabel: (base) => ({
+                        ...base,
+                        color: '#1e40af',
+                        fontWeight: '500',
+                        fontSize: '0.75rem',
+                      }),
+                      multiValueRemove: (base) => ({
+                        ...base,
+                        color: '#3b82f6',
+                        '&:hover': {
+                          backgroundColor: '#dbeafe',
+                          color: '#1e40af',
+                        },
+                      }),
+                    }}
+                  />
+                  {productInterested.length > 0 && (
+                    <p className="text-[10px] text-slate-400 font-medium">
+                      {productInterested.length} product{productInterested.length > 1 ? 's' : ''} selected
+                    </p>
+                  )}
                 </div>
               </div>
 

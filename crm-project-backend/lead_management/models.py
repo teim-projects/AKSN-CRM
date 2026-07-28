@@ -85,6 +85,7 @@ class Customer(models.Model):
     )
     gst_number = models.CharField(max_length=15, blank=True, null=True, verbose_name="GST Number")
     pan_number = models.CharField(max_length=10, blank=True, null=True, verbose_name="PAN Number")
+    msme_number = models.CharField(max_length=20, blank=True, null=True, verbose_name="MSME Number")  # ✅ NEW
     
     # COMMERCIAL DETAILS
     product_purchased = models.JSONField(blank=True, null=True, default=list, verbose_name="Product Purchased")
@@ -158,13 +159,18 @@ class lead_management(models.Model):
     state = models.CharField(max_length=100, blank=True, null=True, verbose_name="State")
     product_interested = models.JSONField(blank=True, null=True, default=list, verbose_name="Product Interested")
     expected_closure_date = models.DateField(blank=True, null=True, verbose_name="Expected Closure Date")
-    lead_source = models.CharField(max_length=50, blank=True, null=True, verbose_name="Lead Source")  # Removed choices
+    lead_source = models.CharField(max_length=50, blank=True, null=True, verbose_name="Lead Source")
     contact_person = models.CharField(max_length=200, blank=True, null=True, verbose_name="Contact Person")
     email_address = models.EmailField(blank=True, null=True, verbose_name="Email Address")
     city = models.CharField(max_length=100, blank=True, null=True, verbose_name="City")
-    industry_type = models.CharField(max_length=50, blank=True, null=True, verbose_name="Industry Type")  # Removed choices
+    industry_type = models.CharField(max_length=50, blank=True, null=True, verbose_name="Industry Type")
     expected_budget = models.CharField(max_length=100, blank=True, null=True, verbose_name="Expected Budget")
     priority = models.CharField(max_length=50, choices=Priority.choices, blank=True, null=True, verbose_name="Priority")
+    
+    # ✅ NEW FIELDS
+    gst_number = models.CharField(max_length=15, blank=True, null=True, verbose_name="GST Number")
+    pan_number = models.CharField(max_length=10, blank=True, null=True, verbose_name="PAN Number")
+    msme_number = models.CharField(max_length=20, blank=True, null=True, verbose_name="MSME Number")
 
     # Pipeline Information (matching Lead form)
     assigned_executive = models.ForeignKey(
@@ -228,6 +234,7 @@ class lead_management(models.Model):
         ordering = ['-created_at']
         verbose_name = "Lead"
         verbose_name_plural = "Leads"
+
 
 
 
@@ -343,6 +350,12 @@ class LeadFollowUp(models.Model):
     discussion_summary = models.TextField(blank=True, null=True, verbose_name="Discussion Summary")
     commitment_client = models.TextField(blank=True, null=True, verbose_name="Commitment by Client")
     commitment_us = models.TextField(blank=True, null=True, verbose_name="Commitment by Us")
+    products_interested = models.JSONField(
+        blank=True, 
+        null=True, 
+        default=list, 
+        verbose_name="Products Interested"
+    )
     
     # Qualifying Questions
     decision_maker_contacted = models.CharField(
@@ -437,12 +450,18 @@ class LeadFollowUp(models.Model):
         lead = self.lead
         lead.status = self.status
         lead.followup_date = self.next_followup_date or self.followup_date
+        
         if self.additional_remarks:
             lead.remarks = self.additional_remarks
+            
         # Update pipeline stage if move_to_stage is set
         if self.move_to_stage:
             lead.pipeline_stage = self.move_to_stage
-            lead.save(update_fields=["status", "followup_date", "remarks", "pipeline_stage"])
+            
+        # ✅ NEW: Update lead products if provided
+        if self.products_interested is not None:
+            lead.product_interested = self.products_interested
+            lead.save(update_fields=["status", "followup_date", "remarks", "pipeline_stage", "product_interested"])
         else:
             lead.save(update_fields=["status", "followup_date", "remarks"])
 

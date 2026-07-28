@@ -20,7 +20,11 @@ export default function FollowUp() {
   const [totalPages, setTotalPages] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Filter state
+  // Quick Filter state
+  const [filterType, setFilterType] = useState("all");
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+
+  // Advanced Filter state
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filteredData, setFilteredData] = useState([]);
 
@@ -138,6 +142,32 @@ export default function FollowUp() {
     fetchDataAndStats();
   }, [fetchDataAndStats]);
 
+  // Apply quick filter
+  const applyQuickFilter = useCallback(() => {
+    const today = getTodayString();
+    let filtered = allRows;
+
+    switch(filterType) {
+      case "today":
+        filtered = allRows.filter((l) => l.effective_followup_date === today && l.status !== "closed");
+        break;
+      case "overdue":
+        filtered = allRows.filter((l) => l.effective_followup_date && l.effective_followup_date < today && l.status !== "closed");
+        break;
+      case "completed":
+        filtered = allRows.filter((l) => l.status === "closed");
+        break;
+      default:
+        filtered = allRows;
+    }
+
+    setFilteredData(filtered);
+  }, [allRows, filterType]);
+
+  useEffect(() => {
+    applyQuickFilter();
+  }, [applyQuickFilter]);
+
   // Update pagination when filtered data changes
   useEffect(() => {
     setRows(filteredData);
@@ -163,6 +193,8 @@ export default function FollowUp() {
   };
 
   const getRowClassName = (lead) => {
+    if (lead.status === "closed") return "";
+    
     const targetDate = lead.effective_followup_date || lead.followup_date;
     if (!targetDate) return "";
     const today = new Date();
@@ -211,6 +243,16 @@ export default function FollowUp() {
     }, 500);
     return () => clearTimeout(timer);
   }, [leadSearchTerm]);
+
+  // Quick filter options
+  const filterOptions = [
+    { value: "all", label: "All Records" },
+    { value: "today", label: "Today's Follow-ups" },
+    { value: "overdue", label: "Overdue Follow-ups" },
+    { value: "completed", label: "Completed Follow-ups" },
+  ];
+
+  const currentFilterLabel = filterOptions.find(f => f.value === filterType)?.label || "All Records";
 
   const columns = [
     { 
@@ -376,12 +418,47 @@ export default function FollowUp() {
           </div>
           
           <div className="mt-3 md:mt-0 flex items-center gap-3">
+            {/* Quick Filter Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-sm"
+              >
+                <MdFilterList className="text-slate-400" />
+                {currentFilterLabel}
+              </button>
+              
+              {showFilterDropdown && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10">
+                  {filterOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setFilterType(option.value);
+                        setShowFilterDropdown(false);
+                        setCurrentPage(1);
+                      }}
+                      className={`w-full text-left px-4 py-2 text-xs hover:bg-slate-50 transition-colors ${
+                        filterType === option.value ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-700'
+                      }`}
+                    >
+                      {option.label}
+                      {filterType === option.value && (
+                        <span className="float-right text-blue-600">✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Advanced Filter Button */}
             <button
               onClick={() => setIsFilterOpen(true)}
               className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-sm"
             >
               <MdFilterList className="text-slate-400" />
-              Filter
+              Advanced
             </button>
 
             <button
@@ -442,7 +519,7 @@ export default function FollowUp() {
           />
         </div>
 
-        {/* FILTER DRAWER - DARK OVERLAY WITHOUT BLUR */}
+        {/* ADVANCED FILTER DRAWER - DARK OVERLAY WITHOUT BLUR */}
         {isFilterOpen && (
           <div 
             className="fixed inset-0 bg-black/40 z-[999]" 
@@ -452,7 +529,7 @@ export default function FollowUp() {
         
         <div className={`fixed top-0 right-0 h-full w-[380px] bg-white shadow-2xl z-[1000] transition-transform duration-300 ease-in-out ${isFilterOpen ? 'translate-x-0' : 'translate-x-full'}`}>
           <div className="flex items-center justify-between p-5 border-b border-slate-200">
-            <h3 className="text-lg font-bold text-slate-900">Filters</h3>
+            <h3 className="text-lg font-bold text-slate-900">Advanced Filters</h3>
             <button 
               onClick={() => setIsFilterOpen(false)}
               className="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1"
@@ -465,7 +542,7 @@ export default function FollowUp() {
               data={allRows}
               onFilter={setFilteredData}
               setItemsPerPage={setItemsPerPage}
-              columns={columns}  // ← ADD THIS LINE
+              columns={columns}
             />
           </div>
         </div>

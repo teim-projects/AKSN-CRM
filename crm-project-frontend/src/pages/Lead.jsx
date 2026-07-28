@@ -195,16 +195,19 @@ export default function Lead() {
   };
 
   const getRowClassName = (lead) => {
-    if (!lead.followup_date) return "";
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const followupDate = new Date(lead.followup_date);
-    followupDate.setHours(0, 0, 0, 0);
+  // If status is "closed", return normal styling (no background color)
+  if (lead.status === "closed") return "";
+  
+  if (!lead.followup_date) return "";
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const followupDate = new Date(lead.followup_date);
+  followupDate.setHours(0, 0, 0, 0);
 
-    if (followupDate.getTime() === today.getTime()) return "bg-yellow-100";
-    if (followupDate < today) return "bg-red-100";
-    return "";
-  };
+  if (followupDate.getTime() === today.getTime()) return "bg-yellow-100";
+  if (followupDate < today) return "bg-red-100";
+  return "";
+};
 
   const columns = [
     { key: "sr", label: "Sr.No", render: (_, idx) => <span className="text-slate-600 font-medium text-xs py-0.5 block">{(currentPage - 1) * itemsPerPage + (idx + 1)}</span> },

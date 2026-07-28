@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import axios from "axios";
-import ItemSelectionEngine from "../ItemSelectionEngine";
-import ReusableForm from "../Form";
 import Swal from "sweetalert2";
+import Select from "react-select";
+import { RxCross2 } from "react-icons/rx";
+import { MdDelete } from "react-icons/md";
 
 const BASE_API = import.meta.env.VITE_BASE_API_URL;
 
@@ -16,376 +17,326 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-export default function AddQuotation({ id, onBack, leadData }) {
+export default function AddQuotation({ id, onBack }) {
   const isEdit = !!id;
-  const isFromLead = !!leadData;
 
-  const [step, setStep] = useState(1);
-
-  useEffect(() => {
-    setStep(1);
-  }, [id]);
+  const [loading, setLoading] = useState(false);
+  const [versionName, setVersionName] = useState("");
 
   const [formData, setFormData] = useState({
-    customer_phone: "",
-    customer_name: "",
-    customer_id: "",
+    lead: "",
+    company_name: "",
+    contact_person: "",
+    mobile_number: "",
+    email_address: "",
+    linkedin_profile_url: "",
+    state: "",
+    city: "",
+    industry_type: "",
+    gst_number: "",        // ✅ NEW
+    pan_number: "",        // ✅ NEW
+    msme_number: "",
     subject: "",
     gst_type: "CGST_SGST",
     thank_you_note: "",
   });
 
-  const [loading, setLoading] = useState(false);
-  const [versionName, setVersionName] = useState("");
-
   const [items, setItems] = useState([]);
-  const [lowItems, setLowItems] = useState([]);
+  const [availableProducts, setAvailableProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
 
-  const [thankYouSuggestions, setThankYouSuggestions] = useState([]);
-  const [showThankYouSuggestions, setShowThankYouSuggestions] = useState(false);
-  const [loadingThankYou, setLoadingThankYou] = useState(false);
-  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+  // ✅ Single mobile number search
+  const [mobileSearch, setMobileSearch] = useState("");
+  const [searchingLead, setSearchingLead] = useState(false);
+  const [leadFound, setLeadFound] = useState(null);
 
-  const [subjectSuggestions, setSubjectSuggestions] = useState([]);
-  const [showSubjectSuggestions, setShowSubjectSuggestions] = useState(false);
-  const [loadingSubject, setLoadingSubject] = useState(false);
-  const [selectedSubjectIndex, setSelectedSubjectIndex] = useState(-1);
-
-  // Edit load
+  // Load quotation for edit
   useEffect(() => {
     if (!isEdit) return;
 
-    const loadQuotationData = async () => {
+    const loadQuotation = async () => {
       try {
         const res = await api.get(`quotation/quotation/${id}/`);
         const q = res.data;
 
-        const active = q.versions.find(v => v.is_active);
-        if (active && active.version_no) {
+        const active = q.versions?.find((v) => v.is_active);
+        if (active) {
           setVersionName(active.version_no);
         }
 
-        setFormData(prev => ({
-          ...prev,
-          customer_phone: q.customer_contact || "",
-          customer_name: q.customer_name || "",
-          customer_id: q.customer || "",
+        setFormData({
+          lead: q.lead || "",
+          company_name: q.company_name || "",
+          contact_person: q.contact_person || "",
+          mobile_number: q.mobile_number || "",
+          email_address: q.email_address || "",
+          linkedin_profile_url: q.linkedin_profile_url || "",
+          state: q.state || "",
+          city: q.city || "",
+          industry_type: q.industry_type || "",
+          gst_number: q.gst_number || "",      
+          pan_number: q.pan_number || "",      
+          msme_number: q.msme_number || "",
           subject: q.subject || "",
+          gst_type: q.gst_type || "CGST_SGST",
           thank_you_note: q.thank_you_note || "",
-          gst_type: active?.gst_type || "CGST_SGST"
-        }));
+        });
 
-        // Load high side items - read from product_data JSON
-        setItems(
-          (active?.high_side_items || []).map(i => ({
-            product_name: i.product_data?.name || i.product_name || "",
-            product_sku: i.product_data?.sku || i.product_sku || "",
-            product_variant: i.product_data?.id || i.product_variant || "",
-            unit: i.unit || "NOS",
-            quantity: i.quantity || 1,
-            unit_price: i.unit_price || 0,
-            gst_percent: i.gst_percent || 18,
-            mathadi_charges: i.mathadi_charges || 0,
-            transportation_charges: i.transportation_charges || 0,
-            description: i.description || "",
-            hsn_sac: i.hsn_sac || "",
-            category: i.product_data?.category || i.category || ""
-          }))
-        );
-
-        // Load low side items - read from item_data JSON
-        setLowItems(
-          (active?.low_side_items || []).map(l => ({
-            item: l.item_data?.id || l.item || "",
-            item_code: l.item_data?.item_code || l.item_code || "",
-            item_name: l.item_data?.name || l.item_name || "",
-            unit: l.unit || "NOS",
-            quantity: l.quantity || 1,
-            unit_price: l.unit_price || 0,
-            gst_percent: l.gst_percent || 18,
-            mathadi_charges: l.mathadi_charges || 0,
-            description: l.description || "",
-            hsn_sac: l.hsn_sac || ""
-          }))
-        );
+        if (active?.items) {
+          setItems(
+            active.items.map((item) => ({
+              id: item.id,
+              product_id: item.product_id,
+              product_name: item.product_name,
+              product_code: item.product_code,
+              category: item.category,
+              hsn_sac_code: item.hsn_sac_code,
+              description: item.description || "",
+              quantity: parseFloat(item.quantity) || 1,
+              unit: item.unit || "NOS",
+              unit_price: parseFloat(item.unit_price) || 0,
+              gst_percentage: parseFloat(item.gst_percentage) || 18,
+            }))
+          );
+        }
       } catch (err) {
-        console.log("Error loading quotation:", err);
+        console.error("Error loading quotation:", err);
+        Swal.fire({ icon: "error", title: "Error", text: "Failed to load quotation" });
       }
     };
 
-    loadQuotationData();
-  }, [id]);
+    loadQuotation();
+  }, [id, isEdit]);
 
-  // Lead data mapping
+  // Load products
   useEffect(() => {
-    if (leadData && !isEdit) {
-      setFormData(prev => ({
-        ...prev,
-        customer_phone: leadData.customer_contact || "",
-        customer_name: leadData.customer_name || "",
-        customer_id: leadData.customer || "",
-        subject: "",
-        gst_type: "CGST_SGST",
-        thank_you_note: ""
-      }));
-
-      if (leadData.product_details && leadData.product_details.length > 0) {
-        const mappedItems = leadData.product_details.map(product => ({
-          product_name: product.product_name || "",
-          product_sku: product.product_sku || "",
-          unit: "NOS",
-          quantity: product.quantity || 1,
-          unit_price: product.expected_price || 0,
-          gst_percent: 18,
-          mathadi_charges: 0,
-          transportation_charges: 0,
-          description: product.remarks || "",
-          hsn_sac: product.hsn_sac || "",
-          category: product.category || ""
-        }));
-        setItems(mappedItems);
-      }
-    }
-  }, [leadData, isEdit]);
-
-  // Phone search
-  const handlePhoneSearch = async (phone) => {
-    if (phone.length >= 10) {
+    const fetchProducts = async () => {
+      setLoadingProducts(true);
       try {
-        const res = await api.get(`lead/customer/?search=${phone}`);
-        const data = Array.isArray(res.data) ? res.data : res.data?.results || [];
-
-        if (data.length > 0) {
-          setFormData(prev => ({
-            ...prev,
-            customer_phone: phone,
-            customer_name: data[0].name,
-            customer_id: data[0].id
-          }));
-        }
+        const res = await api.get(`product/products/`);
+        const products = Array.isArray(res.data) ? res.data : res.data?.results || [];
+        setAvailableProducts(products);
       } catch (err) {
-        console.log("Error searching customer:", err);
+        console.error("Error loading products:", err);
+        setAvailableProducts([]);
+      } finally {
+        setLoadingProducts(false);
       }
-    }
-  };
-
-  // Thank you note suggestions
-  const fetchThankYouSuggestions = async (searchTerm) => {
-    if (searchTerm.length < 2) {
-      setThankYouSuggestions([]);
-      setShowThankYouSuggestions(false);
-      return;
-    }
-
-    setLoadingThankYou(true);
-    try {
-      const response = await api.get(`quotation/thank-you-suggestions/?search=${encodeURIComponent(searchTerm)}`);
-      setThankYouSuggestions(response.data);
-      setShowThankYouSuggestions(response.data.length > 0);
-      setSelectedSuggestionIndex(-1);
-    } catch (error) {
-      console.error('Error fetching thank you suggestions:', error);
-      setThankYouSuggestions([]);
-      setShowThankYouSuggestions(false);
-    } finally {
-      setLoadingThankYou(false);
-    }
-  };
-
-  const debounce = (func, delay) => {
-    let timeoutId;
-    return (...args) => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => func(...args), delay);
     };
-  };
+    fetchProducts();
+  }, []);
 
-  const debouncedThankYouSearch = debounce(fetchThankYouSuggestions, 300);
-
-  const handleThankYouKeyDown = (e) => {
-    if (!showThankYouSuggestions) return;
-
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setSelectedSuggestionIndex(prev =>
-          prev < thankYouSuggestions.length - 1 ? prev + 1 : 0
-        );
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setSelectedSuggestionIndex(prev =>
-          prev > 0 ? prev - 1 : thankYouSuggestions.length - 1
-        );
-        break;
-      case 'Enter':
-        e.preventDefault();
-        if (selectedSuggestionIndex >= 0) {
-          selectThankYouNote(thankYouSuggestions[selectedSuggestionIndex]);
-        }
-        break;
-      case 'Escape':
-        setShowThankYouSuggestions(false);
-        setSelectedSuggestionIndex(-1);
-        break;
-    }
-  };
-
-  const selectThankYouNote = (note) => {
-    setFormData(prev => ({ ...prev, thank_you_note: note.text }));
-    setShowThankYouSuggestions(false);
-    setSelectedSuggestionIndex(-1);
-  };
-
-  // Subject suggestions
-  const fetchSubjectSuggestions = async (searchTerm) => {
-    if (searchTerm.length < 2) {
-      setSubjectSuggestions([]);
-      setShowSubjectSuggestions(false);
+  // ✅ Search lead by mobile number
+  const searchLeadByMobile = async (mobile) => {
+    if (!mobile || mobile.length < 10) {
+      setLeadFound(null);
+      setFormData((prev) => ({
+        ...prev,
+        lead: "",
+        company_name: "",
+        contact_person: "",
+        email_address: "",
+        linkedin_profile_url: "",
+        state: "",
+        city: "",
+        industry_type: "",
+      }));
       return;
     }
 
-    setLoadingSubject(true);
+    setSearchingLead(true);
     try {
-      const token = localStorage.getItem("access") || localStorage.getItem("access_token");
-      const response = await fetch(
-        `${BASE_API}/quotation/subject-suggestions/?search=${encodeURIComponent(searchTerm)}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setSubjectSuggestions(data);
-        setShowSubjectSuggestions(data.length > 0);
+      const res = await api.get(`lead/lead/?search=${mobile}`);
+      const data = Array.isArray(res.data) ? res.data : res.data?.results || [];
+      
+      // Find exact match by mobile number
+      const lead = data.find(l => l.mobile_number === mobile);
+      
+      if (lead) {
+        setLeadFound(lead);
+        setFormData((prev) => ({
+          ...prev,
+          lead: lead.id,
+          company_name: lead.company_name || "",
+          contact_person: lead.contact_person || "",
+          mobile_number: lead.mobile_number || "",
+          email_address: lead.email_address || "",
+          linkedin_profile_url: lead.linkedin_profile_url || "",
+          gst_number: lead.gst_number || "",      
+          pan_number: lead.pan_number || "",      
+          msme_number: lead.msme_number || "", 
+          state: lead.state || "",
+          city: lead.city || "",
+          industry_type: lead.industry_type || "",
+          subject: prev.subject || `Quotation for ${lead.company_name || lead.contact_person || "Lead"}`,
+        }));
+        setMobileSearch(mobile);
+      } else {
+        setLeadFound(null);
+        // Clear form data if no lead found
+        setFormData((prev) => ({
+          ...prev,
+          lead: "",
+          company_name: "",
+          contact_person: "",
+          email_address: "",
+          linkedin_profile_url: "",
+          state: "",
+          city: "",
+          industry_type: "",
+        }));
       }
-    } catch (error) {
-      console.error("Error fetching subject suggestions:", error);
+    } catch (err) {
+      console.error("Error searching lead:", err);
+      setLeadFound(null);
     } finally {
-      setLoadingSubject(false);
+      setSearchingLead(false);
     }
   };
 
-  const debouncedSubjectSearch = useCallback(
-    debounce((searchTerm) => {
-      fetchSubjectSuggestions(searchTerm);
-    }, 300),
+  // Debounced mobile search
+  const debouncedMobileSearch = useCallback(
+    debounce((mobile) => searchLeadByMobile(mobile), 500),
     []
   );
 
-  const handleSubjectKeyDown = (e) => {
-    if (!showSubjectSuggestions || subjectSuggestions.length === 0) return;
-
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setSelectedSubjectIndex(prev =>
-          prev < subjectSuggestions.length - 1 ? prev + 1 : prev
-        );
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setSelectedSubjectIndex(prev => (prev > 0 ? prev - 1 : -1));
-        break;
-      case 'Enter':
-        e.preventDefault();
-        if (selectedSubjectIndex >= 0) {
-          selectSubject(subjectSuggestions[selectedSubjectIndex]);
-        }
-        break;
-      case 'Escape':
-        setShowSubjectSuggestions(false);
-        setSelectedSubjectIndex(-1);
-        break;
-    }
+  // Handle mobile number change
+  const handleMobileChange = (e) => {
+    const value = e.target.value.replace(/\D/g, ''); // Only digits
+    setFormData((prev) => ({ ...prev, mobile_number: value }));
+    debouncedMobileSearch(value);
   };
 
-  const selectSubject = (suggestion) => {
-    setFormData(prev => ({ ...prev, subject: suggestion.text }));
-    setShowSubjectSuggestions(false);
-    setSelectedSubjectIndex(-1);
-  };
-
-  const resetForm = () => {
-    if (isFromLead) {
-      onBack && onBack();
+  // Add product
+  const addProduct = (product) => {
+    if (items.some((item) => item.product_id === product.id)) {
+      Swal.fire({
+        icon: "info",
+        title: "Product Already Added",
+        text: "This product is already in the quotation",
+        timer: 1500,
+        showConfirmButton: false,
+      });
       return;
     }
 
-    setFormData({
-      customer_phone: "",
-      customer_name: "",
-      customer_id: "",
-      subject: "",
-      gst_type: "CGST_SGST",
-      thank_you_note: ""
+    setItems((prev) => [
+      ...prev,
+      {
+        product_id: product.id,
+        product_name: product.name,
+        product_code: product.product_code || "",
+        category: product.category?.name || "",
+        hsn_sac_code: product.hsn_sac_code || "",
+        description: product.description || "",
+        quantity: 1,
+        unit: "NOS",
+        unit_price: parseFloat(product.unit_price) || 0,
+        gst_percentage: parseFloat(product.gst_percentage) || 18,
+      },
+    ]);
+  };
+
+  const updateItem = (index, field, value) => {
+    const updated = [...items];
+    updated[index] = { ...updated[index], [field]: value };
+    setItems(updated);
+  };
+
+  const removeItem = (index) => {
+    setItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  function debounce(fn, delay) {
+    let timeout;
+    return function (...args) {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => fn(...args), delay);
+    };
+  }
+
+  const calculateTotals = useMemo(() => {
+    let subtotal = 0;
+    let totalGst = 0;
+    let grandTotal = 0;
+
+    items.forEach((item) => {
+      const qty = parseFloat(item.quantity) || 0;
+      const price = parseFloat(item.unit_price) || 0;
+      const gst = parseFloat(item.gst_percentage) || 18;
+
+      const base = qty * price;
+      const gstAmount = (base * gst) / 100;
+      const total = base + gstAmount;
+
+      subtotal += base;
+      totalGst += gstAmount;
+      grandTotal += total;
     });
 
-    setItems([]);
-    setLowItems([]);
-  };
+    return { subtotal, totalGst, grandTotal };
+  }, [items]);
 
   // Submit
-  const handleSubmit = async (data) => {
-    if (!data.customer_id) {
-      Swal.fire({ icon: "error", title: "Validation", text: "Please search and select a customer" });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!formData.company_name || !formData.company_name.trim()) {
+      Swal.fire({ icon: "error", title: "Validation", text: "Company Name is required" });
       return;
     }
-    if (!data.subject.trim()) {
+    if (!formData.contact_person || !formData.contact_person.trim()) {
+      Swal.fire({ icon: "error", title: "Validation", text: "Contact Person is required" });
+      return;
+    }
+    if (!formData.mobile_number || !formData.mobile_number.trim()) {
+      Swal.fire({ icon: "error", title: "Validation", text: "Mobile Number is required" });
+      return;
+    }
+    if (!formData.subject || !formData.subject.trim()) {
       Swal.fire({ icon: "error", title: "Validation", text: "Subject is required" });
+      return;
+    }
+    if (!formData.thank_you_note || !formData.thank_you_note.trim()) {
+      Swal.fire({ icon: "error", title: "Validation", text: "Thank You Note is required" });
+      return;
+    }
+    if (items.length === 0) {
+      Swal.fire({ icon: "error", title: "Validation", text: "Please add at least one product" });
       return;
     }
 
     setLoading(true);
 
     const payload = {
-      customer: Number(data.customer_id),
-      subject: data.subject,
-      thank_you_note: data.thank_you_note,
-      versions: [{
-        gst_type: data.gst_type,
-        high_side_items: items.map(i => ({
-          product_data: {
-            id: i.product_variant || i.id || null,
-            name: i.product_name || "",
-            sku: i.product_sku || "",
-            price: i.unit_price || 0,
-            category: i.category || "",
-            hsn_code: i.hsn_sac || "",
-            gst_percentage: i.gst_percent || 18,
-          },
-          product_name: i.product_name || "",
-          product_sku: i.product_sku || "",
-          quantity: Number(i.quantity),
-          unit: i.unit || "NOS",
-          description: i.description || "",
-          unit_price: Number(i.unit_price),
-          gst_percent: Number(i.gst_percent),
-          mathadi_charges: Number(i.mathadi_charges || 0),
-          transportation_charges: Number(i.transportation_charges || 0),
-          hsn_sac: i.hsn_sac || "",
-          category: i.category || ""
-        })),
-        low_side_items: lowItems.map(l => ({
-          item_data: {
-            id: l.item || l.id || null,
-            item_code: l.item_code || "",
-            name: l.item_name || "",
-            description: l.description || "",
-          },
-          quantity: Number(l.quantity),
-          unit_price: Number(l.unit_price),
-          description: l.description || "",
-          unit: l.unit || "NOS",
-          gst_percent: Number(l.gst_percent || 18),
-          mathadi_charges: Number(l.mathadi_charges || 0),
-          hsn_sac: l.hsn_sac || ""
-        }))
-      }]
+      lead: formData.lead || null,
+      
+      company_name: formData.company_name,
+      contact_person: formData.contact_person,
+      mobile_number: formData.mobile_number,
+      email_address: formData.email_address || "",
+      linkedin_profile_url: formData.linkedin_profile_url || "",
+      gst_number: formData.gst_number || "",      // ✅ NEW
+      pan_number: formData.pan_number || "",      // ✅ NEW
+      msme_number: formData.msme_number || "",
+      state: formData.state || "",
+      city: formData.city || "",
+      industry_type: formData.industry_type || "",
+      subject: formData.subject,
+      gst_type: formData.gst_type,
+      thank_you_note: formData.thank_you_note,
+      items: items.map((item) => ({
+        product_id: item.product_id || null,
+        product_name: item.product_name,
+        product_code: item.product_code || "",
+        category: item.category || "",
+        hsn_sac_code: item.hsn_sac_code || "",
+        description: item.description || "",
+        quantity: parseFloat(item.quantity) || 1,
+        unit: item.unit || "NOS",
+        unit_price: parseFloat(item.unit_price) || 0,
+        gst_percentage: parseFloat(item.gst_percentage) || 18,
+      })),
     };
 
     try {
@@ -397,348 +348,444 @@ export default function AddQuotation({ id, onBack, leadData }) {
 
       Swal.fire({
         icon: "success",
-        text: isEdit ? "Quotation updated successfully" : "Quotation saved successfully",
+        text: isEdit ? "Quotation updated successfully" : "Quotation created successfully",
         timer: 1200,
-        showConfirmButton: false
+        showConfirmButton: false,
       });
 
-      resetForm();
       onBack && onBack();
-
     } catch (err) {
-      console.log("Error details:", err);
-      console.log("Response status:", err.response?.status);
-      console.log("Response data:", err.response?.data);
-
-      if (err.response?.status === 200 || err.response?.status === 201) {
-        Swal.fire({
-          icon: "success",
-          text: isEdit ? "Quotation updated successfully" : "Quotation saved successfully",
-          timer: 1200,
-          showConfirmButton: false
-        });
-        resetForm();
-        onBack && onBack();
-        return;
+      console.error("Error saving quotation:", err);
+      let errorMsg = "Failed to save quotation";
+      if (err.response?.data) {
+        const data = err.response.data;
+        if (typeof data === "object") {
+          const errors = Object.entries(data)
+            .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(", ") : msgs}`)
+            .join("\n");
+          errorMsg = errors || errorMsg;
+        } else if (typeof data === "string") {
+          errorMsg = data;
+        }
       }
-
       Swal.fire({
         icon: "error",
         title: "Error",
-        text: err.response?.data?.detail || "Error saving quotation"
+        text: errorMsg,
       });
     } finally {
       setLoading(false);
     }
   };
 
-  // Step validation functions
-  const validateStep1 = () => {
-    if (!formData.customer_id) {
-      Swal.fire({ icon: "error", title: "Validation", text: "Please search and select a customer" });
-      return false;
-    }
-    if (!formData.subject.trim()) {
-      Swal.fire({ icon: "error", title: "Validation", text: "Subject is required" });
-      return false;
-    }
-    if (!formData.thank_you_note || !formData.thank_you_note.trim()) {
-      Swal.fire({ icon: "error", title: "Validation", text: "Thank You Note is required" });
-      return false;
-    }
-    return true;
-  };
-
-  const validateStep2 = () => {
-    if (items.length === 0 && lowItems.length === 0) {
-      Swal.fire({ icon: "error", title: "Validation", text: "Please add at least one item" });
-      return false;
-    }
-    return true;
-  };
-
-  // Step 1 Fields
-  const step1Fields = [
-    {
-      name: "customer_phone",
-      label: "Customer Phone",
-      type: "phone",
-      required: true,
-      gridCols: 1,
-      placeholder: "Enter customer phone",
-      component: ({ value, onChange }) => (
-        <input
-          type="text"
-          className="w-full px-3 py-2 rounded-md border border-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          value={value}
-          onChange={(e) => {
-            const phone = e.target.value.replace(/\D/g, "");
-            onChange(phone);
-            handlePhoneSearch(phone);
-          }}
-          placeholder="Enter customer phone"
-          maxLength={10}
-        />
-      )
-    },
-    {
-      name: "customer_name",
-      label: "Customer Name",
-      type: "text",
-      disabled: true,
-      gridCols: 1,
-      placeholder: "Auto-filled from phone search"
-    },
-    {
-      name: "subject",
-      label: "Subject",
-      type: "component",
-      required: true,
-      gridCols: 1,
-      component: ({ value, onChange }) => (
-        <div className="relative">
-          <input
-            type="text"
-            className="w-full px-3 py-2 rounded-md border border-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            placeholder="Type to get suggestions..."
-            value={value || ""}
-            onChange={(e) => {
-              onChange(e.target.value);
-              debouncedSubjectSearch(e.target.value);
-            }}
-            onKeyDown={handleSubjectKeyDown}
-            onFocus={() => {
-              if (value && value.length >= 2) {
-                debouncedSubjectSearch(value);
-              }
-            }}
-            onBlur={() => {
-              setTimeout(() => {
-                setShowSubjectSuggestions(false);
-                setSelectedSubjectIndex(-1);
-              }, 200);
-            }}
-          />
-
-          {loadingSubject && (
-            <div className="absolute right-3 top-3 pointer-events-none">
-              <div className="animate-spin rounded-full h-4 w-4 border-2 border-indigo-600 border-t-transparent"></div>
-            </div>
-          )}
-
-          {showSubjectSuggestions && subjectSuggestions.length > 0 && (
-            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
-              {subjectSuggestions.map((suggestion, index) => {
-                const isSelected = index === selectedSubjectIndex;
-                return (
-                  <div
-                    key={suggestion.id}
-                    className={`px-3 py-2 cursor-pointer text-sm border-b border-gray-100 last:border-b-0 transition-colors ${isSelected
-                        ? 'bg-indigo-100 text-indigo-900'
-                        : 'hover:bg-gray-50 text-gray-700'
-                      }`}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      selectSubject(suggestion);
-                    }}
-                    onMouseEnter={() => setSelectedSubjectIndex(index)}
-                  >
-                    <div className="truncate">
-                      {suggestion.text.length > 80 ? `${suggestion.text.substring(0, 80)}...` : suggestion.text}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {showSubjectSuggestions && subjectSuggestions.length === 0 && !loadingSubject && value && value.length >= 2 && (
-            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
-              <div className="px-3 py-2 text-sm text-gray-500 italic">
-                No suggestions found. Keep typing to create a new one.
-              </div>
-            </div>
-          )}
-        </div>
-      )
-    },
-    {
-      name: "gst_type",
-      label: "GST Type",
-      type: "select",
-      required: true,
-      gridCols: 1,
-      options: [
-        { value: "CGST_SGST", label: "CGST + SGST" },
-        { value: "IGST", label: "IGST" },
-        { value: "NO_GST", label: "No GST" }
-      ]
-    },
-    {
-      name: "thank_you_note",
-      label: "Thank You Note",
-      type: "component",
-      required: true,
-      gridCols: 2,
-      component: ({ value, onChange }) => (
-        <div className="relative">
-          <textarea
-            className="w-full px-3 py-2 rounded-md border border-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
-            placeholder="Type to get suggestions..."
-            rows={3}
-            value={value || ""}
-            onChange={(e) => {
-              onChange(e.target.value);
-              debouncedThankYouSearch(e.target.value);
-            }}
-            onKeyDown={handleThankYouKeyDown}
-            onFocus={() => {
-              if (value && value.length >= 2) {
-                debouncedThankYouSearch(value);
-              }
-            }}
-            onBlur={() => {
-              setTimeout(() => {
-                setShowThankYouSuggestions(false);
-                setSelectedSuggestionIndex(-1);
-              }, 200);
-            }}
-          />
-
-          {loadingThankYou && (
-            <div className="absolute right-3 top-3 pointer-events-none">
-              <div className="animate-spin rounded-full h-4 w-4 border-2 border-indigo-600 border-t-transparent"></div>
-            </div>
-          )}
-
-          {showThankYouSuggestions && thankYouSuggestions.length > 0 && (
-            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
-              {thankYouSuggestions.map((note, index) => {
-                const isSelected = index === selectedSuggestionIndex;
-                return (
-                  <div
-                    key={note.id}
-                    className={`px-3 py-2 cursor-pointer text-sm border-b border-gray-100 last:border-b-0 transition-colors ${isSelected
-                      ? 'bg-indigo-100 text-indigo-900'
-                      : 'hover:bg-gray-50 text-gray-700'
-                      }`}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      selectThankYouNote(note);
-                    }}
-                    onMouseEnter={() => setSelectedSuggestionIndex(index)}
-                  >
-                    <div className="truncate">
-                      {note.text.length > 80 ? `${note.text.substring(0, 80)}...` : note.text}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {showThankYouSuggestions && thankYouSuggestions.length === 0 && !loadingThankYou && value && value.length >= 2 && (
-            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
-              <div className="px-3 py-2 text-sm text-gray-500 italic">
-                No suggestions found. Keep typing to create a new one.
-              </div>
-            </div>
-          )}
-        </div>
-      )
-    }
-  ];
-
-  // Step 2 Fields
-  const step2Fields = [
-    {
-      name: "items_section",
-      label: "Items",
-      component: () => (
-        <ItemSelectionEngine
-          baseApi={BASE_API}
-          authToken={localStorage.getItem("access")}
-          items={items}
-          setItems={setItems}
-          lowItems={lowItems}
-          setLowItems={setLowItems}
-          mode="quotation"
-          gstType={formData.gst_type}
-        />
-      ),
-      gridCols: 2,
-    },
-  ];
-
-  const getCurrentFields = () => {
-    switch (step) {
-      case 1: return step1Fields;
-      case 2: return step2Fields;
-      default: return step1Fields;
-    }
-  };
+  const productOptions = useMemo(() => {
+    return availableProducts.map((p) => ({
+      value: p.id,
+      label: p.name,
+      product: p,
+    }));
+  }, [availableProducts]);
 
   return (
-    <>
-      <div className="fixed inset-0 mt-8 bg-black/40 flex items-start sm:items-center justify-center z-50">
-        <div className="bg-white rounded-md shadow-lg w-full max-w-4xl relative max-h-[90vh] flex flex-col">
-          <div className="sticky top-0 bg-white z-10 border-b px-6 py-4">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">
-                {isEdit 
-                  ? (versionName ? `${versionName} - Edit Quotation` : "Edit Quotation")
-                  : isFromLead 
-                    ? "Create Quotation from Enquiry" 
-                    : "Add Quotation"
-                }
-              </h2>
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
+      <div className="bg-white rounded-xl shadow-xl border border-slate-100 max-w-4xl w-full mx-auto my-6 relative max-h-[90vh] flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="bg-white px-6 pt-6 pb-2 flex justify-between items-start">
+          <div>
+            <h3 className="text-xl font-bold text-slate-900">
+              {isEdit
+                ? versionName
+                  ? `${versionName} - Edit Quotation`
+                  : "Edit Quotation"
+                : "Add New Quotation"}
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">Configure quotation items and commercial pricing terms</p>
+          </div>
+          <button
+            onClick={onBack}
+            className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-50"
+          >
+            <RxCross2 size={18} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-6 overflow-y-auto flex-1 scrollbar-thin">
+          <form onSubmit={handleSubmit} className="space-y-6 text-slate-800">
+            {/* Lead Section */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 pb-1 border-b border-slate-100">
+                Lead Information
+              </h4>
+
+              {/* ✅ Mobile Number Search - Single field */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-600">
+                  Mobile Number <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Enter mobile number to fetch lead data..."
+                    value={formData.mobile_number}
+                    onChange={handleMobileChange}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                    maxLength={10}
+                  />
+                  {searchingLead && (
+                    <div className="absolute right-3 top-2.5">
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                    </div>
+                  )}
+                  {leadFound && formData.mobile_number && (
+                    <div className="absolute right-3 top-2.5 text-emerald-500">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+                {leadFound && (
+                  <p className="text-[10px] text-emerald-600 font-medium">
+                    ✓ Lead found: {leadFound.company_name || "No Company"} 
+                    {leadFound.contact_person && ` • ${leadFound.contact_person}`}
+                  </p>
+                )}
+                {!leadFound && formData.mobile_number && formData.mobile_number.length >= 10 && !searchingLead && (
+                  <p className="text-[10px] text-amber-600 font-medium">
+                    ⚠ No lead found with this number. You can manually enter details below.
+                  </p>
+                )}
+              </div>
+
+              {/* Fields - Auto-populated or manually editable */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-slate-600">Company Name *</label>
+                  <input
+                    type="text"
+                    value={formData.company_name}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, company_name: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                    placeholder="Company Name"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-slate-600">Contact Person *</label>
+                  <input
+                    type="text"
+                    value={formData.contact_person}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, contact_person: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                    placeholder="Contact Person"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-slate-600">Email Address</label>
+                  <input
+                    type="email"
+                    value={formData.email_address}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, email_address: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                    placeholder="contact@company.com"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-slate-600">LinkedIn Profile URL</label>
+                  <input
+                    type="url"
+                    value={formData.linkedin_profile_url}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, linkedin_profile_url: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                    placeholder="https://linkedin.com/in/username"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-slate-600">State</label>
+                  <input
+                    type="text"
+                    value={formData.state}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, state: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                    placeholder="State"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-slate-600">City</label>
+                  <input
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, city: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                    placeholder="City"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-slate-600">Industry Type</label>
+                  <input
+                    type="text"
+                    value={formData.industry_type}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, industry_type: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                    placeholder="Industry Type"
+                  />
+                </div>
+
+
+                {/* Add these fields in the grid after industry_type or before Quotation Details */}
+<div className="space-y-1">
+  <label className="block text-xs font-semibold text-slate-600">GST Number</label>
+  <input
+    type="text"
+    value={formData.gst_number}
+    onChange={(e) => setFormData((prev) => ({ ...prev, gst_number: e.target.value }))}
+    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+    placeholder="29AAGCM0000A1ZP"
+    maxLength={15}
+  />
+</div>
+
+<div className="space-y-1">
+  <label className="block text-xs font-semibold text-slate-600">PAN Number</label>
+  <input
+    type="text"
+    value={formData.pan_number}
+    onChange={(e) => setFormData((prev) => ({ ...prev, pan_number: e.target.value }))}
+    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+    placeholder="AAGCM0000A"
+    maxLength={10}
+  />
+</div>
+
+<div className="space-y-1">
+  <label className="block text-xs font-semibold text-slate-600">MSME Number</label>
+  <input
+    type="text"
+    value={formData.msme_number}
+    onChange={(e) => setFormData((prev) => ({ ...prev, msme_number: e.target.value }))}
+    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+    placeholder="UDYAM-XX-XX-XXXXXXX"
+  />
+</div>
+
+
+
+
+              </div>
+            </div>
+
+            {/* Quotation Details */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 pb-1 border-b border-slate-100">
+                Quotation Details
+              </h4>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1 md:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-600">Subject *</label>
+                  <input
+                    type="text"
+                    value={formData.subject}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, subject: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                    placeholder="Quotation Subject"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-slate-600">GST Type *</label>
+                  <select
+                    value={formData.gst_type}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, gst_type: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white h-[38px]"
+                  >
+                    <option value="CGST_SGST">CGST + SGST</option>
+                    <option value="IGST">IGST</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1 md:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-600">Thank You Note *</label>
+                  <textarea
+                    value={formData.thank_you_note}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, thank_you_note: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                    rows={2}
+                    placeholder="Thank you note..."
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Products Section */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 pb-1 border-b border-slate-100">
+                Line Items *
+              </h4>
+
+              <div className="space-y-1">
+                <Select
+                  options={productOptions}
+                  placeholder={loadingProducts ? "Loading products..." : "Search and select product..."}
+                  isLoading={loadingProducts}
+                  isClearable
+                  onChange={(selected) => {
+                    if (selected) {
+                      addProduct(selected.product);
+                    }
+                  }}
+                  styles={{
+                    control: (base) => ({
+                      ...base,
+                      minHeight: "38px",
+                      borderColor: "#e2e8f0",
+                      borderRadius: "0.5rem",
+                      "&:hover": { borderColor: "#e2e8f0" },
+                    }),
+                  }}
+                />
+              </div>
+
+              {items.length > 0 ? (
+                <div className="overflow-x-auto border border-slate-200/80 rounded-lg shadow-2xs">
+                  <table className="w-full text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
+                      <tr>
+                        <th className="px-3 py-2 text-left">#</th>
+                        <th className="px-3 py-2 text-left">Product</th>
+                        <th className="px-3 py-2 text-left">HSN/SAC</th>
+                        <th className="px-3 py-2 text-center">Qty</th>
+                        <th className="px-3 py-2 text-right">Unit Price</th>
+                        <th className="px-3 py-2 text-center">GST %</th>
+                        <th className="px-3 py-2 text-right">Total</th>
+                        <th className="px-3 py-2 text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {items.map((item, index) => {
+                        const baseAmount = (item.quantity || 0) * (item.unit_price || 0);
+                        const gstAmount = (baseAmount * (item.gst_percentage || 18)) / 100;
+                        const total = baseAmount + gstAmount;
+
+                        return (
+                          <tr key={index} className="hover:bg-slate-50/50">
+                            <td className="px-3 py-2 text-slate-400 font-medium">{index + 1}</td>
+                            <td className="px-3 py-2">
+                              <div className="font-semibold text-slate-900">{item.product_name}</div>
+                              <div className="text-[10px] text-slate-400">{item.product_code}</div>
+                            </td>
+                            <td className="px-3 py-2 text-slate-600">{item.hsn_sac_code || "-"}</td>
+                            <td className="px-3 py-2 text-center">
+                              <input
+                                type="number"
+                                value={item.quantity}
+                                onChange={(e) => updateItem(index, "quantity", parseFloat(e.target.value) || 0)}
+                                className="w-16 px-2 py-1 border border-slate-200 rounded text-center bg-white"
+                                min="0.01"
+                                step="0.01"
+                              />
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              <input
+                                type="number"
+                                value={item.unit_price}
+                                onChange={(e) => updateItem(index, "unit_price", parseFloat(e.target.value) || 0)}
+                                className="w-24 px-2 py-1 border border-slate-200 rounded text-right bg-white"
+                                min="0"
+                                step="0.01"
+                              />
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <input
+                                type="number"
+                                value={item.gst_percentage}
+                                onChange={(e) => updateItem(index, "gst_percentage", parseFloat(e.target.value) || 0)}
+                                className="w-16 px-2 py-1 border border-slate-200 rounded text-center bg-white"
+                                min="0"
+                                max="100"
+                                step="0.01"
+                              />
+                            </td>
+                            <td className="px-3 py-2 text-right font-semibold text-slate-900">
+                              ₹{total.toFixed(2)}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <button
+                                type="button"
+                                onClick={() => removeItem(index)}
+                                className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
+                              >
+                                <MdDelete size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="bg-slate-50 border-t border-slate-200 font-medium">
+                      <tr>
+                        <td colSpan="6" className="px-3 py-1.5 text-right text-slate-600">Subtotal:</td>
+                        <td className="px-3 py-1.5 text-right font-semibold text-slate-900">
+                          ₹{calculateTotals.subtotal.toFixed(2)}
+                        </td>
+                        <td></td>
+                      </tr>
+                      <tr>
+                        <td colSpan="6" className="px-3 py-1.5 text-right text-slate-600">
+                          GST ({formData.gst_type === "CGST_SGST" ? "CGST + SGST" : "IGST"}):
+                        </td>
+                        <td className="px-3 py-1.5 text-right font-semibold text-slate-900">
+                          ₹{calculateTotals.totalGst.toFixed(2)}
+                        </td>
+                        <td></td>
+                      </tr>
+                      <tr className="border-t border-slate-200 font-bold text-slate-900">
+                        <td colSpan="6" className="px-3 py-2 text-right">Grand Total:</td>
+                        <td className="px-3 py-2 text-right text-blue-600 text-sm">
+                          ₹{calculateTotals.grandTotal.toFixed(2)}
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400 text-center py-6 border border-dashed border-slate-200 rounded-lg">
+                  No line items attached. Search and select products above.
+                </p>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
               <button
+                type="button"
                 onClick={onBack}
-                className="text-xl font-bold hover:text-red-500"
-                aria-label="Close"
+                className="px-4 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 bg-white hover:bg-slate-50 transition-colors shadow-xs"
               >
-                ✕
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-5 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm shadow-blue-500/10"
+              >
+                {loading ? "Saving..." : isEdit ? "Update Quotation" : "Create Quotation"}
               </button>
             </div>
-
-            <div className="flex items-center justify-center space-x-4">
-              <div className={`flex items-center ${step >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
-                  1
-                </div>
-                <span className="ml-2">Basic Info</span>
-              </div>
-              <div className={`w-8 h-1 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-              <div className={`flex items-center ${step >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
-                  2
-                </div>
-                <span className="ml-2">Items</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-6">
-            <ReusableForm
-              fields={getCurrentFields()}
-              formData={formData}
-              onChange={setFormData}
-              onSubmit={
-                step === 2
-                  ? handleSubmit
-                  : step === 1
-                    ? () => { if (validateStep1()) setStep(2); }
-                    : () => { }
-              }
-              loading={loading}
-              showCancel={true}
-              onCancel={step > 1 ? () => setStep(step - 1) : onBack}
-              submitText={step === 2 ? (isEdit ? "Update Quotation" : "Save Quotation") : "Next"}
-              cancelText={step > 1 ? "Back" : "Cancel"}
-            />
-          </div>
+          </form>
         </div>
       </div>
-    </>
+    </div>
   );
 }

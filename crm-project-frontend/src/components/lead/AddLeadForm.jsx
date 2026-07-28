@@ -46,6 +46,10 @@ export default function AddLeadForm({
     is_tally_user: "",
     requirement_details: "",
     remarks: "",
+    // ✅ NEW FIELDS
+    gst_number: "",
+    pan_number: "",
+    msme_number: "",
   });
 
   const cities = useMemo(() => {
@@ -231,6 +235,10 @@ export default function AddLeadForm({
         is_tally_user: lead.is_tally_user || "",
         requirement_details: lead.requirement_details || "",
         remarks: lead.remarks || "",
+        // ✅ NEW FIELDS
+        gst_number: lead.gst_number || "",
+        pan_number: lead.pan_number || "",
+        msme_number: lead.msme_number || "",
       });
 
       setShowOtherLeadSource(isLeadSourceOther);
@@ -265,6 +273,10 @@ export default function AddLeadForm({
         is_tally_user: "",
         requirement_details: "",
         remarks: "",
+        // ✅ NEW FIELDS
+        gst_number: "",
+        pan_number: "",
+        msme_number: "",
       });
 
       setShowOtherLeadSource(false);
@@ -431,6 +443,10 @@ export default function AddLeadForm({
         requirement_details: formData.requirement_details || "",
         remarks: formData.remarks || "",
         status: "open",
+        // ✅ NEW FIELDS
+        gst_number: formData.gst_number || "",
+        pan_number: formData.pan_number || "",
+        msme_number: formData.msme_number || "",
       };
 
       const url = lead ? `${API_URL}${lead.id}/` : API_URL;
@@ -579,7 +595,6 @@ export default function AddLeadForm({
         `}
       </style>
       <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
-        {/* Parent container has clear overflow-hidden to let all corners inherit the exact same rounded curve */}
         <div className="bg-white rounded-xl shadow-xl border border-slate-100 max-w-2xl w-full mx-auto my-8 relative max-h-[90vh] flex flex-col overflow-hidden">
           
           {/* Header Bar */}
@@ -598,7 +613,7 @@ export default function AddLeadForm({
             </button>
           </div>
 
-          {/* Form Main Body - flex layout handles custom scrollbar paths cleanly inside the round edges */}
+          {/* Form Main Body */}
           <div className="p-6 overflow-y-auto flex-1 scrollbar-thin">
             <form className="space-y-4 text-slate-800" onSubmit={handleSubmit}>
               {step === 1 && (
@@ -900,6 +915,60 @@ export default function AddLeadForm({
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  {/* ✅ NEW FIELDS - GST, PAN, MSME */}
+                  <div className="space-y-1">
+                    <label className="block text-xs font-semibold text-slate-600">
+                      GST Number
+                    </label>
+                    <input
+                      name="gst_number"
+                      type="text"
+                      placeholder="29AAGCM0000A1ZP"
+                      value={formData.gst_number}
+                      onChange={(e) => {
+                        clearError(e);
+                        handleChange(e);
+                      }}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                      maxLength={15}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-xs font-semibold text-slate-600">
+                      PAN Number
+                    </label>
+                    <input
+                      name="pan_number"
+                      type="text"
+                      placeholder="AAGCM0000A"
+                      value={formData.pan_number}
+                      onChange={(e) => {
+                        clearError(e);
+                        handleChange(e);
+                      }}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                      maxLength={10}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-xs font-semibold text-slate-600">
+                      MSME Number
+                    </label>
+                    <input
+                      name="msme_number"
+                      type="text"
+                      placeholder="UDYAM-XX-XX-XXXXXXX"
+                      value={formData.msme_number}
+                      onChange={(e) => {
+                        clearError(e);
+                        handleChange(e);
+                      }}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                    />
                   </div>
                 </div>
               )}

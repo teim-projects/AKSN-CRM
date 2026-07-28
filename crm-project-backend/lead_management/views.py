@@ -116,7 +116,6 @@ class LeadViewSet(viewsets.ModelViewSet):
             "company_name": lead.company_name,
             "contact_person": lead.contact_person,
         }, status=status.HTTP_200_OK)
-
     @action(detail=True, methods=['post'], url_path='convert-to-customer')
     @transaction.atomic
     def convert_to_customer(self, request, pk=None):
@@ -147,7 +146,7 @@ class LeadViewSet(viewsets.ModelViewSet):
                 "customer_name": existing_customer.name
             }, status=status.HTTP_200_OK)
     
-        # Create new customer from lead data - map only matching fields
+        # Create new customer from lead data - map all fields
         customer_data = {
             "name": lead.company_name or lead.contact_person or "Unknown",
             "contact_person": lead.contact_person,
@@ -157,11 +156,13 @@ class LeadViewSet(viewsets.ModelViewSet):
             "state": lead.state,
             "industry_category": lead.industry_type,
             "product_purchased": lead.product_interested,
+            # ✅ Auto-map new fields
+            "gst_number": lead.gst_number or "",
+            "pan_number": lead.pan_number or "",
+            "msme_number": lead.msme_number or "",
             # These fields need to be added manually after conversion
             "designation": "",
             "website": "",
-            "gst_number": "",
-            "pan_number": "",
             "service_package": [],
             "payment_terms": "",
             "project_value": None,

@@ -30,6 +30,7 @@ export default function AddCustomerForm({
     industry_category: "",
     gst_number: "",
     pan_number: "",
+    msme_number: "", // ✅ NEW
     product_purchased: [],
     service_package: [],
     payment_terms: "",
@@ -197,6 +198,7 @@ export default function AddCustomerForm({
       industry_category: customer.industry_category || "",
       gst_number: customer.gst_number || "",
       pan_number: customer.pan_number || customer.pan || "",
+      msme_number: customer.msme_number || "", // ✅ NEW
       product_purchased: Array.isArray(customer.product_purchased) ? customer.product_purchased : [],
       service_package: Array.isArray(customer.service_package) ? customer.service_package : [],
       payment_terms: customer.payment_terms || "",
@@ -248,6 +250,7 @@ export default function AddCustomerForm({
         industry_category: "",
         gst_number: "",
         pan_number: "",
+        msme_number: "", // ✅ NEW
         product_purchased: [],
         service_package: [],
         payment_terms: "",
@@ -336,6 +339,10 @@ export default function AddCustomerForm({
         state: lead.state || prev.state,
         industry_category: lead.industry_type || prev.industry_category,
         product_purchased: lead.product_interested || prev.product_purchased,
+        // ✅ Auto-map new fields
+        gst_number: lead.gst_number || prev.gst_number,
+        pan_number: lead.pan_number || prev.pan_number,
+        msme_number: lead.msme_number || prev.msme_number,
       }));
 
       Swal.fire({
@@ -397,134 +404,132 @@ export default function AddCustomerForm({
     
     return true;
   };
-const handleSubmit = async (e) => {
-  e && e.preventDefault();
-  if (!validate()) return;
 
-  setLoading(true);
-  try {
-    const payload = {
-      name: formData.name.trim(),
-      contact_person: formData.contact_person?.trim() || "",
-      designation: formData.designation?.trim() || "",
-      contact_number: formData.contact_number?.toString() || "",
-      email: formData.email ? String(formData.email).trim() : "",
-      website: formData.website?.trim() || "",
-      industry_category: formData.industry_category || "",
-      gst_number: formData.gst_number?.trim().toUpperCase() || "",
-      pan_number: formData.pan_number?.trim().toUpperCase() || "",
-      product_purchased: formData.product_purchased || [],
-      service_package: formData.service_package || [],
-      payment_terms: formData.payment_terms || "",
-      project_value: formData.project_value || null,
-      sales_executive: formData.sales_executive || null,
-      amc_start_date: formData.amc_start_date || null,
-      amc_end_date: formData.amc_end_date || null,
-      customer_status: formData.customer_status || "prospect",
-      billing_address: formData.billing_address?.trim() || "",
-      city: formData.city?.trim() || "",
-      state: formData.state?.trim() || "",
-      pin_code: formData.pin_code?.toString().trim() || "",
-    };
+  const handleSubmit = async (e) => {
+    e && e.preventDefault();
+    if (!validate()) return;
 
-    const url = customer ? `${API_URL}${customer.id}/` : API_URL;
-    const method = customer ? "PATCH" : "POST";
+    setLoading(true);
+    try {
+      const payload = {
+        name: formData.name.trim(),
+        contact_person: formData.contact_person?.trim() || "",
+        designation: formData.designation?.trim() || "",
+        contact_number: formData.contact_number?.toString() || "",
+        email: formData.email ? String(formData.email).trim() : "",
+        website: formData.website?.trim() || "",
+        industry_category: formData.industry_category || "",
+        gst_number: formData.gst_number?.trim().toUpperCase() || "",
+        pan_number: formData.pan_number?.trim().toUpperCase() || "",
+        msme_number: formData.msme_number?.trim() || "", // ✅ NEW
+        product_purchased: formData.product_purchased || [],
+        service_package: formData.service_package || [],
+        payment_terms: formData.payment_terms || "",
+        project_value: formData.project_value || null,
+        sales_executive: formData.sales_executive || null,
+        amc_start_date: formData.amc_start_date || null,
+        amc_end_date: formData.amc_end_date || null,
+        customer_status: formData.customer_status || "prospect",
+        billing_address: formData.billing_address?.trim() || "",
+        city: formData.city?.trim() || "",
+        state: formData.state?.trim() || "",
+        pin_code: formData.pin_code?.toString().trim() || "",
+      };
 
-    const res = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      },
-      body: JSON.stringify(payload)
-    });
+      const url = customer ? `${API_URL}${customer.id}/` : API_URL;
+      const method = customer ? "PATCH" : "POST";
 
-    let data;
-    try { data = await res.json(); } catch (e) { data = {}; }
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(payload)
+      });
 
-    if (!res.ok) {
-      let errorMessage = "";
-      if (data) {
-        if (typeof data === "object") {
-          errorMessage = Object.entries(data)
-            .map(([field, messages]) => {
-              const msg = Array.isArray(messages) ? messages.join(", ") : messages;
-              return `${field}: ${msg}`;
-            })
-            .join("\n");
+      let data;
+      try { data = await res.json(); } catch (e) { data = {}; }
+
+      if (!res.ok) {
+        let errorMessage = "";
+        if (data) {
+          if (typeof data === "object") {
+            errorMessage = Object.entries(data)
+              .map(([field, messages]) => {
+                const msg = Array.isArray(messages) ? messages.join(", ") : messages;
+                return `${field}: ${msg}`;
+              })
+              .join("\n");
+          } else {
+            errorMessage = data.detail || "Something went wrong";
+          }
         } else {
-          errorMessage = data.detail || "Something went wrong";
+          errorMessage = `${res.status} ${res.statusText}`;
         }
-      } else {
-        errorMessage = `${res.status} ${res.statusText}`;
+        throw new Error(errorMessage);
       }
-      throw new Error(errorMessage);
-    }
 
-    // After successfully creating/updating customer, check if there's a lead with same mobile number
-    // and mark it as converted if not already
-    if (formData.contact_number && !customer) {
-      try {
-        // Find lead with this mobile number
-        const leadRes = await fetch(`${LEAD_API_URL}?search=${formData.contact_number}`, {
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        });
-        
-        if (leadRes.ok) {
-          const leadData = await leadRes.json();
-          const leads = Array.isArray(leadData) ? leadData : leadData.results || [];
+      // After successfully creating/updating customer, check if there's a lead with same mobile number
+      // and mark it as converted if not already
+      if (formData.contact_number && !customer) {
+        try {
+          const leadRes = await fetch(`${LEAD_API_URL}?search=${formData.contact_number}`, {
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          });
           
-          // If a lead exists with this mobile number and it's not converted yet
-          if (leads.length > 0) {
-            const lead = leads[0];
-            if (!lead.is_converted) {
-              // Link the lead to this customer
-              const updateLeadRes = await fetch(`${LEAD_API_URL}${lead.id}/`, {
-                method: "PATCH",
-                headers: {
-                  "Content-Type": "application/json",
-                  ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                },
-                body: JSON.stringify({
-                  converted_to_customer: data.id,
-                  is_converted: true
-                })
-              });
-              
-              if (updateLeadRes.ok) {
-                console.log(`Lead ${lead.id} marked as converted to customer ${data.id}`);
+          if (leadRes.ok) {
+            const leadData = await leadRes.json();
+            const leads = Array.isArray(leadData) ? leadData : leadData.results || [];
+            
+            if (leads.length > 0) {
+              const lead = leads[0];
+              if (!lead.is_converted) {
+                const updateLeadRes = await fetch(`${LEAD_API_URL}${lead.id}/`, {
+                  method: "PATCH",
+                  headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                  },
+                  body: JSON.stringify({
+                    converted_to_customer: data.id,
+                    is_converted: true
+                  })
+                });
+                
+                if (updateLeadRes.ok) {
+                  console.log(`Lead ${lead.id} marked as converted to customer ${data.id}`);
+                }
               }
             }
           }
+        } catch (err) {
+          console.error("Error linking lead to customer:", err);
         }
-      } catch (err) {
-        console.error("Error linking lead to customer:", err);
-        // Don't block the success flow if this fails
       }
+
+      Swal.fire({
+        icon: "success",
+        text: customer ? "Customer updated successfully" : "Customer added successfully",
+        timer: 1200,
+        showConfirmButton: false
+      });
+
+      onSuccess && onSuccess(data);
+      onClose && onClose();
+    } catch (err) {
+      Swal.fire({ icon: "error", title: "Error", text: err.message || "Failed to save customer" });
+    } finally {
+      setLoading(false);
     }
-
-    Swal.fire({
-      icon: "success",
-      text: customer ? "Customer updated successfully" : "Customer added successfully",
-      timer: 1200,
-      showConfirmButton: false
-    });
-
-    onSuccess && onSuccess(data);
-    onClose && onClose();
-  } catch (err) {
-    Swal.fire({ icon: "error", title: "Error", text: err.message || "Failed to save customer" });
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   // Product options for react-select
   const productSelectOptions = products
-    .filter(p => p.is_service !== true) // Products only (not services)
+    .filter(p => p.is_service !== true)
     .map((p) => ({
       value: p.id,
       label: p.name,
@@ -532,7 +537,7 @@ const handleSubmit = async (e) => {
 
   // Service options for react-select (only is_service = true)
   const serviceSelectOptions = services
-    .filter(s => s.is_service === true) // Services only
+    .filter(s => s.is_service === true)
     .map((s) => ({
       value: s.id,
       label: s.name,
@@ -728,6 +733,18 @@ const handleSubmit = async (e) => {
                       onChange={handleChange}
                       maxLength={10}
                       placeholder="AAGCM0000A"
+                    />
+                  </div>
+
+                  {/* ✅ MSME Number Field */}
+                  <div className="space-y-1">
+                    <label className="block text-xs font-semibold text-slate-600">MSME Number</label>
+                    <input 
+                      name="msme_number"
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                      value={formData.msme_number} 
+                      onChange={handleChange}
+                      placeholder="UDYAM-XX-XX-XXXXXXX"
                     />
                   </div>
                 </div>

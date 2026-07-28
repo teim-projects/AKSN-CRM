@@ -1,52 +1,23 @@
 from rest_framework import serializers
 from django.db import transaction
-import random
-from datetime import datetime
+from decimal import Decimal
 
 from .models import (
     Quotation,
     QuotationVersion,
-    QuotationHighSideItem,
-    QuotationLowSideItem,
+    QuotationItem
 )
-from .models import ServiceMaster, QuotationServiceItem
 
-# =====================================================
-# HIGH SIDE SERIALIZER - Decoupled
-# =====================================================
-class QuotationHighSideItemSerializer(serializers.ModelSerializer):
-    # Read from product_data JSON
-    product_id = serializers.IntegerField(source="product_data.id", read_only=True)
-    product_name = serializers.CharField(source="product_data.name", read_only=True)
-    product_sku = serializers.CharField(source="product_data.sku", read_only=True)
-    product_category = serializers.CharField(source="product_data.category", read_only=True)
 
+class QuotationItemSerializer(serializers.ModelSerializer):
     class Meta:
-        model = QuotationHighSideItem
+        model = QuotationItem
         fields = "__all__"
         read_only_fields = ("quotation_version", "base_amount", "gst_amount", "total_with_gst")
 
 
-# =====================================================
-# LOW SIDE SERIALIZER - Decoupled
-# =====================================================
-class QuotationLowSideItemSerializer(serializers.ModelSerializer):
-    # Read from item_data JSON
-    item_code = serializers.CharField(source="item_data.item_code", read_only=True)
-    item_name = serializers.CharField(source="item_data.name", read_only=True)
-
-    class Meta:
-        model = QuotationLowSideItem
-        fields = "__all__"
-        read_only_fields = ("quotation_version", "base_amount", "gst_amount", "total_with_gst")
-
-
-# =====================================================
-# VERSION SERIALIZER
-# =====================================================
 class QuotationVersionSerializer(serializers.ModelSerializer):
-    high_side_items = QuotationHighSideItemSerializer(many=True)
-    low_side_items = QuotationLowSideItemSerializer(many=True)
+    items = QuotationItemSerializer(many=True)
     version_label = serializers.SerializerMethodField()
 
     class Meta:
@@ -67,90 +38,50 @@ class QuotationVersionSerializer(serializers.ModelSerializer):
         )
 
     def get_version_label(self, obj):
-        return f"{obj.quotation.quotation_no}-R{obj.version_no}"    
+        return obj.version_no
 
 
-# =====================================================
-# MAIN QUOTATION SERIALIZER
-# =====================================================
 class QuotationSerializer(serializers.ModelSerializer):
-    customer_name = serializers.CharField(
-        source="customer.name", read_only=True
+    lead_name = serializers.CharField(
+        source="lead.company_name", read_only=True
     )
-    customer_contact = serializers.CharField(
-        source="customer.contact_number", read_only=True
+    lead_contact = serializers.CharField(
+        source="lead.mobile_number", read_only=True
     )
-    
-    # Removed branch and site fields
-
-    versions = QuotationVersionSerializer(many=True)
-    
-    # Removed terms_conditions fields
+    versions = QuotationVersionSerializer(many=True, read_only=True)
 
     class Meta:
         model = Quotation
         fields = "__all__"
-        read_only_fields = ("quotation_no",)
+        read_only_fields = ("quotation_no", "created_by", "created_at", "updated_at")
 
-    # =====================================================
-    # 🔥 CORE CALCULATION ENGINE
-    # =====================================================
-    def calculate_totals(self, version, high_items, low_items):
+    def calculate_totals(self, version, items_data):
+        """Calculate all totals for the version"""
         version_subtotal = 0
         version_gst_total = 0
-    
-        # =============================
-        # HIGH SIDE
-        # =============================
-        for item in high_items:
-            qty = item["quantity"]
-            price = item["unit_price"]
-            gst_percent = item.get("gst_percent", 0)
-            mathadi = item.get("mathadi_charges", 0)
-            transport = item.get("transportation_charges", 0)
-    
+
+        for item_data in items_data:
+            qty = Decimal(str(item_data.get("quantity", 1)))
+            price = Decimal(str(item_data.get("unit_price", 0)))
+            gst_percent = Decimal(str(item_data.get("gst_percentage", 18)))
+
             base_amount = qty * price
             gst_value = (base_amount * gst_percent) / 100
-            total_with_gst = base_amount + gst_value + mathadi + transport
-    
-            version_subtotal += base_amount + mathadi + transport
+            total_with_gst = base_amount + gst_value
+
+            version_subtotal += base_amount
             version_gst_total += gst_value
-    
-            QuotationHighSideItem.objects.create(
+
+            # Create the item with calculated values
+            QuotationItem.objects.create(
                 quotation_version=version,
                 base_amount=base_amount,
                 gst_amount=gst_value,
                 total_with_gst=total_with_gst,
-                **item
+                **item_data
             )
-    
-        # =============================
-        # LOW SIDE
-        # =============================
-        for item in low_items:
-            qty = item["quantity"]
-            price = item["unit_price"]
-            gst_percent = item.get("gst_percent", 0)
-            mathadi = item.get("mathadi_charges", 0)
-    
-            base_amount = qty * price
-            gst_value = (base_amount * gst_percent) / 100
-            total_with_gst = base_amount + gst_value + mathadi
-    
-            version_subtotal += base_amount + mathadi
-            version_gst_total += gst_value
-    
-            QuotationLowSideItem.objects.create(
-                quotation_version=version,
-                base_amount=base_amount,
-                gst_amount=gst_value,
-                total_with_gst=total_with_gst,
-                **item
-            )
-    
-        # =============================
-        # GST SPLIT
-        # =============================
+
+        # GST Split
         if version.gst_type == "CGST_SGST":
             version.cgst_amount = version_gst_total / 2
             version.sgst_amount = version_gst_total / 2
@@ -159,144 +90,190 @@ class QuotationSerializer(serializers.ModelSerializer):
             version.igst_amount = version_gst_total
             version.cgst_amount = 0
             version.sgst_amount = 0
-    
+
         version.subtotal = version_subtotal
         version.gst_amount = version_gst_total
         version.total_amount = version_subtotal + version_gst_total
         version.grand_total = version.total_amount
-    
         version.save()
 
-    # =====================================================
-    # CREATE
-    # =====================================================
     @transaction.atomic
     def create(self, validated_data):
         request = self.context.get("request")
-        versions_data = validated_data.pop("versions")
-        # Removed terms_conditions
-    
-        version_data = versions_data[0]
-        high_items = version_data.pop("high_side_items")
-        low_items = version_data.pop("low_side_items")
+        items_data = validated_data.pop("items", [])
         
-        # Validate that we have at least one item
-        if not high_items and not low_items:
-            raise serializers.ValidationError("At least one item is required")
-    
-        # ======================================
-        # STEP 1️⃣ CREATE QUOTATION FIRST
-        # ======================================
+        # Validate at least one item
+        if not items_data:
+            raise serializers.ValidationError({"items": "At least one item is required"})
+
+        # ✅ Remove created_by from validated_data if it exists
+        validated_data.pop('created_by', None)
+
+        # Create quotation
         quotation = Quotation.objects.create(
-            quotation_no="TEMP",
-            **validated_data
+            **validated_data,
+            created_by=request.user if request else None
         )
-        
-        # Removed terms_conditions set
-    
-        # ======================================
-        # STEP 2️⃣ BUILD NUMBER USING DB ID
-        # ======================================
-        now = datetime.now()
-        year = str(now.year)[-2:]
-        month = str(now.month).zfill(2)
-        
-        # Try to get AC type from first high side item if exists
-        ac_code = "GEN"
-        if high_items and high_items[0].get("product_data"):
-            product_name = high_items[0]["product_data"].get("name", "")
-            ac_code = product_name[:3].upper() if product_name else "GEN"
-    
-        quotation_no = f"KA/{ac_code}/{year}/{month}{quotation.id}"
-        quotation.quotation_no = quotation_no
-        quotation.save(update_fields=["quotation_no"])
-    
-        # ======================================
-        # CREATE VERSION
-        # ======================================
-        version_no = f"{quotation.quotation_no}-R1"
-        
+
+        # Create version
         version = QuotationVersion.objects.create(
             quotation=quotation,
-            version_no=version_no,
+            gst_type=validated_data.get("gst_type", "CGST_SGST"),
             is_active=True,
-            created_by=request.user if request else None,
-            **version_data
-        )        
-        
-        self.calculate_totals(version, high_items, low_items)
-    
+            created_by=request.user if request else None
+        )
+
+        # Calculate totals and create items
+        self.calculate_totals(version, items_data)
+
         return quotation
-    
-    # =====================================================
-    # UPDATE (CREATE NEW VERSION)
-    # =====================================================
+
     @transaction.atomic
     def update(self, instance, validated_data):
         request = self.context.get("request")
-        versions_data = validated_data.pop("versions")
-        # Removed terms_conditions
+        items_data = validated_data.pop("items", [])
         
+        if not items_data:
+            raise serializers.ValidationError({"items": "At least one item is required"})
+
+        # ✅ Remove created_by from validated_data if it exists
+        validated_data.pop('created_by', None)
+
+        # Update quotation fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
-        
-        # Removed terms_conditions update
-        
+
+        # Deactivate old version
         old_version = instance.versions.filter(is_active=True).first()
-        
         if old_version:
             old_version.is_active = False
             old_version.save()
-            
-            current_r = int(old_version.version_no.split("-R")[-1])
-            next_r = current_r + 1
-        else:
-            next_r = 1
-        
-        new_version_no = f"{instance.quotation_no}-R{next_r}"
 
-        version_data = versions_data[0]
-        high_items = version_data.pop("high_side_items")
-        low_items = version_data.pop("low_side_items")
-
+        # Create new version
         new_version = QuotationVersion.objects.create(
             quotation=instance,
-            version_no=new_version_no,
+            gst_type=validated_data.get("gst_type", instance.gst_type),
             is_active=True,
-            created_by=request.user if request else None,
-            **version_data
+            created_by=request.user if request else None
         )
 
-        self.calculate_totals(new_version, high_items, low_items)
+        # Calculate totals and create items
+        self.calculate_totals(new_version, items_data)
 
         return instance
 
 
-class ServiceMasterSerializer(serializers.ModelSerializer):
+# Serializer for creating with items
+# Serializer for creating with items
+class QuotationCreateSerializer(serializers.ModelSerializer):
+    items = QuotationItemSerializer(many=True, write_only=True)
+
     class Meta:
-        model = ServiceMaster
-        fields = '__all__'
+        model = Quotation
+        fields = "__all__"
+        read_only_fields = ("quotation_no", "created_by", "created_at", "updated_at")
 
-
-class QuotationServiceItemSerializer(serializers.ModelSerializer):
-    service_name = serializers.CharField(source='service.name', read_only=True)
-    service_type = serializers.CharField(source='service.service_type', read_only=True)
-    category_name = serializers.CharField(source='service.category', read_only=True)
-    subcategory_name = serializers.CharField(source='service.subcategory', read_only=True)
-    
-    class Meta:
-        model = QuotationServiceItem
-        fields = '__all__'
-        read_only_fields = ['base_amount', 'gst_amount', 'total_with_gst']
-
-
-class QuotationServiceItemCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = QuotationServiceItem
-        fields = ['quotation_version', 'service', 'quantity', 'unit_price', 'description', 'gst_percentage', 'mathadi_charges', 'transportation_charges']
-    
     def create(self, validated_data):
-        service = validated_data['service']
-        validated_data['unit'] = service.unit
-        return super().create(validated_data)
+        request = self.context.get("request")
+        items_data = validated_data.pop("items", [])
+        
+        if not items_data:
+            raise serializers.ValidationError({"items": "At least one item is required"})
+
+        # ✅ Remove created_by from validated_data if it exists
+        validated_data.pop('created_by', None)
+
+        quotation = Quotation.objects.create(
+            **validated_data,
+            created_by=request.user if request else None
+        )
+
+        version = QuotationVersion.objects.create(
+            quotation=quotation,
+            gst_type=validated_data.get("gst_type", "CGST_SGST"),
+            is_active=True,
+            created_by=request.user if request else None
+        )
+
+        # Calculate totals and create items
+        self.calculate_totals(version, items_data)
+
+        return quotation
+
+    def update(self, instance, validated_data):
+        """✅ ADD THIS METHOD - Creates new version on update"""
+        request = self.context.get("request")
+        items_data = validated_data.pop("items", [])
+        
+        if not items_data:
+            raise serializers.ValidationError({"items": "At least one item is required"})
+
+        # ✅ Remove created_by from validated_data if it exists
+        validated_data.pop('created_by', None)
+
+        # Update quotation fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # Deactivate old version
+        old_version = instance.versions.filter(is_active=True).first()
+        if old_version:
+            old_version.is_active = False
+            old_version.save()
+
+        # Create new version
+        new_version = QuotationVersion.objects.create(
+            quotation=instance,
+            gst_type=validated_data.get("gst_type", instance.gst_type),
+            is_active=True,
+            created_by=request.user if request else None
+        )
+
+        # Calculate totals and create items
+        self.calculate_totals(new_version, items_data)
+
+        return instance
+
+    def calculate_totals(self, version, items_data):
+        """Calculate all totals for the version"""
+        version_subtotal = 0
+        version_gst_total = 0
+
+        for item_data in items_data:
+            qty = Decimal(str(item_data.get("quantity", 1)))
+            price = Decimal(str(item_data.get("unit_price", 0)))
+            gst_percent = Decimal(str(item_data.get("gst_percentage", 18)))
+
+            base_amount = qty * price
+            gst_value = (base_amount * gst_percent) / 100
+            total_with_gst = base_amount + gst_value
+
+            version_subtotal += base_amount
+            version_gst_total += gst_value
+
+            # Create the item with calculated values
+            QuotationItem.objects.create(
+                quotation_version=version,
+                base_amount=base_amount,
+                gst_amount=gst_value,
+                total_with_gst=total_with_gst,
+                **item_data
+            )
+
+        # GST Split
+        if version.gst_type == "CGST_SGST":
+            version.cgst_amount = version_gst_total / 2
+            version.sgst_amount = version_gst_total / 2
+            version.igst_amount = 0
+        else:
+            version.igst_amount = version_gst_total
+            version.cgst_amount = 0
+            version.sgst_amount = 0
+
+        version.subtotal = version_subtotal
+        version.gst_amount = version_gst_total
+        version.total_amount = version_subtotal + version_gst_total
+        version.grand_total = version.total_amount
+        version.save()
