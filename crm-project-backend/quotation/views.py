@@ -4,12 +4,60 @@ from rest_framework.response import Response
 from rest_framework.decorators import action, api_view
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
+from .models import Quotation, QuotationVersion, TermCategory, TermsConditions
 import logging
+from .serializers import (
+    QuotationSerializer, QuotationCreateSerializer,
+    TermCategorySerializer, TermCategoryCreateSerializer,
+    TermsConditionsSerializer, TermsConditionsCreateSerializer
+)
 
 from .models import Quotation, QuotationVersion
 from .serializers import QuotationSerializer, QuotationCreateSerializer
 
 logger = logging.getLogger(__name__)
+
+
+
+# =====================================================
+# TERMS & CONDITIONS VIEWS
+# =====================================================
+
+class TermCategoryViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    search_fields = ['name', 'description']
+    filterset_fields = ['is_active']
+    
+    def get_queryset(self):
+        return TermCategory.objects.all().prefetch_related('terms')
+    
+    def get_serializer_class(self):
+        if self.action == 'create' or self.action == 'update':
+            return TermCategoryCreateSerializer
+        return TermCategorySerializer
+    
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+
+class TermsConditionsViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    search_fields = ['name', 'description']
+    filterset_fields = ['category', 'is_active', 'is_default']
+    
+    def get_queryset(self):
+        return TermsConditions.objects.all().select_related('category')
+    
+    def get_serializer_class(self):
+        if self.action == 'create' or self.action == 'update':
+            return TermsConditionsCreateSerializer
+        return TermsConditionsSerializer
+    
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
 
 
 @api_view(['GET'])

@@ -4,12 +4,16 @@ from .views import (
     QuotationViewSet, 
     thank_you_suggestions, 
     subject_suggestions,
+    TermCategoryViewSet,
+    TermsConditionsViewSet,
 )
 
 router = DefaultRouter()
 
 # Register only Quotation ViewSet
 router.register(r'quotation', QuotationViewSet, basename='quotation')
+router.register(r'term-categories', TermCategoryViewSet, basename='term-categories')
+router.register(r'terms', TermsConditionsViewSet, basename='terms')
 
 urlpatterns = [
     # Suggestions endpoints

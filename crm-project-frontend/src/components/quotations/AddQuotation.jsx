@@ -33,8 +33,8 @@ export default function AddQuotation({ id, onBack }) {
     state: "",
     city: "",
     industry_type: "",
-    gst_number: "",        // ✅ NEW
-    pan_number: "",        // ✅ NEW
+    gst_number: "",
+    pan_number: "",
     msme_number: "",
     subject: "",
     gst_type: "CGST_SGST",
@@ -45,10 +45,10 @@ export default function AddQuotation({ id, onBack }) {
   const [availableProducts, setAvailableProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
 
-  // ✅ Single mobile number search
-  const [mobileSearch, setMobileSearch] = useState("");
+  // Single mobile number search
   const [searchingLead, setSearchingLead] = useState(false);
   const [leadFound, setLeadFound] = useState(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Load quotation for edit
   useEffect(() => {
@@ -64,11 +64,13 @@ export default function AddQuotation({ id, onBack }) {
           setVersionName(active.version_no);
         }
 
+        const mobile = q.mobile_number || "";
+        
         setFormData({
           lead: q.lead || "",
           company_name: q.company_name || "",
           contact_person: q.contact_person || "",
-          mobile_number: q.mobile_number || "",
+          mobile_number: mobile,
           email_address: q.email_address || "",
           linkedin_profile_url: q.linkedin_profile_url || "",
           state: q.state || "",
@@ -99,9 +101,17 @@ export default function AddQuotation({ id, onBack }) {
             }))
           );
         }
+
+        // ✅ Auto-search for lead after loading data
+        if (mobile && mobile.length >= 10) {
+          await searchLeadByMobile(mobile);
+        }
+        setIsInitialLoad(false);
+
       } catch (err) {
         console.error("Error loading quotation:", err);
         Swal.fire({ icon: "error", title: "Error", text: "Failed to load quotation" });
+        setIsInitialLoad(false);
       }
     };
 
@@ -126,8 +136,8 @@ export default function AddQuotation({ id, onBack }) {
     fetchProducts();
   }, []);
 
-  // ✅ Search lead by mobile number
-  const searchLeadByMobile = async (mobile) => {
+  // Search lead by mobile number
+  const searchLeadByMobile = useCallback(async (mobile) => {
     if (!mobile || mobile.length < 10) {
       setLeadFound(null);
       setFormData((prev) => ({
@@ -168,23 +178,23 @@ export default function AddQuotation({ id, onBack }) {
           state: lead.state || "",
           city: lead.city || "",
           industry_type: lead.industry_type || "",
-          subject: prev.subject || `Quotation for ${lead.company_name || lead.contact_person || "Lead"}`,
         }));
-        setMobileSearch(mobile);
       } else {
         setLeadFound(null);
-        // Clear form data if no lead found
-        setFormData((prev) => ({
-          ...prev,
-          lead: "",
-          company_name: "",
-          contact_person: "",
-          email_address: "",
-          linkedin_profile_url: "",
-          state: "",
-          city: "",
-          industry_type: "",
-        }));
+        // Don't clear form data if we're editing and already have data
+        if (!isEdit) {
+          setFormData((prev) => ({
+            ...prev,
+            lead: "",
+            company_name: "",
+            contact_person: "",
+            email_address: "",
+            linkedin_profile_url: "",
+            state: "",
+            city: "",
+            industry_type: "",
+          }));
+        }
       }
     } catch (err) {
       console.error("Error searching lead:", err);
@@ -192,19 +202,25 @@ export default function AddQuotation({ id, onBack }) {
     } finally {
       setSearchingLead(false);
     }
-  };
+  }, [isEdit]);
 
   // Debounced mobile search
   const debouncedMobileSearch = useCallback(
-    debounce((mobile) => searchLeadByMobile(mobile), 500),
-    []
+    debounce((mobile) => {
+      searchLeadByMobile(mobile);
+    }, 500),
+    [searchLeadByMobile]
   );
 
   // Handle mobile number change
   const handleMobileChange = (e) => {
-    const value = e.target.value.replace(/\D/g, ''); // Only digits
+    const value = e.target.value.replace(/\D/g, '');
     setFormData((prev) => ({ ...prev, mobile_number: value }));
-    debouncedMobileSearch(value);
+    if (value.length >= 10) {
+      debouncedMobileSearch(value);
+    } else if (value.length < 10 && value.length > 0) {
+      setLeadFound(null);
+    }
   };
 
   // Add product
@@ -316,8 +332,8 @@ export default function AddQuotation({ id, onBack }) {
       mobile_number: formData.mobile_number,
       email_address: formData.email_address || "",
       linkedin_profile_url: formData.linkedin_profile_url || "",
-      gst_number: formData.gst_number || "",      // ✅ NEW
-      pan_number: formData.pan_number || "",      // ✅ NEW
+      gst_number: formData.gst_number || "",
+      pan_number: formData.pan_number || "",
       msme_number: formData.msme_number || "",
       state: formData.state || "",
       city: formData.city || "",
@@ -418,7 +434,7 @@ export default function AddQuotation({ id, onBack }) {
                 Lead Information
               </h4>
 
-              {/* ✅ Mobile Number Search - Single field */}
+              {/* Mobile Number Search - Single field */}
               <div className="space-y-1">
                 <label className="block text-xs font-semibold text-slate-600">
                   Mobile Number <span className="text-red-500">*</span>
@@ -451,7 +467,7 @@ export default function AddQuotation({ id, onBack }) {
                     {leadFound.contact_person && ` • ${leadFound.contact_person}`}
                   </p>
                 )}
-                {!leadFound && formData.mobile_number && formData.mobile_number.length >= 10 && !searchingLead && (
+                {!leadFound && formData.mobile_number && formData.mobile_number.length >= 10 && !searchingLead && !isInitialLoad && (
                   <p className="text-[10px] text-amber-600 font-medium">
                     ⚠ No lead found with this number. You can manually enter details below.
                   </p>
@@ -539,46 +555,40 @@ export default function AddQuotation({ id, onBack }) {
                   />
                 </div>
 
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-slate-600">GST Number</label>
+                  <input
+                    type="text"
+                    value={formData.gst_number}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, gst_number: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                    placeholder="29AAGCM0000A1ZP"
+                    maxLength={15}
+                  />
+                </div>
 
-                {/* Add these fields in the grid after industry_type or before Quotation Details */}
-<div className="space-y-1">
-  <label className="block text-xs font-semibold text-slate-600">GST Number</label>
-  <input
-    type="text"
-    value={formData.gst_number}
-    onChange={(e) => setFormData((prev) => ({ ...prev, gst_number: e.target.value }))}
-    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
-    placeholder="29AAGCM0000A1ZP"
-    maxLength={15}
-  />
-</div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-slate-600">PAN Number</label>
+                  <input
+                    type="text"
+                    value={formData.pan_number}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, pan_number: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                    placeholder="AAGCM0000A"
+                    maxLength={10}
+                  />
+                </div>
 
-<div className="space-y-1">
-  <label className="block text-xs font-semibold text-slate-600">PAN Number</label>
-  <input
-    type="text"
-    value={formData.pan_number}
-    onChange={(e) => setFormData((prev) => ({ ...prev, pan_number: e.target.value }))}
-    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
-    placeholder="AAGCM0000A"
-    maxLength={10}
-  />
-</div>
-
-<div className="space-y-1">
-  <label className="block text-xs font-semibold text-slate-600">MSME Number</label>
-  <input
-    type="text"
-    value={formData.msme_number}
-    onChange={(e) => setFormData((prev) => ({ ...prev, msme_number: e.target.value }))}
-    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
-    placeholder="UDYAM-XX-XX-XXXXXXX"
-  />
-</div>
-
-
-
-
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-slate-600">MSME Number</label>
+                  <input
+                    type="text"
+                    value={formData.msme_number}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, msme_number: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                    placeholder="UDYAM-XX-XX-XXXXXXX"
+                  />
+                </div>
               </div>
             </div>
 

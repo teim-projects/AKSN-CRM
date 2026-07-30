@@ -22,6 +22,11 @@ import ProductList from './components/products/ProductList';
 import ProductForm from './components/products/ProductForm';
 import CategoryList from './components/products/CategoryList';
 import FollowUp from "./components/lead/FollowUp";
+import TermsCategoriesList from "./components/terms_conditions/TermsCategoriesList";
+import TermsCategoryForm from "./components/terms_conditions/TermsCategoryForm";
+import TermsForm from "./components/terms_conditions/TermsForm";
+
+
 
 function AppRoutes() {
   const location = useLocation();
@@ -71,6 +76,13 @@ function AppRoutes() {
       <Route path="/follow-up" element={<FollowUp />} />
       
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
+
+      <Route path="/terms" element={<TermsCategoriesList />} />
+      <Route path="/terms/add-category" element={<TermsCategoryForm />} />
+      <Route path="/terms/edit-category/:id" element={<TermsCategoryForm />} />
+      <Route path="/terms/add-term" element={<TermsForm />} />
+      <Route path="/terms/edit-term/:id" element={<TermsForm />} />
+
     </Routes>
   );
 

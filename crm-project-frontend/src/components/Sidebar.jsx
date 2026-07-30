@@ -10,6 +10,14 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useUserRole } from "../hooks/useAuth";
 
+// ✅ NEW: Terms & Conditions Icon
+function TermsIcon(props) { 
+  return <svg {...props} viewBox="0 0 24 24" fill="none">
+    <path d="M4 4h16v16H4V4z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M8 8h8M8 12h6M8 16h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  </svg>;
+}
+
 const allSidebarItems = [
   { key: "home", label: "Dashboard", icon: HomeIcon, path: "/dashboard", section: "OVERVIEW" },
   { key: "leads", label: "Lead Management", icon: TargetIcon, path: "/leads", section: "SALES" },
@@ -17,6 +25,8 @@ const allSidebarItems = [
   { key: "quotes", label: "Quotations", icon: QuoteIcon, path: "/quotation", section: "SALES" },
   { key: "products", label: "Product Master", icon: BoxIcon, path: "/products", section: "SALES" },
   { key: "contacts", label: "Customers", icon: UserIcon, path: "/customer", section: "SALES" },
+  // ✅ NEW: Terms & Conditions in SALES section
+  { key: "terms", label: "Terms & Conditions", icon: TermsIcon, path: "/terms", section: "SALES" },
   { key: "accounts", label: "Accounts", icon: BuildingIcon, path: "/accounts", section: "OPERATIONS" }, 
 ];
 
@@ -98,7 +108,6 @@ export default function Sidebar({ children }) {
           isSidebarOpen={isOpen}
         />
         
-        {/* REMOVED DENSE PADDING AND ALIGNED DIRECTLY TO EDGE LINES */}
         <main className="flex-1 p-5 md:p-6 overflow-x-hidden w-full">
           {children}
         </main>
@@ -263,7 +272,6 @@ function BuildingIcon(props) { return <svg {...props} viewBox="0 0 24 24" fill="
 function BoxIcon(props) { return <svg {...props} viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 00-1-1.73L13 3.27a2 2 0 00-2 0L4 6.27A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
 function QuoteIcon(props) { return <svg {...props} viewBox="0 0 24 24" fill="none"><path d="M8 7H5a2 2 0 00-2 2v4a2 2 0 002 2h3V7zM19 7h-3a2 2 0 00-2 2v4a2 2 0 002 2h3V7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
 
-// Follow-up Icon
 function FollowUpIcon(props) { 
   return <svg {...props} viewBox="0 0 24 24" fill="none">
     <path d="M12 8v4l2 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

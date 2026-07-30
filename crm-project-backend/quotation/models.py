@@ -5,6 +5,74 @@ from decimal import Decimal
 
 User = get_user_model()
 
+# =====================================================
+# TERMS & CONDITIONS MODELS (Standalone)
+# =====================================================
+
+class TermCategory(models.Model):
+    """Category for Terms & Conditions (e.g., Payment Terms, AMC Warranty)"""
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    sort_order = models.IntegerField(default=0)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='term_categories_created'
+    )
+    
+    class Meta:
+        ordering = ['sort_order', 'name']
+        verbose_name = "Term Category"
+        verbose_name_plural = "Term Categories"
+    
+    def __str__(self):
+        return self.name
+    
+    @property
+    def terms_count(self):
+        return self.terms.filter(is_active=True).count()
+
+
+class TermsConditions(models.Model):
+    """Individual terms under categories"""
+    category = models.ForeignKey(
+        TermCategory,
+        on_delete=models.CASCADE,
+        related_name='terms'
+    )
+    name = models.CharField(max_length=255)
+    description = models.TextField()
+    is_default = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    sort_order = models.IntegerField(default=0)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='terms_conditions_created'
+    )
+    
+    class Meta:
+        ordering = ['sort_order', 'name']
+        verbose_name = "Term & Condition"
+        verbose_name_plural = "Terms & Conditions"
+        unique_together = ['category', 'name']
+    
+    def __str__(self):
+        return f"{self.category.name} - {self.name}"
+
+
+
 class Quotation(models.Model):
     # Quotation Number: AKSN-001, AKSN-002, etc.
     quotation_no = models.CharField(max_length=50, unique=True)

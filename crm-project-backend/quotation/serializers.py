@@ -5,8 +5,53 @@ from decimal import Decimal
 from .models import (
     Quotation,
     QuotationVersion,
-    QuotationItem
+    QuotationItem,
+    TermCategory,
+    TermsConditions,
+
 )
+
+
+
+class TermsConditionsSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    
+    class Meta:
+        model = TermsConditions
+        fields = [
+            'id', 'name', 'description', 'category', 'category_name',
+            'is_default', 'is_active', 'sort_order', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+
+
+class TermCategorySerializer(serializers.ModelSerializer):
+    terms = TermsConditionsSerializer(many=True, read_only=True)
+    terms_count = serializers.IntegerField(read_only=True)
+    
+    class Meta:
+        model = TermCategory
+        fields = [
+            'id', 'name', 'description', 'is_active', 'sort_order',
+            'terms', 'terms_count', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+
+
+class TermCategoryCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TermCategory
+        fields = ['id', 'name', 'description', 'is_active', 'sort_order']
+
+
+class TermsConditionsCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TermsConditions
+        fields = ['id', 'name', 'description', 'category', 'is_default', 'is_active', 'sort_order']
+
+
+
+
 
 
 class QuotationItemSerializer(serializers.ModelSerializer):
