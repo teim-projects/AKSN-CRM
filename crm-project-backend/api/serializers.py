@@ -68,8 +68,17 @@ class CustomLoginSerializer(LoginSerializer):
 class CustomUserDetailsSerializer(UserDetailsSerializer):
     class Meta:
         model = CustomUser
-        fields = ('id', 'email', 'mobile_no', 'role',  'profile_photo')
-        read_only_fields = ('email',)
+        fields = ('id', 'email', 'mobile_no', 'first_name', 'last_name', 'role', 'profile_photo')
+        read_only_fields = ()
+
+    def validate_email(self, value):
+        if value:
+            value = value.strip().lower()
+            request = self.context.get('request')
+            if request and hasattr(request, 'user') and request.user.is_authenticated:
+                if CustomUser.objects.filter(email__iexact=value).exclude(pk=request.user.pk).exists():
+                    raise serializers.ValidationError("A user with this email address already exists.")
+        return value
 
     def to_internal_value(self, instance):
         internal = super().to_internal_value(instance)
@@ -78,7 +87,7 @@ class CustomUserDetailsSerializer(UserDetailsSerializer):
         if full_name:
             parts = full_name.strip().split()
             internal['first_name'] = parts[0]
-            internal['last_name'] = ''.join(parts[1:]) if len(parts) > 1 else ""
+            internal['last_name'] = ' '.join(parts[1:]) if len(parts) > 1 else ""
 
         if "mobile_no" in instance:
             internal["mobile_no"] = str(instance["mobile_no"]).replace(" ", "").strip() 
@@ -87,7 +96,7 @@ class CustomUserDetailsSerializer(UserDetailsSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-        rep['full_name'] = f"{instance.first_name or ''} {instance.last_name or ''}"
+        rep['full_name'] = f"{instance.first_name or ''} {instance.last_name or ''}".strip()
         return rep
     
 
@@ -155,7 +164,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
-        fields = ('id', 'name')
+        fields = ('id', 'name', 'permissions')
         read_only_fields = ('id',)
 
 # Staff Profile section
@@ -165,7 +174,7 @@ class RoleFlexibleField(serializers.RelatedField):
       - integer id (e.g. 3)
       - string id (e.g. "3")
       - role name (e.g. "staff" or "Staff")
-    Represents role in responses as {"id": id, "name": name}
+    Represents role in responses as {"id": id, "name": name, "permissions": permissions}
     """
     def to_internal_value(self, data):
         # integer id or numeric string -> pk
@@ -184,7 +193,11 @@ class RoleFlexibleField(serializers.RelatedField):
         raise ValidationError("Invalid role value. Provide a role id or name.")
 
     def to_representation(self, value):
-        return {"id": value.id, "name": value.name}
+        return {
+            "id": value.id,
+            "name": value.name,
+            "permissions": value.permissions or {}
+        }
 
 
 PHONE_10_DIGIT_RE = r'^\d{10}$'

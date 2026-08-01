@@ -103,6 +103,12 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
     { id: "negotiation", name: "Negotiation" },
   ];
 
+  const statusOptions = [
+    { id: "open", name: "Open" },
+    { id: "close_win", name: "Close Win" },
+    { id: "close_loss", name: "Close Loss" },
+  ];
+
   if (!open) return null;
 
   return (
@@ -201,6 +207,14 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
                   <span className="font-medium text-slate-600">Expected Budget:</span>{" "}
                   {lead.expected_budget || "—"}
                 </div>
+                <div>
+                  <span className="font-medium text-slate-600">Amount:</span>{" "}
+                  <span className="font-bold text-slate-900">
+                    {lead.amount !== undefined && lead.amount !== null
+                      ? `₹${parseFloat(lead.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      : "—"}
+                  </span>
+                </div>
                 <div className="md:col-span-2">
                   <span className="font-medium text-slate-600">LinkedIn:</span>{" "}
                   {lead.linkedin_profile_url ? (
@@ -227,7 +241,7 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
             {/* Pipeline Information */}
             <div className="border rounded-lg p-4">
               <h3 className="font-semibold mb-3 text-slate-700">Pipeline Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                 <div>
                   <span className="font-medium text-slate-600">Pipeline Stage:</span>{" "}
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -235,11 +249,25 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
                   </span>
                 </div>
                 <div>
+                  <span className="font-medium text-slate-600">Status:</span>{" "}
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    lead.status === 'close_win' ? 'bg-emerald-100 text-emerald-800' :
+                    lead.status === 'close_loss' ? 'bg-rose-100 text-rose-800' :
+                    'bg-slate-100 text-slate-800'
+                  }`}>
+                    {getDisplayValue(lead.status, statusOptions)}
+                  </span>
+                </div>
+                <div>
                   <span className="font-medium text-slate-600">Assigned Executive:</span>{" "}
                   {lead.assigned_executive_details?.full_name || lead.assigned_executive || "—"}
                 </div>
                 <div>
-                  <span className="font-medium text-slate-600">Follow-up Date:</span>{" "}
+                  <span className="font-medium text-slate-600">Last Follow-up Date:</span>{" "}
+                  {lead.last_followup_date || "—"}
+                </div>
+                <div>
+                  <span className="font-medium text-slate-600">Next Follow-up Date:</span>{" "}
                   {lead.followup_date || "—"}
                 </div>
                 <div className="md:col-span-3">

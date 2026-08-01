@@ -55,9 +55,16 @@ export default function Dashboard() {
   };
 
   const formatCurrencyInLakhs = (amount) => {
-    if (!amount || isNaN(amount)) return "₹0L";
-    const lakhs = (amount / 100000).toFixed(1);
-    return `₹${lakhs}L`;
+    if (!amount || isNaN(amount) || amount === 0) return "₹0";
+    if (amount >= 100000) {
+      const lakhs = (amount / 100000).toFixed(1);
+      return `₹${lakhs}L`;
+    }
+    if (amount >= 1000) {
+      const k = (amount / 1000).toFixed(1);
+      return `₹${k}K`;
+    }
+    return `₹${amount.toLocaleString('en-IN')}`;
   };
 
   useEffect(() => {
@@ -88,8 +95,9 @@ export default function Dashboard() {
         const convertedLeads = leads.filter(l => l.is_converted === true).length;
         const totalCustomers = customers.length;
         const totalFollowups = followups.length;
-        const todayFollowups = followups.filter(f => f.followup_date === today).length;
-        const overdueFollowups = followups.filter(f => f.followup_date && f.followup_date < today && f.status !== 'closed').length;
+        const isNotClosed = (s) => s !== 'close_win' && s !== 'close_loss' && s !== 'closed';
+        const todayFollowups = leads.filter(l => l.followup_date === today && isNotClosed(l.status)).length;
+        const overdueFollowups = leads.filter(l => l.followup_date && l.followup_date < today && isNotClosed(l.status)).length;
         
         const conversionRate = totalLeads > 0 ? ((convertedLeads / totalLeads) * 100).toFixed(1) : 0;
 
@@ -102,14 +110,18 @@ export default function Dashboard() {
 
         const statusColors = {
           open: 'bg-blue-600',
-          in_process: 'bg-indigo-500',
-          closed: 'bg-emerald-500'
+          close_win: 'bg-emerald-500',
+          close_loss: 'bg-rose-500',
+          closed: 'bg-emerald-500',
+          in_process: 'bg-indigo-500'
         };
 
         const statusLabels = {
           open: 'Open',
-          in_process: 'In Process',
-          closed: 'Closed'
+          close_win: 'Close Win',
+          close_loss: 'Close Loss',
+          closed: 'Closed',
+          in_process: 'In Process'
         };
 
         const leadsByStatus = Object.entries(statusMap).map(([key, count]) => ({
@@ -128,7 +140,10 @@ export default function Dashboard() {
           demo_scheduled: 'Demo Scheduled',
           demo_completed: 'Demo Completed',
           proposal_sent: 'Proposal Sent',
-          negotiation: 'Negotiation'
+          negotiation: 'Negotiation',
+          won: 'Won',
+          lost: 'Lost',
+          on_hold: 'On Hold'
         };
 
         leads.forEach(lead => {
@@ -228,36 +243,66 @@ export default function Dashboard() {
 
         // --- EXECUTIVE PERFORMANCE ---
         const execMap = {};
-        leads.forEach(lead => {
-          const agentName = lead.assigned_executive_details?.full_name || 
+
+        const getOrInitExec = (id, name) => {
+          const key = id ? `id_${id}` : (name || "Unassigned");
+          if (!execMap[key]) {
+            execMap[key] = {
+              id: id || null,
+              name: name || "Unassigned",
+              totalLeads: 0,
+              wonLeads: 0,
+              revenue: 0,
+            };
+          }
+          return execMap[key];
+        };
+
+        // 1. Process all leads for leads count & won count
+        leads.forEach((lead) => {
+          const staffId = lead.assigned_executive_details?.id || lead.assigned_executive;
+          const staffName = lead.assigned_executive_details?.full_name || 
                             (lead.assigned_executive ? `Executive #${lead.assigned_executive}` : "Unassigned");
           
-          if (!execMap[agentName]) {
-            execMap[agentName] = { name: agentName, totalLeads: 0, wonLeads: 0, revenue: 0 };
-          }
-          execMap[agentName].totalLeads += 1;
+          const execEntry = getOrInitExec(staffId, staffName);
+          execEntry.totalLeads += 1;
           if (lead.is_converted) {
-            execMap[agentName].wonLeads += 1;
+            execEntry.wonLeads += 1;
           }
         });
 
-        customers.forEach(cust => {
-          const agentName = cust.sales_executive_details?.full_name || 
-                            (cust.sales_executive ? `Executive #${cust.sales_executive}` : "Unassigned");
-          if (execMap[agentName]) {
-            execMap[agentName].revenue += parseFloat(cust.project_value || 0);
-          }
+        // 2. Attribute converted customer project_value to the staff executive who converted that lead
+        customers.forEach((cust) => {
+          const convertedLead = leads.find(
+            (l) => (cust.lead && l.id === cust.lead) || (l.converted_to_customer === cust.id)
+          );
+
+          const staffId = cust.sales_executive_details?.id || 
+                          cust.sales_executive || 
+                          convertedLead?.assigned_executive_details?.id || 
+                          convertedLead?.assigned_executive;
+
+          const staffName = cust.sales_executive_details?.full_name || 
+                            convertedLead?.assigned_executive_details?.full_name || 
+                            (staffId ? `Executive #${staffId}` : "Unassigned");
+
+          const customerProjectVal = parseFloat(cust.project_value || 0);
+          const leadAmt = parseFloat(convertedLead?.amount || 0);
+          const val = customerProjectVal > 0 ? customerProjectVal : leadAmt;
+
+          const execEntry = getOrInitExec(staffId, staffName);
+          execEntry.revenue += val;
         });
 
         const maxExecRev = Math.max(...Object.values(execMap).map(e => e.revenue), 1);
         const executivePerformance = Object.values(execMap)
+          .filter(e => e.totalLeads > 0 || e.revenue > 0)
           .map(e => ({
             ...e,
             formattedRevenue: formatCurrencyInLakhs(e.revenue),
             progressWidth: Math.max(8, (e.revenue / maxExecRev) * 100)
           }))
-          .sort((a, b) => b.revenue - a.revenue)
-          .slice(0, 4);
+          .sort((a, b) => b.revenue - a.revenue || b.wonLeads - a.wonLeads);
 
         // --- RECENT ACTIVITIES LOG ---
         const recentLeads = [...leads]
@@ -777,11 +822,11 @@ export default function Dashboard() {
                       </td>
                       <td className="py-2.5">
                         <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                          row.status === 'closed' ? 'bg-emerald-100 text-emerald-700' : 
-                          row.status === 'in_process' ? 'bg-yellow-100 text-yellow-700' : 
+                          row.status === 'close_win' || row.status === 'closed' ? 'bg-emerald-100 text-emerald-700' : 
+                          row.status === 'close_loss' ? 'bg-rose-100 text-rose-700' : 
                           'bg-blue-100 text-blue-700'
                         }`}>
-                          {row.status || 'Open'}
+                          {row.status === 'close_win' ? 'Close Win' : row.status === 'close_loss' ? 'Close Loss' : row.status || 'Open'}
                         </span>
                         {row.isConverted && (
                           <span className="ml-1 text-[8px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded font-bold">✓ Converted</span>

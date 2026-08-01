@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import (
     lead_management, LeadFollowUp, LeadFAQ, 
     LeadFollowUpFAQAnswer, Customer, LeadSource, IndustryType, 
-    Priority, PipelineStage, LeadStatus
+    Priority, PipelineStage, LeadStatus, Project
 )
 from api.serializers import CustomUserDetailsSerializer
 from django.contrib.auth import get_user_model
@@ -26,6 +26,10 @@ class CustomerSerializer(serializers.ModelSerializer):
         source="get_industry_category_display",
         read_only=True
     )
+    has_project = serializers.SerializerMethodField()
+
+    def get_has_project(self, obj):
+        return obj.projects.exists()
 
     class Meta:
         model = Customer
@@ -146,6 +150,7 @@ class LeadFollowUpSerializer(serializers.ModelSerializer):
             "additional_remarks",
             "ready_to_send_quotation",
             "products_interested",
+            "amount",
             # System fields
             "status",
             "created_by",
@@ -236,6 +241,7 @@ class LeadSerializer(serializers.ModelSerializer):
             "linkedin_profile_url",
             "state",
             "product_interested",
+            "amount",
             "expected_closure_date",
             "lead_source",
             "lead_source_display",
@@ -250,6 +256,7 @@ class LeadSerializer(serializers.ModelSerializer):
             "assigned_executive",
             "assigned_executive_details",
             "followup_date",
+            "last_followup_date",
             "pipeline_stage",
             "pipeline_stage_display",
             "is_tally_user",
@@ -260,6 +267,7 @@ class LeadSerializer(serializers.ModelSerializer):
             "gst_number",
             "pan_number",
             "msme_number",
+            "address",
             "created_by",
             "created_by_details",
             "created_at",
@@ -279,6 +287,46 @@ class LeadSerializer(serializers.ModelSerializer):
             validated_data["created_by"] = request.user
         lead = lead_management.objects.create(**validated_data)
         return lead
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
+
+
+class ProjectSerializer(serializers.ModelSerializer):
+    customer_details = CustomerSerializer(source="customer", read_only=True)
+    project_executive_details = CustomUserDetailsSerializer(
+        source="project_executive",
+        read_only=True
+    )
+    created_by_details = CustomUserDetailsSerializer(
+        source="created_by",
+        read_only=True
+    )
+    project_stage_display = serializers.CharField(
+        source="get_project_stage_display",
+        read_only=True
+    )
+    priority_display = serializers.CharField(
+        source="get_priority_display",
+        read_only=True
+    )
+
+    class Meta:
+        model = Project
+        fields = "__all__"
+        read_only_fields = ('id', 'project_code', 'created_at', 'updated_at')
+
+    @transaction.atomic
+    def create(self, validated_data):
+        request = self.context.get("request")
+        if request and request.user.is_authenticated and "created_by" not in validated_data:
+            validated_data["created_by"] = request.user
+        project = Project.objects.create(**validated_data)
+        return project
 
     @transaction.atomic
     def update(self, instance, validated_data):

@@ -7,9 +7,18 @@ import Swal from "sweetalert2";
 import TableView from "../components/TableView";
 import AdvancedTableFilter from "../components/AdvancedTableFilter";
 import RecordViewer from "../components/RecordViewer";
+import { useUserRole } from "../hooks/useAuth";
+
+import { useNavigate } from "react-router-dom";
 
 export default function Accounts() {
-  const BASE_API = import.meta.env.VITE_BASE_API_URL;
+  const navigate = useNavigate();
+  const BASE_API = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
+
+  const { hasPermission } = useUserRole(BASE_API);
+  const canCreateAccount = hasPermission("accounts", "create");
+  const canEditAccount = hasPermission("accounts", "edit");
+  const canDeleteAccount = hasPermission("accounts", "delete");
 
   const [rows, setRows] = useState([]);
   const [allRows, setAllRows] = useState([]);
@@ -103,7 +112,7 @@ export default function Accounts() {
 
       const data = await res.json();
       let results = [];
-      
+
       if (data && Array.isArray(data.results)) {
         results = data.results;
       } else if (Array.isArray(data)) {
@@ -111,7 +120,7 @@ export default function Accounts() {
       } else {
         throw new Error("Unexpected staff response shape");
       }
-      
+
       setAllRows(results);
       setFilteredData(results);
       setRows(results);
@@ -212,30 +221,34 @@ export default function Accounts() {
         <MdZoomIn size={16} />
       </button>
 
-      <button
-        onClick={() => { setEditingStaff(row); setShowStaffForm(true); }}
-        className="hover:text-amber-600 transition-colors p-0 bg-transparent border-none"
-        title="Edit"
-      >
-        <MdEdit size={16} />
-      </button>
+      {canEditAccount && (
+        <button
+          onClick={() => { setEditingStaff(row); setShowStaffForm(true); }}
+          className="hover:text-amber-600 transition-colors p-0 bg-transparent border-none cursor-pointer"
+          title="Edit"
+        >
+          <MdEdit size={16} />
+        </button>
+      )}
 
-      <button
-        onClick={() => handleDeleteStaff(row.id)}
-        className="hover:text-rose-600 transition-colors p-0 bg-transparent border-none"
-        title="Delete"
-      >
-        <MdDelete size={16} />
-      </button>
+      {canDeleteAccount && (
+        <button
+          onClick={() => handleDeleteStaff(row.id)}
+          className="hover:text-rose-600 transition-colors p-0 bg-transparent border-none cursor-pointer"
+          title="Delete"
+        >
+          <MdDelete size={16} />
+        </button>
+      )}
     </div>
-  ), [handleDeleteStaff]);
+  ), [handleDeleteStaff, canEditAccount, canDeleteAccount]);
 
   const currentPageData = getCurrentPageData();
 
   return (
     <Base title="">
       <div className="w-full space-y-4 font-sans antialiased text-slate-800 -mt-5 px-1">
-        
+
         {/* HEADER BLOCK WITH THE BLUE VERTICAL ACCENT LINE */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-1 pt-1">
           <div className="flex items-center gap-3">
@@ -258,21 +271,23 @@ export default function Accounts() {
             </button>
 
             <button
-              onClick={() => setShowAddRole(true)}
-              className="px-3.5 py-1.5 border border-slate-200 bg-white text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-xs"
+              onClick={() => navigate("/roles")}
+              className="px-3.5 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-xs cursor-pointer"
             >
-              Manage Roles
+              Manage Roles & Permissions
             </button>
 
-            <button
-              onClick={() => { setEditingStaff(null); setShowStaffForm(true); }}
-              className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10 flex items-center gap-1"
-            >
-              <span>+</span> Add Staff
-            </button>
+            {canCreateAccount && (
+              <button
+                onClick={() => { setEditingStaff(null); setShowStaffForm(true); }}
+                className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10 flex items-center gap-1 cursor-pointer"
+              >
+                <span>+</span> Add Staff
+              </button>
+            )}
 
             {rolesLoading ? <div className="text-xs text-slate-400">Loading roles…</div> :
-             rolesError ? <div className="text-xs text-red-500">Roles error</div> : null}
+              rolesError ? <div className="text-xs text-red-500">Roles error</div> : null}
           </div>
         </div>
 
@@ -299,16 +314,16 @@ export default function Accounts() {
 
       {/* FILTER DRAWER - DARK OVERLAY WITHOUT BLUR */}
       {isFilterOpen && (
-        <div 
-          className="fixed inset-0 bg-black/40 z-[999]" 
-          onClick={() => setIsFilterOpen(false)} 
+        <div
+          className="fixed inset-0 bg-black/40 z-[999]"
+          onClick={() => setIsFilterOpen(false)}
         />
       )}
-      
+
       <div className={`fixed top-0 right-0 h-full w-[380px] bg-white shadow-2xl z-[1000] transition-transform duration-300 ease-in-out ${isFilterOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="flex items-center justify-between p-5 border-b border-slate-200">
           <h3 className="text-lg font-bold text-slate-900">Filters</h3>
-          <button 
+          <button
             onClick={() => setIsFilterOpen(false)}
             className="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1"
           >
@@ -340,12 +355,12 @@ export default function Accounts() {
       {showAddRole && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 animate-fade-in">
           <div className="w-full max-w-3xl p-4 mx-4">
-            <RolePage 
-              baseApi={BASE_API} 
+            <RolePage
+              baseApi={BASE_API}
               onClose={() => {
-                setShowAddRole(false); 
+                setShowAddRole(false);
                 fetchRoles();
-              }} 
+              }}
             />
           </div>
         </div>

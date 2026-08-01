@@ -8,9 +8,14 @@ import Swal from 'sweetalert2';
 import ProductForm from './ProductForm'; 
 import AdvancedTableFilter from '../AdvancedTableFilter';
 import RecordViewer from '../RecordViewer';
+import { useUserRole } from '../../hooks/useAuth';
 
 const ProductList = () => {
-    const BASE_API = import.meta.env.VITE_BASE_API_URL;
+    const BASE_API = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
+    const { hasPermission } = useUserRole(BASE_API);
+    const canCreateProduct = hasPermission("products", "create");
+    const canEditProduct = hasPermission("products", "edit");
+    const canDeleteProduct = hasPermission("products", "delete");
     const navigate = useNavigate(); 
     const [products, setProducts] = useState([]);
     const [allProducts, setAllProducts] = useState([]);
@@ -227,15 +232,17 @@ const ProductList = () => {
                         >
                             Manage Categories
                         </button>
-                        <button 
-                            onClick={() => {
-                                setSelectedProductId(null);
-                                setShowProductForm(true);
-                            }}
-                            className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10"
-                        >
-                            + Add Product
-                        </button>
+                        {canCreateProduct && (
+                            <button 
+                                onClick={() => {
+                                    setSelectedProductId(null);
+                                    setShowProductForm(true);
+                                }}
+                                className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10 cursor-pointer"
+                            >
+                                + Add Product
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -372,23 +379,27 @@ const ProductList = () => {
                                             <MdZoomIn size={16} />
                                         </button>
 
-                                        <button 
-                                            onClick={() => {
-                                                setSelectedProductId(product.id);
-                                                setShowProductForm(true);
-                                            }}
-                                            className="p-1.5 text-slate-400 hover:text-slate-700 rounded-md hover:bg-slate-100 transition-colors"
-                                            title="Edit Catalog Item"
-                                        >
-                                            <MdEdit size={16} />
-                                        </button>
-                                        <button 
-                                            onClick={() => handleDelete(product.id)}
-                                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-md hover:bg-rose-50 transition-colors"
-                                            title="Delete Catalog Item"
-                                        >
-                                            <MdDelete size={16} />
-                                        </button>
+                                        {canEditProduct && (
+                                            <button 
+                                                onClick={() => {
+                                                    setSelectedProductId(product.id);
+                                                    setShowProductForm(true);
+                                                }}
+                                                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-md hover:bg-slate-100 transition-colors cursor-pointer"
+                                                title="Edit Catalog Item"
+                                            >
+                                                <MdEdit size={16} />
+                                            </button>
+                                        )}
+                                        {canDeleteProduct && (
+                                            <button 
+                                                onClick={() => handleDelete(product.id)}
+                                                className="p-1.5 text-slate-400 hover:text-rose-600 rounded-md hover:bg-rose-50 transition-colors cursor-pointer"
+                                                title="Delete Catalog Item"
+                                            >
+                                                <MdDelete size={16} />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </div>

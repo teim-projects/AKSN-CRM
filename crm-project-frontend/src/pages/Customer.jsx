@@ -6,10 +6,16 @@ import Swal from "sweetalert2";
 import AddCustomerForm from "../components/customers/AddCustomerForm";
 import AdvancedTableFilter from "../components/AdvancedTableFilter";
 import RecordViewer from "../components/RecordViewer";
+import { useUserRole } from '../hooks/useAuth';
 
 export default function Customer() {
   const BASE_API = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
   const API_URL = `${BASE_API}/lead/customer/`;
+
+  const { hasPermission } = useUserRole(BASE_API);
+  const canCreateCustomer = hasPermission("customers", "create");
+  const canEditCustomer = hasPermission("customers", "edit");
+  const canDeleteCustomer = hasPermission("customers", "delete");
 
   const [rows, setRows] = useState([]);
   const [allRows, setAllRows] = useState([]);
@@ -62,7 +68,7 @@ export default function Customer() {
 
       const data = await res.json();
       const results = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : [];
-      
+
       setAllRows(results);
       setFilteredData(results);
       setRows(results);
@@ -81,8 +87,8 @@ export default function Customer() {
     }
   }, [API_URL, token, itemsPerPage]);
 
-  useEffect(() => { 
-    fetchData(); 
+  useEffect(() => {
+    fetchData();
   }, [fetchData]);
 
   // Update pagination when filtered data changes
@@ -152,7 +158,7 @@ export default function Customer() {
 
   // Get status color
   const getStatusColor = (status) => {
-    switch(status) {
+    switch (status) {
       case 'active': return 'bg-emerald-100 text-emerald-700';
       case 'prospect': return 'bg-blue-100 text-blue-700';
       case 'inactive': return 'bg-red-100 text-red-700';
@@ -161,17 +167,63 @@ export default function Customer() {
     }
   };
 
+  const handleConvertToProject = async (customer) => {
+    if (!customer || !customer.id) return;
+
+    const result = await Swal.fire({
+      title: "Add to Project?",
+      text: `This will create a project entry for "${customer.name || customer.company_name || 'Customer'}" with matching details.`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Yes, Add to Project",
+      cancelButtonText: "Cancel"
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      const response = await fetch(`${API_URL}${customer.id}/convert-to-project/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to convert customer to project");
+      }
+
+      Swal.fire({
+        icon: "success",
+        title: "Success!",
+        text: data.message || "Customer added to Project successfully",
+        timer: 2000,
+        showConfirmButton: false
+      });
+
+      setProjectCustomer(customer);
+      setShowProjectForm(true);
+    } catch (err) {
+      console.error("Convert to project error:", err);
+      setProjectCustomer(customer);
+      setShowProjectForm(true);
+    }
+  };
+
   // Updated columns matching new Customer model
   const columns = [
-    { 
-      key: "sr", 
-      label: "#", 
+    {
+      key: "sr",
+      label: "#",
       render: (_, idx) => <span className="text-slate-400 font-medium text-[10px] py-0.5 block">{(currentPage - 1) * itemsPerPage + (idx + 1)}</span>,
       className: "w-8 text-center"
     },
-    { 
-      key: "customer_code", 
-      label: "Code", 
+    {
+      key: "customer_code",
+      label: "Code",
       render: (r) => (
         <div className="py-0.5">
           <span className="font-mono text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded tracking-wider">
@@ -181,27 +233,33 @@ export default function Customer() {
       ),
       className: "w-16"
     },
-    { 
-      key: "name", 
-      label: "Company Name", 
+    {
+      key: "name",
+      label: "Company Name",
       render: (r) => <span className="text-slate-800 font-medium text-xs tracking-tight py-0.5 block">{r.name || "-"}</span>,
       className: "min-w-[120px]"
     },
-    { 
-      key: "contact_person", 
-      label: "Contact Person", 
+    {
+      key: "contact_person",
+      label: "Contact Person",
       render: (r) => <span className="text-slate-600 text-xs py-0.5 block">{r.contact_person || "-"}</span>,
       className: "w-32"
     },
-    { 
-      key: "contact_number", 
-      label: "Mobile", 
+    {
+      key: "sales_executive",
+      label: "Sales Executive",
+      render: (r) => <span className="text-slate-600 text-xs py-0.5 block">{r.sales_executive_details?.full_name || "-"}</span>,
+      className: "w-28"
+    },
+    {
+      key: "contact_number",
+      label: "Mobile",
       render: (r) => <span className="text-slate-700 text-xs font-medium whitespace-nowrap py-0.5 block">{r.contact_number || "-"}</span>,
       className: "w-28"
     },
-    { 
-      key: "email", 
-      label: "Email", 
+    {
+      key: "email",
+      label: "Email",
       render: (r) => r.email ? (
         <a href={`mailto:${r.email}`} className="text-blue-600 hover:underline text-xs py-0.5 inline-block truncate max-w-[120px]">
           {r.email}
@@ -209,21 +267,21 @@ export default function Customer() {
       ) : <span className="text-slate-400 text-xs py-0.5 block">-</span>,
       className: "min-w-[100px]"
     },
-    { 
-      key: "city", 
-      label: "City", 
+    {
+      key: "city",
+      label: "City",
       render: (r) => <span className="text-slate-600 text-xs py-0.5 block">{r.city || "-"}</span>,
       className: "w-24"
     },
-    { 
-      key: "state", 
-      label: "State", 
+    {
+      key: "state",
+      label: "State",
       render: (r) => <span className="text-slate-600 text-xs py-0.5 block">{r.state || "-"}</span>,
       className: "w-24"
     },
-    { 
-      key: "customer_status", 
-      label: "Status", 
+    {
+      key: "customer_status",
+      label: "Status",
       render: (r) => (
         <div className="py-0.5">
           <span className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full uppercase tracking-wider ${getStatusColor(r.customer_status)}`}>
@@ -233,15 +291,9 @@ export default function Customer() {
       ),
       className: "w-24"
     },
-    { 
-      key: "sales_executive", 
-      label: "Sales Executive", 
-      render: (r) => <span className="text-slate-600 text-xs py-0.5 block">{r.sales_executive_details?.full_name || "-"}</span>,
-      className: "w-28"
-    },
-    { 
-      key: "created_at", 
-      label: "Created", 
+    {
+      key: "created_at",
+      label: "Created",
       render: (r) => <span className="text-slate-400 text-[10px] whitespace-nowrap py-0.5 block">{formatDate(r.created_at)}</span>,
       className: "w-24"
     },
@@ -249,6 +301,26 @@ export default function Customer() {
 
   const actionsRenderer = useCallback((row) => (
     <div className="flex items-center justify-center gap-1 py-0.5">
+      {/* Convert to Project / Already Added Status */}
+      {row.has_project ? (
+        <span
+          className="p-1 text-emerald-600 bg-emerald-50 rounded text-xs font-bold flex items-center justify-center border border-emerald-200"
+          title="Customer already added to Project"
+        >
+          ✓
+        </span>
+      ) : (
+        <button
+          onClick={() => handleConvertToProject(row)}
+          className="p-1 bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-700 rounded transition-all duration-150 flex items-center justify-center text-sm shadow-sm cursor-pointer"
+          title="Add Customer to Project"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+          </svg>
+        </button>
+      )}
+
       {/* Record Viewer Button */}
       <button
         onClick={() => {
@@ -273,26 +345,30 @@ export default function Customer() {
         <MdOutlineRemoveRedEye />
       </button>
 
-      <button
-        onClick={() => { 
-          setEditingCustomer(row); 
-          setShowCustomerForm(true); 
-        }}
-        className="p-1 bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 rounded transition-all duration-150 text-sm shadow-sm"
-        title="Edit"
-      >
-        <MdEdit />
-      </button>
+      {canEditCustomer && (
+        <button
+          onClick={() => {
+            setEditingCustomer(row);
+            setShowCustomerForm(true);
+          }}
+          className="p-1 bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 rounded transition-all duration-150 text-sm shadow-sm cursor-pointer"
+          title="Edit"
+        >
+          <MdEdit />
+        </button>
+      )}
 
-      <button
-        onClick={() => handleDelete(row.id)}
-        className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 rounded transition-all duration-150 text-sm shadow-sm"
-        title="Delete"
-      >
-        <MdDelete />
-      </button>
+      {canDeleteCustomer && (
+        <button
+          onClick={() => handleDelete(row.id)}
+          className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 rounded transition-all duration-150 text-sm shadow-sm cursor-pointer"
+          title="Delete"
+        >
+          <MdDelete />
+        </button>
+      )}
     </div>
-  ), [handleDelete]);
+  ), [handleDelete, canEditCustomer, canDeleteCustomer, handleConvertToProject]);
 
   // Customer Details Modal - Updated with new fields
   const CustomerDetailsModal = ({ customer, open, onClose }) => {
@@ -311,7 +387,7 @@ export default function Customer() {
           </button>
 
           <h2 className="text-xl font-bold text-slate-900 mb-4">Customer Details</h2>
-          
+
           {/* Customer Code Badge */}
           <div className="mb-4">
             <span className="text-xs font-medium text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
@@ -448,10 +524,25 @@ export default function Customer() {
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+          <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end gap-2">
+            {customer.has_project ? (
+              <span className="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-sm font-semibold flex items-center gap-1.5">
+                ✓ Added to Project
+              </span>
+            ) : (
+              <button
+                onClick={() => {
+                  onClose();
+                  handleConvertToProject(customer);
+                }}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+              >
+                + Add to Project
+              </button>
+            )}
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-200 transition-colors cursor-pointer"
             >
               Close
             </button>
@@ -466,7 +557,7 @@ export default function Customer() {
   return (
     <Base title="">
       <div className="w-full space-y-4 font-sans antialiased text-slate-800 -mt-5 px-1">
-        
+
         {/* HEADER BLOCK WITH BLUE ACCENT */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-1 pt-1">
           <div className="flex items-center gap-3">
@@ -486,18 +577,20 @@ export default function Customer() {
               <MdFilterList className="text-slate-400" />
               Filter
             </button>
-            <button
-              onClick={() => { 
-                setEditingCustomer(null); 
-                setShowCustomerForm(true); 
-              }}
-              className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10 flex items-center gap-1"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-              </svg>
-              Add Customer
-            </button>
+            {canCreateCustomer && (
+              <button
+                onClick={() => {
+                  setEditingCustomer(null);
+                  setShowCustomerForm(true);
+                }}
+                className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10 flex items-center gap-1 cursor-pointer"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Customer
+              </button>
+            )}
           </div>
         </div>
 
@@ -524,16 +617,16 @@ export default function Customer() {
 
       {/* FILTER DRAWER - DARK OVERLAY WITHOUT BLUR */}
       {isFilterOpen && (
-        <div 
-          className="fixed inset-0 bg-black/40 z-[999]" 
-          onClick={() => setIsFilterOpen(false)} 
+        <div
+          className="fixed inset-0 bg-black/40 z-[999]"
+          onClick={() => setIsFilterOpen(false)}
         />
       )}
-      
+
       <div className={`fixed top-0 right-0 h-full w-[380px] bg-white shadow-2xl z-[1000] transition-transform duration-300 ease-in-out ${isFilterOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="flex items-center justify-between p-5 border-b border-slate-200">
           <h3 className="text-lg font-bold text-slate-900">Filters</h3>
-          <button 
+          <button
             onClick={() => setIsFilterOpen(false)}
             className="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1"
           >

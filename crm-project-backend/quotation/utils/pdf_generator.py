@@ -6,238 +6,114 @@ import logging
 
 try:
     from weasyprint import HTML
-except Exception:  # pragma: no cover - depends on OS native libs
+except Exception:  # pragma: no cover
     HTML = None
 
 logger = logging.getLogger(__name__)
 
 
-def _item_line_amount(item):
-    """Return line total including GST and extra charges where stored on the model."""
-    total = getattr(item, 'total_with_gst', None)
-    if total is not None and total > 0:
-        return Decimal(total)
-
-    qty = Decimal(getattr(item, 'quantity', 0) or 0)
-    rate = Decimal(getattr(item, 'unit_price', 0) or 0)
-    base = qty * rate
-    gst = Decimal(getattr(item, 'gst_amount', 0) or 0)
-    mathadi = Decimal(getattr(item, 'mathadi_charges', 0) or 0)
-    transport = Decimal(getattr(item, 'transportation_charges', 0) or 0)
-    return base + gst + mathadi + transport
-
-
-def _item_base_amount(item):
-    base = getattr(item, 'base_amount', None)
-    if base is not None and base > 0:
-        return Decimal(base)
-    qty = Decimal(getattr(item, 'quantity', 0) or 0)
-    rate = Decimal(getattr(item, 'unit_price', 0) or 0)
-    return qty * rate
-
-
 def _build_quotation_pdf_context(quotation, version):
-    high_side_items = list(
-        version.high_side_items.select_related('product_variant__product_model').all()
-    )
-    low_side_items = list(
-        version.low_side_items.select_related(
-            'item__material_type_id',
-            'item__item_type_id',
-            'item__feature_type_id',
-            'item__brand',
-        ).all()
-    )
-    service_items = list(version.service_items.select_related('service').all())
+    items = list(version.items.all())
+    
+    formatted_items = []
+    total_quantity = Decimal('0')
+    subtotal = Decimal('0')
+    gst_total = Decimal('0')
 
-    high_side_total = sum((_item_line_amount(i) for i in high_side_items), Decimal('0'))
-    low_side_total = sum((_item_line_amount(i) for i in low_side_items), Decimal('0'))
-    service_total = sum((_item_line_amount(i) for i in service_items), Decimal('0'))
+    for idx, item in enumerate(items, 1):
+        qty = Decimal(str(item.quantity or 0))
+        rate = Decimal(str(item.unit_price or 0))
+        base = Decimal(str(item.base_amount or (qty * rate)))
+        gst_amt = Decimal(str(item.gst_amount or 0))
+        total_item = Decimal(str(item.total_with_gst or (base + gst_amt)))
 
-    subtotal = version.subtotal or (high_side_total + low_side_total + service_total)
-    gst_amount = version.gst_amount or Decimal('0')
-    grand_total = version.grand_total or version.total_amount or (subtotal + gst_amount)
+        total_quantity += qty
+        subtotal += base
+        gst_total += gst_amt
+
+        formatted_items.append({
+            'sr': idx,
+            'product_name': item.product_name,
+            'product_code': item.product_code or '',
+            'hsn_sac_code': item.hsn_sac_code or '',
+            'description': item.description or item.product_name,
+            'quantity': qty,
+            'unit': item.unit or 'NOS',
+            'unit_price': rate,
+            'gst_percentage': item.gst_percentage,
+            'base_amount': base,
+            'gst_amount': gst_amt,
+            'total_with_gst': total_item,
+        })
+
+    gst_amount = version.gst_amount or gst_total
+    subtotal = version.subtotal or subtotal
+    grand_total = version.grand_total or (subtotal + gst_amount)
 
     if subtotal and gst_amount:
         gst_percentage = (gst_amount / subtotal) * Decimal('100')
     else:
         gst_percentage = Decimal('18')
 
-    summary_sections = []
+    # Selected Terms & Conditions
+    raw_terms = version.terms_and_conditions or quotation.terms_and_conditions or []
 
-    if high_side_items:
-        summary_sections.append({
-            'title': 'Part A: High Side Equipment',
-            'items': [
-                {
-                    'description': item.description or str(item.product_variant.sku),
-                    'amount': _item_line_amount(item),
-                }
-                for item in high_side_items
-            ],
-            'subtotal': high_side_total,
-        })
-
-    if low_side_items:
-        summary_sections.append({
-            'title': 'Part B: Low Side Installation Work',
-            'items': [
-                {
-                    'description': item.description or str(item.item.item_code),
-                    'amount': _item_line_amount(item),
-                }
-                for item in low_side_items
-            ],
-            'subtotal': low_side_total,
-        })
-
-    if service_items:
-        summary_sections.append({
-            'title': 'Part C: Services',
-            'items': [
-                {
-                    'description': f"{item.service.name} ({item.service.category})",
-                    'amount': _item_line_amount(item),
-                }
-                for item in service_items
-            ],
-            'subtotal': service_total,
-        })
-
-    all_items = []
-
-    for item in high_side_items:
-        all_items.append({
-            'description': item.description or str(item.product_variant.sku),
-            'product_variant': item.product_variant,
-            'quantity': item.quantity,
-            'unit': item.unit,
-            'rate': item.unit_price,
-            'amount': _item_line_amount(item),
-        })
-
-    for item in low_side_items:
-        all_items.append({
-            'description': item.description or str(item.item.item_code),
-            'item': item.item,
-            'quantity': item.quantity,
-            'unit': item.unit,
-            'rate': item.unit_price,
-            'amount': _item_line_amount(item),
-        })
-
-    for item in service_items:
-        all_items.append({
-            'description': item.description or item.service.name,
-            'quantity': item.quantity,
-            'unit': item.unit,
-            'rate': item.unit_price,
-            'amount': _item_line_amount(item),
-        })
-
-    customer = quotation.customer
-    site = quotation.site
+    # Lead Fallbacks for Client Information
+    lead = quotation.lead
+    company_name = quotation.company_name or (lead.company_name if lead else '-')
+    contact_person = quotation.contact_person or (lead.contact_person if lead else '-')
+    mobile_number = quotation.mobile_number or (lead.mobile_number if lead else '-')
+    email_address = quotation.email_address or (lead.email_address if lead else '-')
+    address = quotation.address or (lead.address if lead else '')
+    city = quotation.city or (lead.city if lead else '')
+    state = quotation.state or (lead.state if lead else '')
+    gst_number = quotation.gst_number or (lead.gst_number if lead else '')
 
     return {
         'quotation': quotation,
         'version': version,
         'quotation_no': quotation.quotation_no,
-        'quotation_date': version.created_at,
-        'customer_name': customer.name if customer else '-',
-        'customer_contact': getattr(customer, 'contact_number', '') or '',
-        'site_name': (site.site_name if site else None) or quotation.site_name or '-',
+        'version_no': version.version_no,
+        'quotation_date': quotation.quotation_date or version.created_at,
+        'company_name': company_name,
+        'contact_person': contact_person,
+        'mobile_number': mobile_number,
+        'email_address': email_address,
+        'address': address,
+        'city': city,
+        'state': state,
+        'gst_number': gst_number,
         'subject': quotation.subject or '-',
-        'summary_sections': summary_sections,
-        'quotation_items': all_items,
+        'thank_you_note': quotation.thank_you_note or '',
+        'quotation_items': formatted_items,
+        'terms_list': raw_terms,
         'subtotal': subtotal,
         'gst_amount': gst_amount,
         'gst_percentage': gst_percentage,
         'grand_total': grand_total,
-        'total_quantity': sum(
-            (Decimal(str(item.get('quantity', 0) or 0)) for item in all_items),
-            Decimal('0'),
-        ),
+        'total_quantity': total_quantity,
+        'company_address': "AKSN Infotech Office No:-10B, 2nd Floor, Prestige Point Behind Telephone Exchange, Bajirao Road, 283, Shukrawar Peth, PUNE 411002 India GSTIN: 27AAXFA5487A1Z4",
     }
 
 
 def generate_quotation_pdf(quotation, version, base_url=None):
     """
-    Generate quotation PDF using WeasyPrint with HTML template (existing design).
+    Generate quotation PDF using WeasyPrint with full A4 HTML template (optimized).
     """
     try:
         if HTML is None:
             raise RuntimeError(
-                "PDF generation is unavailable on this machine. Install WeasyPrint system libraries first."
+                "WeasyPrint is unavailable on this system. Please check system libraries."
             )
         context = _build_quotation_pdf_context(quotation, version)
         html_string = render_to_string('pdf/quotation.html', context)
+        
+        fast_fetcher = lambda url, *args, **kwargs: {'string': b'', 'mime_type': 'text/plain'}
         pdf = HTML(
             string=html_string,
-            base_url=base_url or getattr(settings, 'ABSOLUTE_URL', '/'),
+            url_fetcher=fast_fetcher
         ).write_pdf()
         return pdf
     except Exception as e:
         logger.error(f"Error generating quotation PDF: {str(e)}", exc_info=True)
         raise
-
-
-def generate_quotation_print_pdf(quotation, version, base_url=None):
-    """
-    New WeasyPrint quotation PDF (invoice-style layout).
-    Design stage: uses a dummy items table. Existing /pdf/ endpoints unchanged.
-    """
-    if HTML is None:
-        raise RuntimeError(
-            "PDF generation is unavailable on this machine. Install WeasyPrint system libraries first."
-        )
-    dummy_rows = [
-        {
-            'sr': 1,
-            'description': 'Dummy Item - Copper Pipe 1/2 inch',
-            'qty': 10,
-            'unit': 'Nos',
-            'rate': Decimal('450.00'),
-            'amount': Decimal('4500.00'),
-        },
-        {
-            'sr': 2,
-            'description': 'Dummy Item - Insulation Tape',
-            'qty': 5,
-            'unit': 'Nos',
-            'rate': Decimal('120.00'),
-            'amount': Decimal('600.00'),
-        },
-        {
-            'sr': 3,
-            'description': 'Dummy Item - Service Charge',
-            'qty': 1,
-            'unit': 'Job',
-            'rate': Decimal('2500.00'),
-            'amount': Decimal('2500.00'),
-        },
-    ]
-
-    subtotal = sum((row['amount'] for row in dummy_rows), Decimal('0'))
-    if version.subtotal and version.gst_amount and version.subtotal > 0:
-        gst_pct = (version.gst_amount / version.subtotal) * Decimal('100')
-    else:
-        gst_pct = Decimal('18')
-    gst_amount = (subtotal * gst_pct) / Decimal('100')
-    grand_total = subtotal + gst_amount
-
-    context = {
-        'quotation': quotation,
-        'version': version,
-        'dummy_rows': dummy_rows,
-        'subtotal': subtotal,
-        'gst_amount': gst_amount,
-        'grand_total': grand_total,
-        'gst_percentage': gst_pct,
-    }
-
-    html_string = render_to_string('pdf/quotation_print.html', context)
-    pdf = HTML(
-        string=html_string,
-        base_url=base_url or getattr(settings, 'ABSOLUTE_URL', '/'),
-    ).write_pdf()
-    return pdf

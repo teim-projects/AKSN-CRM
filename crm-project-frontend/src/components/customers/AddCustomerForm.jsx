@@ -43,6 +43,7 @@ export default function AddCustomerForm({
     city: "",
     state: "",
     pin_code: "",
+    lead: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -211,6 +212,7 @@ export default function AddCustomerForm({
       city: customer.city || "",
       state: customer.state || "",
       pin_code: customer.pin_code || "",
+      lead: customer.lead || "",
     });
 
     // Load states and cities
@@ -339,6 +341,7 @@ export default function AddCustomerForm({
         state: lead.state || prev.state,
         industry_category: lead.industry_type || prev.industry_category,
         product_purchased: lead.product_interested || prev.product_purchased,
+        lead: lead.id,
         // ✅ Auto-map new fields
         gst_number: lead.gst_number || prev.gst_number,
         pan_number: lead.pan_number || prev.pan_number,
@@ -434,6 +437,7 @@ export default function AddCustomerForm({
         city: formData.city?.trim() || "",
         state: formData.state?.trim() || "",
         pin_code: formData.pin_code?.toString().trim() || "",
+        lead: formData.lead || null,
       };
 
       const url = customer ? `${API_URL}${customer.id}/` : API_URL;

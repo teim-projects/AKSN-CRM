@@ -100,6 +100,8 @@ class Quotation(models.Model):
     gst_number = models.CharField(max_length=15, blank=True, null=True, verbose_name="GST Number")
     pan_number = models.CharField(max_length=10, blank=True, null=True, verbose_name="PAN Number")
     msme_number = models.CharField(max_length=20, blank=True, null=True, verbose_name="MSME Number")
+    address = models.TextField(blank=True, null=True, verbose_name="Address")
+    terms_and_conditions = models.JSONField(blank=True, null=True, default=list, verbose_name="Terms & Conditions")
     
     # Quotation Details
     subject = models.CharField(max_length=255, verbose_name="Subject", null=True, blank=True)
@@ -184,6 +186,7 @@ class QuotationVersion(models.Model):
     gst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     grand_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    terms_and_conditions = models.JSONField(blank=True, null=True, default=list, verbose_name="Terms & Conditions")
     
     created_by = models.ForeignKey(
         User,

@@ -52,17 +52,26 @@ const FollowupHistoryModal = ({ open, onClose, lead }) => {
                     </span>
                   </div>
 
-                  {/* Show products from this follow-up */}
-                  {fu.products_interested && fu.products_interested.length > 0 && (
+                  {/* Show products & deal amount from this follow-up */}
+                  {(fu.products_interested?.length > 0 || fu.amount) && (
                     <div className="mb-4 p-3 bg-blue-50/50 border border-blue-100 rounded-xl">
-                      <span className="text-xs font-bold text-blue-700 block mb-2">Products Discussed</span>
-                      <div className="flex flex-wrap gap-2">
-                        {fu.products_interested.map((product, idx) => (
-                          <span key={idx} className="px-3 py-1 bg-white border border-blue-200 rounded-full text-xs font-medium text-blue-700">
-                            {product}
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-bold text-blue-700 block">Products Discussed</span>
+                        {fu.amount !== undefined && fu.amount !== null && fu.amount !== "" && (
+                          <span className="text-xs font-bold text-blue-900 bg-white px-2.5 py-0.5 rounded-md border border-blue-200">
+                            Amount: ₹{parseFloat(fu.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
-                        ))}
+                        )}
                       </div>
+                      {fu.products_interested && fu.products_interested.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {fu.products_interested.map((product, idx) => (
+                            <span key={idx} className="px-3 py-1 bg-white border border-blue-200 rounded-full text-xs font-medium text-blue-700">
+                              {product}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -154,6 +163,7 @@ const INITIAL_FORM_DATA = {
   additional_remarks: "",
   ready_to_send_quotation: false,
   status: "open",
+  amount: "",
 };
 
 export default function AddLeadFollowUpForm({
@@ -211,9 +221,6 @@ export default function AddLeadFollowUpForm({
     { value: "demo_completed", label: "Demo Completed" },
     { value: "proposal_sent", label: "Proposal Sent" },
     { value: "negotiation", label: "Negotiation" },
-    { value: "won", label: "Won" },
-    { value: "lost", label: "Lost" },
-    { value: "on_hold", label: "On Hold" },
   ];
 
   const clientResponseOptions = [
@@ -255,8 +262,8 @@ export default function AddLeadFollowUpForm({
 
   const statusOptions = [
     { value: "open", label: "Open" },
-    { value: "in_process", label: "In Process" },
-    { value: "closed", label: "Closed" },
+    { value: "close_win", label: "Close Win" },
+    { value: "close_loss", label: "Close Loss" },
   ];
 
   const resetForm = () => {
@@ -276,11 +283,43 @@ export default function AddLeadFollowUpForm({
     }));
   };
 
-  // Handle product multi-select - same as AddLeadForm
+  // Handle product multi-select & calculate total price sum
   const handleMultiSelectChange = (selected) => {
     const values = selected ? selected.map((opt) => opt.value) : [];
     setProductInterested(values);
+    let total = 0;
+    values.forEach((val) => {
+      const prod = products.find(
+        (p) => p.id === val || p.id === Number(val) || p.name === val
+      );
+      if (prod && prod.unit_price) {
+        total += parseFloat(prod.unit_price) || 0;
+      }
+    });
+    setFormData((prev) => ({
+      ...prev,
+      amount: total > 0 ? total.toFixed(2) : "",
+    }));
   };
+
+  // Detailed selected products breakdown with prices
+  const selectedProductsInfo = useMemo(() => {
+    return productInterested.map((val) => {
+      const prod = products.find(
+        (p) => p.id === val || p.id === Number(val) || p.name === val
+      );
+      return {
+        id: val,
+        name: prod ? prod.name : String(val),
+        code: prod?.product_code || "",
+        unit_price: prod ? parseFloat(prod.unit_price) || 0 : 0,
+      };
+    });
+  }, [productInterested, products]);
+
+  const calculatedTotalPrice = useMemo(() => {
+    return selectedProductsInfo.reduce((sum, item) => sum + item.unit_price, 0);
+  }, [selectedProductsInfo]);
 
   // Get product options for react-select - same as AddLeadForm
   const productSelectOptions = useMemo(() => {
@@ -290,10 +329,15 @@ export default function AddLeadFollowUpForm({
     }));
   }, [products]);
 
-  // Get selected product options for react-select - same as AddLeadForm
+  // Get selected product options for react-select - matching both ID and Name
   const selectedProductOptions = useMemo(() => {
     return productSelectOptions.filter(option =>
-      productInterested.includes(option.value)
+      productInterested.some(val =>
+        val === option.value ||
+        Number(val) === option.value ||
+        String(val) === String(option.value) ||
+        val === option.label
+      )
     );
   }, [productSelectOptions, productInterested]);
 
@@ -359,8 +403,12 @@ export default function AddLeadFollowUpForm({
           setProductInterested(data.product_interested);
         }
         
-        if (data.pipeline_stage && !followup) {
-          setFormData(prev => ({ ...prev, current_stage: data.pipeline_stage }));
+        if (!followup) {
+          setFormData((prev) => ({
+            ...prev,
+            current_stage: data.pipeline_stage || prev.current_stage,
+            amount: data.amount !== undefined && data.amount !== null ? String(data.amount) : prev.amount,
+          }));
         }
       } catch (err) {
         console.error("Lead fetch error:", err);
@@ -370,6 +418,25 @@ export default function AddLeadFollowUpForm({
 
     fetchLead();
   }, [open, leadId, BASE_API, token, followup]);
+
+  // Auto-populate follow-up amount if empty/0 and calculated total product price or lead amount exists
+  useEffect(() => {
+    if (!open || followup) return;
+
+    let targetAmount = "";
+    if (calculatedTotalPrice > 0) {
+      targetAmount = calculatedTotalPrice.toFixed(2);
+    } else if (leadData?.amount && parseFloat(leadData.amount) > 0) {
+      targetAmount = parseFloat(leadData.amount).toFixed(2);
+    }
+
+    if (targetAmount && (!formData.amount || parseFloat(formData.amount) === 0)) {
+      setFormData((prev) => ({
+        ...prev,
+        amount: targetAmount,
+      }));
+    }
+  }, [open, followup, leadData, calculatedTotalPrice, formData.amount]);
 
   // Load followup data for editing
   useEffect(() => {
@@ -397,6 +464,7 @@ export default function AddLeadFollowUpForm({
         additional_remarks: followup.additional_remarks || "",
         ready_to_send_quotation: followup.ready_to_send_quotation || false,
         status: followup.status || "open",
+        amount: followup.amount !== undefined && followup.amount !== null ? String(followup.amount) : "",
       });
 
       // Load products from followup
@@ -525,6 +593,7 @@ export default function AddLeadFollowUpForm({
         additional_remarks: formData.additional_remarks.trim(),
         // ✅ Send product IDs or names - backend expects product names
         products_interested: productInterested,
+        amount: formData.amount !== "" && formData.amount !== null ? parseFloat(formData.amount) : 0.00,
       };
 
       if (faqPayload.length) {
@@ -794,6 +863,63 @@ export default function AddLeadFollowUpForm({
                       {productInterested.length} product{productInterested.length > 1 ? 's' : ''} selected
                     </p>
                   )}
+
+                  {/* Small Box of Products Selling Client with Price */}
+                  {selectedProductsInfo.length > 0 && (
+                    <div className="mt-3 p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl shadow-2xs">
+                      <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-200/60">
+                        <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                          Selected Products & Unit Prices
+                        </span>
+                        <span className="text-[11px] font-semibold text-slate-500">
+                          {selectedProductsInfo.length} product{selectedProductsInfo.length > 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                        {selectedProductsInfo.map((prod, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-xs py-1.5 px-3 bg-white rounded-lg border border-slate-150 shadow-2xs">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-slate-800">{prod.name}</span>
+                              {prod.code && (
+                                <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono">
+                                  {prod.code}
+                                </span>
+                              )}
+                            </div>
+                            <span className="font-bold text-slate-700">
+                              ₹{prod.unit_price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-2.5 pt-2 border-t border-slate-200 flex justify-between items-center text-xs font-bold text-slate-900">
+                        <span>Total Product Price:</span>
+                        <span className="text-blue-700 text-sm">
+                          ₹{calculatedTotalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Followup Amount Input Field */}
+                  <div className="mt-4">
+                    <label className="text-xs font-semibold text-slate-600 mb-1.5 block">
+                      Follow-up Amount (₹)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="amount"
+                      value={formData.amount}
+                      onChange={handleChange}
+                      placeholder="0.00"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white text-sm"
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Auto-calculated sum of selected product prices. You can enter a custom value if needed.
+                    </p>
+                  </div>
                 </div>
               </div>
 

@@ -12,6 +12,7 @@ from .serializers import (
     TermsConditionsSerializer, TermsConditionsCreateSerializer
 )
 
+from django.http import HttpResponse
 from .models import Quotation, QuotationVersion
 from .serializers import QuotationSerializer, QuotationCreateSerializer
 
@@ -160,3 +161,28 @@ class QuotationViewSet(viewsets.ModelViewSet):
             latest.save(update_fields=["is_active"])
 
         return Response({"message": "Version deleted"})
+
+    @action(detail=True, methods=['get'], url_path='pdf')
+    def pdf(self, request, pk=None):
+        """Generate and stream Quotation PDF using WeasyPrint"""
+        quotation = self.get_object()
+        version_id = request.query_params.get('version_id')
+        if version_id:
+            version = get_object_or_404(QuotationVersion, id=version_id, quotation=quotation)
+        else:
+            version = quotation.versions.filter(is_active=True).first() or quotation.versions.first()
+            
+        if not version:
+            return Response({"error": "No version found for this quotation"}, status=status.HTTP_404_NOT_FOUND)
+            
+        try:
+            from .utils.pdf_generator import generate_quotation_pdf
+            pdf_bytes = generate_quotation_pdf(quotation, version)
+            disposition = request.query_params.get('disposition', 'inline')
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            filename = f"Quotation_{quotation.quotation_no}.pdf"
+            response['Content-Disposition'] = f'{disposition}; filename="{filename}"'
+            return response
+        except Exception as e:
+            logger.error(f"Error generating PDF: {str(e)}", exc_info=True)
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

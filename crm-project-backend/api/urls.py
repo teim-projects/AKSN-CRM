@@ -1,7 +1,7 @@
 
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
-from .views import GoogleLogin ,PasswordResetRequestView, PasswordResetConfirmView, StaffViewSet,RoleViewSet,MeView, BranchManagementViewSet , SiteManagementViewSet
+from .views import GoogleLogin ,PasswordResetRequestView, PasswordResetConfirmView, StaffViewSet,RoleViewSet,MeView, ChangePasswordView, BranchManagementViewSet , SiteManagementViewSet
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
@@ -16,7 +16,8 @@ urlpatterns = [
     path('auth/google/', GoogleLogin.as_view(), name='google_login'),
     path("password-reset/", PasswordResetRequestView.as_view(), name="password-reset"),
     path("password-reset-confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
-     path("me/", MeView.as_view(), name="me"),
+    path("me/", MeView.as_view(), name="me"),
+    path("change-password/", ChangePasswordView.as_view(), name="change-password"),
 ]
 
 urlpatterns += router.urls

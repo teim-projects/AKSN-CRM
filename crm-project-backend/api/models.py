@@ -82,6 +82,7 @@ class CustomUserManager(BaseUserManager):
 # Custome Roles 
 class Role(models.Model):
     name = models.CharField(max_length=200, unique=True)
+    permissions = models.JSONField(default=dict, blank=True, null=True)
 
     def __str__(self):
         return self.name 

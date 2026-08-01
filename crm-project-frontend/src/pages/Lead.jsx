@@ -15,7 +15,10 @@ export default function Lead() {
   const BASE_API = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
   const API_URL = `${BASE_API}/lead/lead/`;
 
-  const { userRole, isLoading: loadingUser } = useUserRole(BASE_API);
+  const { userRole, isLoading: loadingUser, hasPermission } = useUserRole(BASE_API);
+  const canCreateLead = hasPermission("leads", "create");
+  const canEditLead = hasPermission("leads", "edit");
+  const canDeleteLead = hasPermission("leads", "delete");
 
   const [showQuotationForm, setShowQuotationForm] = useState(false);
   const [quotationLeadData, setQuotationLeadData] = useState(null);
@@ -76,7 +79,7 @@ export default function Lead() {
 
       const data = await res.json();
       const results = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : [];
-      
+
       setAllRows(results);
       setFilteredData(results);
       setRows(results);
@@ -95,8 +98,8 @@ export default function Lead() {
     }
   }, [token, API_URL]);
 
-  useEffect(() => { 
-    fetchData(); 
+  useEffect(() => {
+    fetchData();
   }, [fetchData]);
 
   // Update pagination when filtered data changes
@@ -195,42 +198,42 @@ export default function Lead() {
   };
 
   const getRowClassName = (lead) => {
-  // If status is "closed", return normal styling (no background color)
-  if (lead.status === "closed") return "";
-  
-  if (!lead.followup_date) return "";
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const followupDate = new Date(lead.followup_date);
-  followupDate.setHours(0, 0, 0, 0);
+    // If status is closed, won, or lost, return normal styling
+    if (lead.status === "close_win" || lead.status === "close_loss" || lead.status === "closed") return "";
 
-  if (followupDate.getTime() === today.getTime()) return "bg-yellow-100";
-  if (followupDate < today) return "bg-red-100";
-  return "";
-};
+    if (!lead.followup_date) return "";
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const followupDate = new Date(lead.followup_date);
+    followupDate.setHours(0, 0, 0, 0);
+
+    if (followupDate.getTime() === today.getTime()) return "bg-yellow-100";
+    if (followupDate < today) return "bg-red-100";
+    return "";
+  };
 
   const columns = [
     { key: "sr", label: "Sr.No", render: (_, idx) => <span className="text-slate-600 font-medium text-xs py-0.5 block">{(currentPage - 1) * itemsPerPage + (idx + 1)}</span> },
     { key: "date", label: "Date", render: (r) => <span className="text-slate-600 text-xs whitespace-nowrap py-0.5 block">{formatDate(r.enquiry_date || r.created_at)}</span> },
-    { key: "followup_date", label: "Followup Date", render: (r) => <span className="font-semibold text-slate-700 text-xs whitespace-nowrap py-0.5 block">{formatDate(r.followup_date)}</span> },
+    { key: "followup_date", label: "Next Followup Date", render: (r) => <span className="font-semibold text-slate-700 text-xs whitespace-nowrap py-0.5 block">{formatDate(r.followup_date)}</span> },
     { key: "company_name", label: "Company Name", render: (r) => <span className="text-slate-900 font-semibold text-xs tracking-tight py-0.5 block">{r.company_name || "-"}</span> },
     { key: "contact_person", label: "Contact Person", render: (r) => <span className="text-slate-700 text-xs py-0.5 block">{r.contact_person || "-"}</span> },
     { key: "mobile_number", label: "Mobile", render: (r) => <span className="text-slate-700 text-xs font-medium whitespace-nowrap py-0.5 block">{r.mobile_number || "-"}</span> },
-    { 
-      key: "lead_source", 
-      label: "Source", 
-      render: (r) => <div className="py-0.5"><span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-medium uppercase tracking-wider">{r.lead_source || "-"}</span></div> 
+    {
+      key: "lead_source",
+      label: "Source",
+      render: (r) => <div className="py-0.5"><span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-medium uppercase tracking-wider">{r.lead_source || "-"}</span></div>
     },
-    { 
-      key: "status", 
-      label: "Status", 
-      render: (r) => <div className="py-0.5"><span className="px-2 py-0.5 rounded bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-wider">{r.status || "-"}</span></div> 
+    {
+      key: "status",
+      label: "Status",
+      render: (r) => <div className="py-0.5"><span className="px-2 py-0.5 rounded bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-wider">{r.status || "-"}</span></div>
     },
-    { 
-      key: "is_converted", 
-      label: "Converted", 
-      render: (r) => r.is_converted ? 
-        <span className="text-emerald-600 font-bold text-sm py-0.5 block">✓</span> : 
+    {
+      key: "is_converted",
+      label: "Converted",
+      render: (r) => r.is_converted ?
+        <span className="text-emerald-600 font-bold text-sm py-0.5 block">✓</span> :
         <span className="text-slate-300 text-xs py-0.5 block">-</span>
     },
     ...(userRole?.name !== "sales"
@@ -309,30 +312,34 @@ export default function Lead() {
         <MdAdd />
       </button>
 
-      <button
-        onClick={() => { setEditingLead(row); setShowLeadForm(true); }}
-        className="p-1 bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 rounded transition-all duration-150 text-sm shadow-sm"
-        title="Edit Record"
-      >
-        <MdEdit />
-      </button>
+      {canEditLead && (
+        <button
+          onClick={() => { setEditingLead(row); setShowLeadForm(true); }}
+          className="p-1 bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 rounded transition-all duration-150 text-sm shadow-sm cursor-pointer"
+          title="Edit Record"
+        >
+          <MdEdit />
+        </button>
+      )}
 
-      <button
-        onClick={() => handleDelete(row.id)}
-        className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 rounded transition-all duration-150 text-sm shadow-sm"
-        title="Delete Record"
-      >
-        <MdDelete />
-      </button>
+      {canDeleteLead && (
+        <button
+          onClick={() => handleDelete(row.id)}
+          className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 rounded transition-all duration-150 text-sm shadow-sm cursor-pointer"
+          title="Delete Record"
+        >
+          <MdDelete />
+        </button>
+      )}
     </div>
-  ), [handleDelete, handleConvertToCustomer]);
+  ), [handleDelete, handleConvertToCustomer, canEditLead, canDeleteLead]);
 
   const currentPageData = getCurrentPageData();
 
   return (
     <Base title="">
       <div className="w-full space-y-4 font-sans antialiased text-slate-800 -mt-5 px-1">
-        
+
         {/* HEADER BLOCK WITH THE BLUE VERTICAL ACCENT LINE */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-1 pt-1">
           <div className="flex items-center gap-3">
@@ -352,12 +359,14 @@ export default function Lead() {
               <MdFilterList className="text-slate-400" />
               Filter
             </button>
-            <button
-              onClick={() => { setEditingLead(null); setShowLeadForm(true); }}
-              className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10 flex items-center gap-1"
-            >
-              <span>+</span> Add Enquiry
-            </button>
+            {canCreateLead && (
+              <button
+                onClick={() => { setEditingLead(null); setShowLeadForm(true); }}
+                className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10 flex items-center gap-1 cursor-pointer"
+              >
+                <span>+</span> Add Enquiry
+              </button>
+            )}
           </div>
         </div>
 
@@ -381,16 +390,16 @@ export default function Lead() {
 
       {/* FILTER DRAWER - DARK OVERLAY WITHOUT BLUR */}
       {isFilterOpen && (
-        <div 
-          className="fixed inset-0 bg-black/40 z-[999]" 
-          onClick={() => setIsFilterOpen(false)} 
+        <div
+          className="fixed inset-0 bg-black/40 z-[999]"
+          onClick={() => setIsFilterOpen(false)}
         />
       )}
-      
+
       <div className={`fixed top-0 right-0 h-full w-[380px] bg-white shadow-2xl z-[1000] transition-transform duration-300 ease-in-out ${isFilterOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="flex items-center justify-between p-5 border-b border-slate-200">
           <h3 className="text-lg font-bold text-slate-900">Filters</h3>
-          <button 
+          <button
             onClick={() => setIsFilterOpen(false)}
             className="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1"
           >

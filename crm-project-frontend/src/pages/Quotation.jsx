@@ -7,6 +7,7 @@ import { FaWhatsapp } from "react-icons/fa";
 import Swal from "sweetalert2";
 import AdvancedTableFilter from "../components/AdvancedTableFilter";
 import axios from "axios";
+import { useUserRole } from '../hooks/useAuth';
 
 const BASE_API = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
 
@@ -23,6 +24,11 @@ api.interceptors.request.use((config) => {
 const normalize = (d) => (Array.isArray(d) ? d : d?.results || []);
 
 export default function Quotation() {
+  const { hasPermission } = useUserRole(BASE_API);
+  const canCreateQuotation = hasPermission("quotations", "create");
+  const canEditQuotation = hasPermission("quotations", "edit");
+  const canDeleteQuotation = hasPermission("quotations", "delete");
+
   const [rows, setRows] = useState([]);
   const [allRows, setAllRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -175,16 +181,36 @@ export default function Quotation() {
 
   const handleViewPDF = async (quotationId, versionId = null) => {
     try {
-      const url = versionId
-        ? `quotation/quotation/${quotationId}/version/${versionId}/pdf/`
-        : `quotation/quotation/${quotationId}/pdf/`;
+      const query = versionId ? `version_id=${versionId}&disposition=inline` : `disposition=inline`;
+      const url = `quotation/quotation/${quotationId}/pdf/?${query}`;
 
       const response = await api.get(url, { responseType: "blob" });
       const file = new Blob([response.data], { type: "application/pdf" });
-      window.open(URL.createObjectURL(file));
+      const fileURL = URL.createObjectURL(file);
+      window.open(fileURL, "_blank");
     } catch (err) {
       console.error(err);
       Swal.fire({ icon: "error", title: "Error", text: "Failed to open PDF" });
+    }
+  };
+
+  const handleDownloadPDF = async (quotationId, versionId = null) => {
+    try {
+      const query = versionId ? `version_id=${versionId}&disposition=attachment` : `disposition=attachment`;
+      const url = `quotation/quotation/${quotationId}/pdf/?${query}`;
+
+      const response = await api.get(url, { responseType: "blob" });
+      const file = new Blob([response.data], { type: "application/pdf" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(file);
+      link.download = `Quotation_${quotationId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+    } catch (err) {
+      console.error(err);
+      Swal.fire({ icon: "error", title: "Error", text: "Failed to download PDF" });
     }
   };
 
@@ -309,13 +335,13 @@ export default function Quotation() {
           <MdRemoveRedEye />
         </button>
 
-        {isLatest && (
+        {canEditQuotation && isLatest && (
           <button
             onClick={() => { 
               setEditingQuotation(row); 
               setShowQuotationForm(true); 
             }}
-            className="p-1 bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 rounded transition-all duration-150 text-sm shadow-xs"
+            className="p-1 bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer"
             title="Edit Record"
           >
             <MdEdit />
@@ -323,15 +349,7 @@ export default function Quotation() {
         )}
 
         <button
-          onClick={() => {
-            Swal.fire({
-              icon: "info",
-              title: "Download PDF",
-              text: "PDF download will start shortly",
-              timer: 1500,
-              showConfirmButton: false,
-            });
-          }}
+          onClick={() => handleDownloadPDF(row.id)}
           className="p-1 bg-slate-100 hover:bg-green-100 text-slate-600 hover:text-green-700 rounded transition-all duration-150 text-sm shadow-xs"
           title="Download PDF"
         >
@@ -352,10 +370,10 @@ export default function Quotation() {
           <MdEmail />
         </button>
 
-        {isLatest && (
+        {canDeleteQuotation && isLatest && (
           <button
             onClick={() => handleDelete(row.id)}
-            className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 rounded transition-all duration-150 text-sm shadow-xs"
+            className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer"
             title="Delete Record"
           >
             <MdDelete />
@@ -363,7 +381,7 @@ export default function Quotation() {
         )}
       </div>
     );
-  }, [openRow, handleDelete]);
+  }, [openRow, handleDelete, canEditQuotation, canDeleteQuotation]);
 
   // NESTED VERSION HISTORY ROW WITH PAGINATION
   const renderExpandedRow = useCallback((row) => {
@@ -450,15 +468,7 @@ export default function Quotation() {
                           </button>
 
                           <button
-                            onClick={() => {
-                              Swal.fire({
-                                icon: "info",
-                                title: "Download PDF",
-                                text: `Downloading ${v.version_no}`,
-                                timer: 1500,
-                                showConfirmButton: false,
-                              });
-                            }}
+                            onClick={() => handleDownloadPDF(row.id, v.id)}
                             className="p-1 bg-slate-100 hover:bg-green-100 text-slate-600 hover:text-green-700 rounded text-xs transition-colors"
                             title="Download PDF"
                           >
@@ -550,13 +560,15 @@ export default function Quotation() {
               <MdFilterList className="text-slate-400" />
               Filter
             </button>
-            <button
-              onClick={() => { setEditingQuotation(null); setShowQuotationForm(true); }}
-              className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10 flex items-center gap-1"
-            >
-              <MdAdd className="text-sm" />
-              Add Quotation
-            </button>
+            {canCreateQuotation && (
+              <button
+                onClick={() => { setEditingQuotation(null); setShowQuotationForm(true); }}
+                className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10 flex items-center gap-1 cursor-pointer"
+              >
+                <MdAdd className="text-sm" />
+                Add Quotation
+              </button>
+            )}
           </div>
         </div>
 

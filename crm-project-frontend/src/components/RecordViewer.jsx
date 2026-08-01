@@ -28,14 +28,14 @@ export default function RecordViewer({
     "priority_display",
     "pipeline_stage_display",
     "status_display",
-    
+
     // Customer display fields
     "customer_status_display",
     "payment_terms_display",
     "industry_category_display",
     "sales_executive_details",
     "assigned_executive_details",
-    
+
     // Follow-up display fields
     "followup_mode_display",
     "client_response_display",
@@ -46,11 +46,11 @@ export default function RecordViewer({
     "next_followup_mode_display",
     "current_stage_display",
     "move_to_stage_display",
-    
+
     // Product display fields
     "category_details",
     "category_name",
-    
+
     // Related fields that are not actual model fields
     "followups",
     "faq_answers",
@@ -79,6 +79,8 @@ export default function RecordViewer({
       'gst_number': 'GST Number',
       'pan_number': 'PAN Number',
       'customer_code': 'Customer Code',
+      'lead': 'Lead ID',
+      'lead_id': 'Lead ID',
       'industry_category': 'Industry Category',
       'project_value': 'Project Value',
       'payment_terms': 'Payment Terms',
@@ -87,6 +89,7 @@ export default function RecordViewer({
       'customer_status': 'Customer Status',
       'lead_source': 'Lead Source',
       'expected_budget': 'Expected Budget',
+      'amount': 'Amount (₹)',
       'linkedin_profile_url': 'LinkedIn Profile URL',
       'is_converted': 'Is Converted',
       'is_qualified': 'Is Qualified',
@@ -112,9 +115,9 @@ export default function RecordViewer({
       'is_service': 'Is Service',
       'product_image_url': 'Product Image URL',
     };
-    
+
     if (labelMap[text]) return labelMap[text];
-    
+
     return text
       .replaceAll("_", " ")
       .replace(/\b\w/g, (c) => c.toUpperCase());
@@ -210,10 +213,10 @@ export default function RecordViewer({
   // Check if a field should be displayed as a status badge
   const isStatusField = (key) => {
     const statusKeys = [
-      "status", 
-      "customer_status", 
-      "lead_status", 
-      "pipeline_stage", 
+      "status",
+      "customer_status",
+      "lead_status",
+      "pipeline_stage",
       "payment_terms",
       "client_response",
       "followup_mode",

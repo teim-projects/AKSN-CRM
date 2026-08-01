@@ -17,33 +17,33 @@ export default function AdvancedTableFilter({
 
   // Auto detect fields from data
   const hiddenFields = [
-    "id", 
-    "password", 
-    "role", 
-    "school", 
-    "created_at", 
-    "updated_at", 
-    "created_by", 
+    "id",
+    "password",
+    "role",
+    "school",
+    "created_at",
+    "updated_at",
+    "created_by",
     "updated_by",
     "converted_to_customer",
     "is_converted",
     "qualifying_answers",
     "followups",
   ];
-  
+
   // Get all fields from the first data item
   const allFields = new Set();
-  
+
   if (data && data.length > 0) {
     const firstItem = data[0];
     Object.keys(firstItem).forEach((key) => {
       // Only include fields that are not hidden and not objects/arrays (for simple filtering)
       const value = firstItem[key];
-      const isSimpleValue = 
-        typeof value !== 'object' || 
-        value === null || 
+      const isSimpleValue =
+        typeof value !== 'object' ||
+        value === null ||
         value instanceof Date;
-      
+
       // Skip complex objects and arrays for filtering
       if (!hiddenFields.includes(key) && isSimpleValue) {
         allFields.add(key);
@@ -52,7 +52,7 @@ export default function AdvancedTableFilter({
   }
 
   // If columns are provided, use their field names
-  const fields = columns.length > 0 
+  const fields = columns.length > 0
     ? columns.map(col => col.key).filter(key => !hiddenFields.includes(key))
     : [...allFields];
 
@@ -145,9 +145,9 @@ export default function AdvancedTableFilter({
       'is_tally_user': 'Tally User',
       'is_converted': 'Converted',
     };
-    
+
     if (labelMap[field]) return labelMap[field];
-    
+
     return field
       .replaceAll("_", " ")
       .replace(/\b\w/g, (c) => c.toUpperCase());
@@ -158,7 +158,7 @@ export default function AdvancedTableFilter({
       {/* FILTER CONDITION CARDS LAYER */}
       <div style={styles.sectionBlock}>
         <label style={styles.sectionLabel}>MATCH CONDITIONS</label>
-        
+
         {filters.map((filter, index) => (
           <div key={index} style={styles.filterCard}>
             <div style={styles.cardHeader}>

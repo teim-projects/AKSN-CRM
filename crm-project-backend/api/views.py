@@ -142,10 +142,56 @@ from rest_framework.views import APIView
 
 class MeView(APIView):
     permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
     def get(self, request):
-        serializer = AddStaffSerializer(request.user)
-        return Response(serializer.data)
+        user = request.user
+        role_data = None
+
+        if user.role:
+            role_data = {
+                "id": user.role.id,
+                "name": user.role.name,
+                "permissions": user.role.permissions or {}
+            }
+        elif user.is_superuser:
+            role_data = {"id": 1, "name": "admin", "permissions": {}}
+        else:
+            role_data = {"id": 0, "name": "staff", "permissions": {}}
+
+        return Response({
+            "id": user.id,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "full_name": f"{user.first_name or ''} {user.last_name or ''}".strip(),
+            "mobile_no": user.mobile_no,
+            "is_superuser": user.is_superuser,
+            "is_staff": user.is_staff,
+            "role": role_data
+        })
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    def post(self, request):
+        user = request.user
+        old_password = request.data.get("old_password")
+        new_password = request.data.get("new_password") or request.data.get("new_password1")
+
+        if not new_password or len(new_password) < 6:
+            return Response({"error": "New password must be at least 6 characters long."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if old_password:
+            if not user.check_password(old_password):
+                return Response({"error": "Current password is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.set_password(new_password)
+        user.save()
+        return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
+
 
 
 

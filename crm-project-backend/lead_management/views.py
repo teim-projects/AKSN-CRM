@@ -5,8 +5,8 @@ from rest_framework import status, filters
 from rest_framework.filters import OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
-from .models import lead_management, LeadFAQ, LeadFollowUp, Customer
-from .serializers import LeadSerializer, LeadFollowUpSerializer, LeadFAQSerializer, CustomerSerializer
+from .models import lead_management, LeadFAQ, LeadFollowUp, Customer, Project
+from .serializers import LeadSerializer, LeadFollowUpSerializer, LeadFAQSerializer, CustomerSerializer, ProjectSerializer
 from django.db.models import Q, Case, When, Value, IntegerField
 from django.utils import timezone
 from .filters import LeadFilter
@@ -25,6 +25,69 @@ class CustomerViewsets(viewsets.ModelViewSet):
         'poc_name', 'poc_contact_number', 'land_line_no',
         'city', 'state', 'site_city', 'site_state', 'pin_code'
     ]
+
+    @action(detail=True, methods=['post'], url_path='convert-to-project')
+    @transaction.atomic
+    def convert_to_project(self, request, pk=None):
+        customer = self.get_object()
+        
+        # Check if project already exists for this customer
+        existing_project = Project.objects.filter(customer=customer).first()
+        if existing_project:
+            return Response({
+                "message": "Project already exists for this customer",
+                "project_id": existing_project.id,
+                "project_code": existing_project.project_code,
+            }, status=status.HTTP_200_OK)
+
+        executive = customer.sales_executive
+        if not executive and customer.lead and customer.lead.assigned_executive:
+            executive = customer.lead.assigned_executive
+
+        products = customer.product_purchased or []
+        if not products and customer.lead and customer.lead.product_interested:
+            products = customer.lead.product_interested
+
+        scope = ""
+        if customer.lead:
+            scope = customer.lead.requirement_details or customer.lead.remarks or ""
+
+        project_val = customer.project_value
+        if (not project_val or project_val == 0) and customer.lead and customer.lead.amount:
+            project_val = customer.lead.amount
+
+        project_data = {
+            "customer": customer.id,
+            "product": products,
+            "project_executive": executive.id if executive else None,
+            "project_value": float(project_val) if project_val else 0.0,
+            "project_scope_requirements": scope,
+            "start_date": timezone.now().date(),
+            "project_stage": "requirement_analysis",
+            "priority": "medium",
+        }
+
+        serializer = ProjectSerializer(data=project_data, context={'request': request})
+        if serializer.is_valid():
+            project = serializer.save()
+            return Response({
+                "message": "Customer converted to Project successfully",
+                "project_id": project.id,
+                "project_code": project.project_code,
+            }, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProjectViewSet(viewsets.ModelViewSet):
+    queryset = Project.objects.all().order_by('-created_at')
+    serializer_class = ProjectSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, OrderingFilter]
+    filterset_fields = ['customer', 'project_executive', 'project_stage', 'priority']
+    search_fields = ['project_code', 'customer__company_name', 'customer__name', 'project_scope_requirements']
+    ordering_fields = ['created_at', 'start_date', 'expected_to_go_live', 'project_value', 'priority']
 
 
 class LeadViewSet(viewsets.ModelViewSet):
@@ -135,6 +198,19 @@ class LeadViewSet(viewsets.ModelViewSet):
             ).first()
     
         if existing_customer:
+            updated_fields = ["lead"]
+            existing_customer.lead = lead
+            if not existing_customer.sales_executive and lead.assigned_executive:
+                existing_customer.sales_executive = lead.assigned_executive
+                updated_fields.append("sales_executive")
+            if (not existing_customer.project_value or existing_customer.project_value == 0) and lead.amount:
+                existing_customer.project_value = lead.amount
+                updated_fields.append("project_value")
+            if not existing_customer.billing_address and lead.address:
+                existing_customer.billing_address = lead.address
+                updated_fields.append("billing_address")
+            existing_customer.save(update_fields=updated_fields)
+            
             lead.converted_to_customer = existing_customer
             lead.is_converted = True
             lead.save()
@@ -148,6 +224,7 @@ class LeadViewSet(viewsets.ModelViewSet):
     
         # Create new customer from lead data - map all fields
         customer_data = {
+            "lead": lead.id,
             "name": lead.company_name or lead.contact_person or "Unknown",
             "contact_person": lead.contact_person,
             "contact_number": lead.mobile_number,
@@ -160,17 +237,16 @@ class LeadViewSet(viewsets.ModelViewSet):
             "gst_number": lead.gst_number or "",
             "pan_number": lead.pan_number or "",
             "msme_number": lead.msme_number or "",
-            # These fields need to be added manually after conversion
+            "project_value": float(lead.amount) if lead.amount else None,
+            "sales_executive": lead.assigned_executive_id,
             "designation": "",
             "website": "",
             "service_package": [],
             "payment_terms": "",
-            "project_value": None,
-            "sales_executive": None,
             "amc_start_date": None,
             "amc_end_date": None,
             "customer_status": "prospect",
-            "billing_address": "",
+            "billing_address": lead.address or "",
             "pin_code": "",
         }
     

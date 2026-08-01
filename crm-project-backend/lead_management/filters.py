@@ -5,6 +5,7 @@ from .models import lead_management
 class LeadFilter(django_filters.FilterSet):
     created_at = django_filters.DateFromToRangeFilter()
     followup_date = django_filters.DateFromToRangeFilter()
+    last_followup_date = django_filters.DateFromToRangeFilter()
     
     class Meta:
         model = lead_management
@@ -15,4 +16,6 @@ class LeadFilter(django_filters.FilterSet):
             'lead_source': ['exact'],
             'assigned_executive': ['exact'],
             'is_converted': ['exact'],
+            'followup_date': ['exact', 'isnull'],
+            'last_followup_date': ['exact', 'isnull'],
         }

@@ -43,13 +43,16 @@ export default function AddLeadForm({
     assigned_executive: "",
     followup_date: "",
     pipeline_stage: "new_lead",
+    status: "open",
     is_tally_user: "",
     requirement_details: "",
     remarks: "",
+    amount: "",
     // ✅ NEW FIELDS
     gst_number: "",
     pan_number: "",
     msme_number: "",
+    address: "",
   });
 
   const cities = useMemo(() => {
@@ -112,6 +115,12 @@ export default function AddLeadForm({
     { id: "demo_completed", name: "Demo Completed" },
     { id: "proposal_sent", name: "Proposal Sent" },
     { id: "negotiation", name: "Negotiation" },
+  ];
+
+  const statusOptions = [
+    { id: "open", name: "Open" },
+    { id: "close_win", name: "Close Win" },
+    { id: "close_loss", name: "Close Loss" },
   ];
 
   // Reset form when opened or lead changes
@@ -232,13 +241,16 @@ export default function AddLeadForm({
         assigned_executive: lead.assigned_executive || "",
         followup_date: lead.followup_date || "",
         pipeline_stage: lead.pipeline_stage || "new_lead",
+        status: lead.status || "open",
         is_tally_user: lead.is_tally_user || "",
         requirement_details: lead.requirement_details || "",
         remarks: lead.remarks || "",
+        amount: lead.amount !== undefined && lead.amount !== null ? String(lead.amount) : "",
         // ✅ NEW FIELDS
         gst_number: lead.gst_number || "",
         pan_number: lead.pan_number || "",
         msme_number: lead.msme_number || "",
+        address: lead.address || "",
       });
 
       setShowOtherLeadSource(isLeadSourceOther);
@@ -270,13 +282,16 @@ export default function AddLeadForm({
         assigned_executive: "",
         followup_date: "",
         pipeline_stage: "new_lead",
+        status: "open",
         is_tally_user: "",
         requirement_details: "",
         remarks: "",
+        amount: "",
         // ✅ NEW FIELDS
         gst_number: "",
         pan_number: "",
         msme_number: "",
+        address: "",
       });
 
       setShowOtherLeadSource(false);
@@ -295,7 +310,22 @@ export default function AddLeadForm({
 
   const handleMultiSelectChange = (name, selected) => {
     const values = selected ? selected.map((opt) => opt.value) : [];
-    setFormData((prev) => ({ ...prev, [name]: values }));
+    setFormData((prev) => {
+      const updated = { ...prev, [name]: values };
+      if (name === "product_interested") {
+        let total = 0;
+        values.forEach((val) => {
+          const prod = products.find(
+            (p) => p.id === val || p.id === Number(val) || p.name === val
+          );
+          if (prod && prod.unit_price) {
+            total += parseFloat(prod.unit_price) || 0;
+          }
+        });
+        updated.amount = total > 0 ? total.toFixed(2) : "";
+      }
+      return updated;
+    });
   };
 
   const clearError = (e) => {
@@ -428,6 +458,7 @@ export default function AddLeadForm({
         linkedin_profile_url: formData.linkedin_profile_url || "",
         state: formData.state || "",
         product_interested: formData.product_interested || [],
+        amount: formData.amount !== "" && formData.amount !== null ? parseFloat(formData.amount) : 0.00,
         expected_closure_date: formatDate(formData.expected_closure_date),
         lead_source: leadSourceValue,
         contact_person: formData.contact_person,
@@ -447,6 +478,7 @@ export default function AddLeadForm({
         gst_number: formData.gst_number || "",
         pan_number: formData.pan_number || "",
         msme_number: formData.msme_number || "",
+        address: formData.address || "",
       };
 
       const url = lead ? `${API_URL}${lead.id}/` : API_URL;
@@ -735,6 +767,21 @@ export default function AddLeadForm({
 
                   <div className="space-y-1">
                     <label className="block text-xs font-semibold text-slate-600">
+                      Amount (₹)
+                    </label>
+                    <input
+                      name="amount"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={formData.amount}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-xs font-semibold text-slate-600">
                       Expected Closure Date
                     </label>
                     <input
@@ -970,6 +1017,23 @@ export default function AddLeadForm({
                       className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
                     />
                   </div>
+
+                  <div className="space-y-1 md:col-span-2">
+                    <label className="block text-xs font-semibold text-slate-600">
+                      Address
+                    </label>
+                    <textarea
+                      name="address"
+                      rows={2}
+                      placeholder="Enter full address details..."
+                      value={formData.address}
+                      onChange={(e) => {
+                        clearError(e);
+                        handleChange(e);
+                      }}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -1023,6 +1087,24 @@ export default function AddLeadForm({
                       className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white h-[38px]"
                     >
                       {pipelineOptions.map(opt => (
+                        <option value={opt.id} key={opt.id}>
+                          {opt.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-xs font-semibold text-slate-600">
+                      Status
+                    </label>
+                    <select
+                      name="status"
+                      value={formData.status}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white h-[38px]"
+                    >
+                      {statusOptions.map(opt => (
                         <option value={opt.id} key={opt.id}>
                           {opt.name}
                         </option>

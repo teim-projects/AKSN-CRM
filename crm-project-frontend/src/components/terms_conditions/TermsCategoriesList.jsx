@@ -6,6 +6,7 @@ import Base from "../Base";
 import TableView from "../TableView";
 import { MdAdd, MdEdit, MdDelete, MdFilterList, MdVisibility } from "react-icons/md";
 import AdvancedTableFilter from "../AdvancedTableFilter";
+import { useUserRole } from "../../hooks/useAuth";
 
 const BASE_API = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
 
@@ -20,6 +21,10 @@ api.interceptors.request.use((config) => {
 });
 
 export default function TermsCategoriesList() {
+  const { hasPermission } = useUserRole(BASE_API);
+  const canCreateTerm = hasPermission("terms", "create");
+  const canEditTerm = hasPermission("terms", "edit");
+  const canDeleteTerm = hasPermission("terms", "delete");
   const navigate = useNavigate();
   const [rows, setRows] = useState([]);
   const [allRows, setAllRows] = useState([]);
@@ -221,31 +226,37 @@ export default function TermsCategoriesList() {
       >
         <MdVisibility size={16} />
       </button>
-      <button
-        onClick={() => navigate(`/terms/add-term?category=${row.id}`)}
-        className="p-1 bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 rounded transition-all duration-150 text-sm shadow-xs"
-        title="Add Term"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-        </svg>
-      </button>
-      <button
-        onClick={() => navigate(`/terms/edit-category/${row.id}`)}
-        className="p-1 bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 rounded transition-all duration-150 text-sm shadow-xs"
-        title="Edit Category"
-      >
-        <MdEdit size={16} />
-      </button>
-      <button
-        onClick={() => handleDelete(row.id)}
-        className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 rounded transition-all duration-150 text-sm shadow-xs"
-        title="Delete Category"
-      >
-        <MdDelete size={16} />
-      </button>
+      {canCreateTerm && (
+        <button
+          onClick={() => navigate(`/terms/add-term?category=${row.id}`)}
+          className="p-1 bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer"
+          title="Add Term"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+      )}
+      {canEditTerm && (
+        <button
+          onClick={() => navigate(`/terms/edit-category/${row.id}`)}
+          className="p-1 bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer"
+          title="Edit Category"
+        >
+          <MdEdit size={16} />
+        </button>
+      )}
+      {canDeleteTerm && (
+        <button
+          onClick={() => handleDelete(row.id)}
+          className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer"
+          title="Delete Category"
+        >
+          <MdDelete size={16} />
+        </button>
+      )}
     </div>
-  ), [openRow, navigate]);
+  ), [openRow, navigate, handleDelete, canCreateTerm, canEditTerm, canDeleteTerm]);
 
   const renderExpandedRow = useCallback((row) => {
     if (openRow !== row.id) return null;
@@ -389,13 +400,15 @@ export default function TermsCategoriesList() {
               <MdFilterList className="text-slate-400" />
               Filter
             </button>
-            <button
-              onClick={() => navigate("/terms/add-category")}
-              className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10 flex items-center gap-1"
-            >
-              <MdAdd className="text-sm" />
-              Add Category
-            </button>
+            {canCreateTerm && (
+              <button
+                onClick={() => navigate("/terms/add-category")}
+                className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10 flex items-center gap-1 cursor-pointer"
+              >
+                <MdAdd className="text-sm" />
+                Add Category
+              </button>
+            )}
           </div>
         </div>
 

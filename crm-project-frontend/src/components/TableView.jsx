@@ -24,7 +24,7 @@ export default function TableView({
   error = null,
   page = 1,
   totalPages = 1,
-  onPageChange = () => {},
+  onPageChange = () => { },
   pageSize = 10,
   actions = null,
   renderExpandedRow = null,

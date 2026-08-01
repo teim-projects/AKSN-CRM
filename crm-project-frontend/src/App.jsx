@@ -17,6 +17,7 @@ import Accounts from "./pages/Accounts";
 import Customer from "./pages/Customer";
 import Lead from "./pages/Lead";
 import Quotation from "./pages/Quotation";
+import Project from "./pages/Project";
 
 import ProductList from './components/products/ProductList';
 import ProductForm from './components/products/ProductForm';
@@ -26,7 +27,27 @@ import TermsCategoriesList from "./components/terms_conditions/TermsCategoriesLi
 import TermsCategoryForm from "./components/terms_conditions/TermsCategoryForm";
 import TermsForm from "./components/terms_conditions/TermsForm";
 
+import RolesPage from "./pages/RolesPage";
+import { useUserRole } from "./hooks/useAuth";
 
+function ModuleProtectedRoute({ module, action = "view", children }) {
+  const baseApi = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
+  const { isLoading, hasPermission } = useUserRole(baseApi);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px] text-slate-500 font-sans text-sm">
+        Verifying permissions...
+      </div>
+    );
+  }
+
+  if (!hasPermission(module, action)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+}
 
 function AppRoutes() {
   const location = useLocation();
@@ -53,36 +74,160 @@ function AppRoutes() {
       <Route path="/profile" element={<ProfileSection />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/password-reset-confirm/:uid/:token" element={<ResetPasswordConfirm />} />
-      <Route path="/accounts" element={<Accounts />} />
-      <Route path="/customer" element={<Customer />} />
-      <Route path="/leads" element={<Lead />} />
-      
-      {/* ✅ Keep only this one route for Quotation */}
-      <Route path="/quotation" element={<Quotation />} />
-      
-      {/* ❌ Remove these - they're redundant */}
-      {/* <Route path="/quotation/add" element={<Quotation />} /> */}
-      {/* <Route path="/quotation/edit/:id" element={<Quotation />} /> */}
+
+      {/* Dynamic Role-Protected Routes */}
+      <Route
+        path="/accounts"
+        element={
+          <ModuleProtectedRoute module="accounts">
+            <Accounts />
+          </ModuleProtectedRoute>
+        }
+      />
+      <Route
+        path="/roles"
+        element={
+          <ModuleProtectedRoute module="roles">
+            <RolesPage />
+          </ModuleProtectedRoute>
+        }
+      />
+      <Route
+        path="/customer"
+        element={
+          <ModuleProtectedRoute module="customers">
+            <Customer />
+          </ModuleProtectedRoute>
+        }
+      />
+      <Route
+        path="/projects"
+        element={
+          <Project />
+        }
+      />
+      <Route
+        path="/leads"
+        element={
+          <ModuleProtectedRoute module="leads">
+            <Lead />
+          </ModuleProtectedRoute>
+        }
+      />
+      <Route
+        path="/quotation"
+        element={
+          <ModuleProtectedRoute module="quotations">
+            <Quotation />
+          </ModuleProtectedRoute>
+        }
+      />
 
       {/* Product Routes */}
-      <Route path="/products" element={<ProductList />} />
-      <Route path="/products/add" element={<ProductForm />} />
-      <Route path="/products/edit/:id" element={<ProductForm />} />
-      
+      <Route
+        path="/products"
+        element={
+          <ModuleProtectedRoute module="products">
+            <ProductList />
+          </ModuleProtectedRoute>
+        }
+      />
+      <Route
+        path="/products/add"
+        element={
+          <ModuleProtectedRoute module="products" action="create">
+            <ProductForm />
+          </ModuleProtectedRoute>
+        }
+      />
+      <Route
+        path="/products/edit/:id"
+        element={
+          <ModuleProtectedRoute module="products" action="edit">
+            <ProductForm />
+          </ModuleProtectedRoute>
+        }
+      />
+
       {/* Category Routes */}
-      <Route path="/categories" element={<CategoryList />} />
-      <Route path="/categories/add" element={<CategoryList />} />
-      <Route path="/categories/edit/:id" element={<CategoryList />} />
-      <Route path="/follow-up" element={<FollowUp />} />
-      
+      <Route
+        path="/categories"
+        element={
+          <ModuleProtectedRoute module="products">
+            <CategoryList />
+          </ModuleProtectedRoute>
+        }
+      />
+      <Route
+        path="/categories/add"
+        element={
+          <ModuleProtectedRoute module="products" action="create">
+            <CategoryList />
+          </ModuleProtectedRoute>
+        }
+      />
+      <Route
+        path="/categories/edit/:id"
+        element={
+          <ModuleProtectedRoute module="products" action="edit">
+            <CategoryList />
+          </ModuleProtectedRoute>
+        }
+      />
+
+      {/* Follow-up Routes */}
+      <Route
+        path="/follow-up"
+        element={
+          <ModuleProtectedRoute module="followups">
+            <FollowUp />
+          </ModuleProtectedRoute>
+        }
+      />
+
+      {/* Terms Routes */}
+      <Route
+        path="/terms"
+        element={
+          <ModuleProtectedRoute module="terms">
+            <TermsCategoriesList />
+          </ModuleProtectedRoute>
+        }
+      />
+      <Route
+        path="/terms/add-category"
+        element={
+          <ModuleProtectedRoute module="terms" action="create">
+            <TermsCategoryForm />
+          </ModuleProtectedRoute>
+        }
+      />
+      <Route
+        path="/terms/edit-category/:id"
+        element={
+          <ModuleProtectedRoute module="terms" action="edit">
+            <TermsCategoryForm />
+          </ModuleProtectedRoute>
+        }
+      />
+      <Route
+        path="/terms/add-term"
+        element={
+          <ModuleProtectedRoute module="terms" action="create">
+            <TermsForm />
+          </ModuleProtectedRoute>
+        }
+      />
+      <Route
+        path="/terms/edit-term/:id"
+        element={
+          <ModuleProtectedRoute module="terms" action="edit">
+            <TermsForm />
+          </ModuleProtectedRoute>
+        }
+      />
+
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
-
-      <Route path="/terms" element={<TermsCategoriesList />} />
-      <Route path="/terms/add-category" element={<TermsCategoryForm />} />
-      <Route path="/terms/edit-category/:id" element={<TermsCategoryForm />} />
-      <Route path="/terms/add-term" element={<TermsForm />} />
-      <Route path="/terms/edit-term/:id" element={<TermsForm />} />
-
     </Routes>
   );
 

@@ -4,11 +4,15 @@ import TableView from "../../components/TableView";
 import { MdAdd, MdFilterList } from "react-icons/md";
 import AddLeadFollowUpForm from "./AddLeadFollowUpForm";
 import AdvancedTableFilter from "../AdvancedTableFilter";
+import { useUserRole } from "../../hooks/useAuth";
 
 export default function FollowUp() {
   const BASE_API = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
   const API_URL = `${BASE_API}/lead/lead/`;
   const FOLLOWUP_API_URL = `${BASE_API}/lead/lead-followups/`;
+
+  const { hasPermission } = useUserRole(BASE_API);
+  const canCreateFollowup = hasPermission("followups", "create");
 
   const [rows, setRows] = useState([]);
   const [allRows, setAllRows] = useState([]);
@@ -87,15 +91,16 @@ export default function FollowUp() {
         const latestFollowup = leadFollowups.length > 0 ? leadFollowups[leadFollowups.length - 1] : null;
         
         let effectiveFollowupDate = lead.followup_date || null;
-        if (latestFollowup?.next_followup_date) {
-          effectiveFollowupDate = latestFollowup.next_followup_date;
-        } else if (latestFollowup?.followup_date) {
-          effectiveFollowupDate = latestFollowup.followup_date;
+        if (latestFollowup) {
+          effectiveFollowupDate = latestFollowup.next_followup_date || null;
         }
+
+        let lastFollowupDate = lead.last_followup_date || (latestFollowup ? latestFollowup.followup_date : null);
 
         return {
           ...lead,
           effective_followup_date: effectiveFollowupDate,
+          last_followup_date: lastFollowupDate,
           followup_count: leadFollowups.length,
           latest_followup: latestFollowup,
           followups: leadFollowups,
@@ -107,14 +112,15 @@ export default function FollowUp() {
       setRows(enrichedLeads);
 
       // Calculate overall statistics
+      const isNotClosed = (status) => status !== "close_win" && status !== "close_loss" && status !== "closed";
       const totalFollowupsCount = followups.length;
       const todayCount = enrichedLeads.filter((l) => {
-        return l.effective_followup_date === today && l.status !== "closed";
+        return l.effective_followup_date === today && isNotClosed(l.status);
       }).length;
       const overdueCount = enrichedLeads.filter((l) => {
-        return l.effective_followup_date && l.effective_followup_date < today && l.status !== "closed";
+        return l.effective_followup_date && l.effective_followup_date < today && isNotClosed(l.status);
       }).length;
-      const completedCount = enrichedLeads.filter((l) => l.status === "closed").length;
+      const completedCount = enrichedLeads.filter((l) => !isNotClosed(l.status)).length;
 
       setStats({
         total_followups: totalFollowupsCount,
@@ -193,9 +199,9 @@ export default function FollowUp() {
   };
 
   const getRowClassName = (lead) => {
-    if (lead.status === "closed") return "";
+    if (lead.status === "close_win" || lead.status === "close_loss" || lead.status === "closed") return "";
     
-    const targetDate = lead.effective_followup_date || lead.followup_date;
+    const targetDate = lead.effective_followup_date;
     if (!targetDate) return "";
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -280,14 +286,24 @@ export default function FollowUp() {
       className: "w-28"
     },
     { 
+      key: "last_followup_date", 
+      label: "Follow-up Date", 
+      render: (r) => (
+        <span className="text-xs font-semibold text-slate-700">
+          {formatDate(r.last_followup_date)}
+        </span>
+      ),
+      className: "w-28"
+    },
+    { 
       key: "followup_date", 
-      label: "Next Follow-up", 
+      label: "Next Follow-up Date", 
       render: (r) => {
         const today = getTodayString();
-        const isOverdue = r.effective_followup_date && r.effective_followup_date < today && r.status !== 'closed';
-        const isToday = r.effective_followup_date === today;
+        const isOverdue = r.effective_followup_date && r.effective_followup_date < today && r.status !== 'close_win' && r.status !== 'close_loss' && r.status !== 'closed';
+        const isToday = r.effective_followup_date === today && r.status !== 'close_win' && r.status !== 'close_loss' && r.status !== 'closed';
         return (
-          <span className={`text-xs font-medium ${isOverdue ? 'text-red-600 font-bold' : isToday ? 'text-emerald-600 font-bold' : 'text-slate-700'}`}>
+          <span className={`text-xs font-medium ${isOverdue ? 'text-red-600 font-bold' : isToday ? 'text-amber-600 font-bold' : 'text-slate-700'}`}>
             {formatDate(r.effective_followup_date)}
           </span>
         );
@@ -307,34 +323,37 @@ export default function FollowUp() {
     { 
       key: "status", 
       label: "Status", 
-      render: (r) => (
-        <span className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-          r.status === 'closed' ? 'bg-emerald-100 text-emerald-700' : 
-          r.status === 'in_process' ? 'bg-yellow-100 text-yellow-700' : 
-          'bg-blue-100 text-blue-700'
-        }`}>
-          {r.status || "Open"}
-        </span>
-      ),
+      render: (r) => {
+        const s = r.status || "open";
+        const label = s === 'close_win' ? 'Close Win' : s === 'close_loss' ? 'Close Loss' : s === 'closed' ? 'Closed' : s === 'in_process' ? 'In Process' : 'Open';
+        const colorClass = s === 'close_win' || s === 'closed' ? 'bg-emerald-100 text-emerald-700' : s === 'close_loss' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700';
+        return (
+          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${colorClass}`}>
+            {label}
+          </span>
+        );
+      },
       className: "w-24"
     },
   ];
 
   const actionsRenderer = useCallback((row) => (
     <div className="flex items-center justify-center gap-1 py-0.5">
-      <button
-        onClick={() => {
-          setSelectedLeadId(row.id);
-          setEditingFollowUp(null);
-          setShowFollowUpForm(true);
-        }}
-        className="p-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 hover:text-emerald-700 rounded transition-all duration-150 text-sm shadow-sm"
-        title="Add Follow-up"
-      >
-        <MdAdd />
-      </button>
+      {canCreateFollowup && (
+        <button
+          onClick={() => {
+            setSelectedLeadId(row.id);
+            setEditingFollowUp(null);
+            setShowFollowUpForm(true);
+          }}
+          className="p-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 hover:text-emerald-700 rounded transition-all duration-150 text-sm shadow-sm cursor-pointer"
+          title="Add Follow-up"
+        >
+          <MdAdd />
+        </button>
+      )}
     </div>
-  ), []);
+  ), [canCreateFollowup]);
 
   // Lead Selector Modal
   const LeadSelectorModal = ({ open, onClose, onSelect }) => {
@@ -458,20 +477,22 @@ export default function FollowUp() {
               className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-sm"
             >
               <MdFilterList className="text-slate-400" />
-              Advanced
+              Filter
             </button>
 
-            <button
-              onClick={() => {
-                setShowLeadSelector(true);
-                setLeadSearchTerm("");
-                setLeadSearchResults([]);
-              }}
-              className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10 flex items-center gap-1"
-            >
-              <MdAdd className="text-sm" />
-              Add Follow-up
-            </button>
+            {canCreateFollowup && (
+              <button
+                onClick={() => {
+                  setShowLeadSelector(true);
+                  setLeadSearchTerm("");
+                  setLeadSearchResults([]);
+                }}
+                className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10 flex items-center gap-1 cursor-pointer"
+              >
+                <MdAdd className="text-sm" />
+                Add Follow-up
+              </button>
+            )}
           </div>
         </div>
 
