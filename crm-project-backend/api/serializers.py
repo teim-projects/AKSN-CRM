@@ -108,31 +108,85 @@ class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
     def validate_email(self, value):
+        email_clean = value.strip().lower()
         try:
-            user = User.objects.get(email=value)
+            user = User.objects.get(email__iexact=email_clean)
         except User.DoesNotExist:
             raise serializers.ValidationError("No account found with this email.")
         self.context['user'] = user
-        return value
+        return email_clean
 
     def save(self):
         user = self.context['user']
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        token = PasswordResetTokenGenerator().make_token(user)
+        configured_email = getattr(settings, 'EMAIL_HOST_USER', 'girsawaleritesh5@gmail.com')
+        admin_email = getattr(settings, 'ADMIN_EMAIL', configured_email)
+        
+        is_admin = (
+            getattr(user, 'is_superuser', False) or 
+            (user.email and user.email.lower() == configured_email.lower()) or
+            (hasattr(user, 'role') and user.role and user.role.name.lower() == 'admin')
+        )
 
-        frontend_url = getattr(settings, "FRONTEND_URL", 
-                            #    "http://localhost:5173/password-reset-confirm"
-                            )
-        reset_link = f"{frontend_url}/{uid}/{token}/"
+        user_display_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
 
-        subject = "Password Reset Request"
-        context = {"user": user, "reset_link": reset_link}
-        body = render_to_string("registration/custom_password_reset_email.html", context)
+        if is_admin:
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = PasswordResetTokenGenerator().make_token(user)
 
-        email = EmailMultiAlternatives(subject, body, settings.DEFAULT_FROM_EMAIL, [user.email])
-        email.send()
+            frontend_url = getattr(settings, "FRONTEND_URL", None) or "http://localhost:5173/password-reset-confirm"
+            reset_link = f"{frontend_url}/{uid}/{token}/"
 
-        return {"detail": "Password reset email sent successfully."}
+            subject = "Admin Password Reset Request"
+            body = (
+                f"Hello Admin ({user_display_name}),\n\n"
+                f"We received a request to reset your password for AKSN CRM Admin account.\n\n"
+                f"Please click the link below to set a new password:\n"
+                f"{reset_link}\n\n"
+                f"If you did not request this, please ignore this email.\n\n"
+                f"Regards,\nAKSN CRM Security Team"
+            )
+
+            recipients = list(set(filter(None, [user.email, configured_email, admin_email])))
+            try:
+                email_msg = EmailMultiAlternatives(subject, body, settings.DEFAULT_FROM_EMAIL, recipients)
+                email_msg.send(fail_silently=False)
+            except Exception as e:
+                print("Failed to send admin reset email:", e)
+
+            return {
+                "detail": "Admin password reset link sent to your email address.",
+                "is_admin": True,
+                "user_id": user.pk,
+                "email": user.email
+            }
+        else:
+            # Staff user request -> send email notification to Admin
+            subject = f"Password Change Requested by Staff: {user_display_name}"
+            body = (
+                f"Hello Admin,\n\n"
+                f"Staff member '{user_display_name}' ({user.email}) has submitted a password change request in AKSN CRM.\n\n"
+                f"Staff Details:\n"
+                f"- Name: {user_display_name}\n"
+                f"- Email: {user.email}\n"
+                f"- User ID: {user.pk}\n\n"
+                f"Please log in to AKSN CRM and go to Accounts / Staff Management to update their password.\n\n"
+                f"Regards,\nAKSN CRM Notification System"
+            )
+
+            recipients = list(set(filter(None, [configured_email, admin_email])))
+            try:
+                email_msg = EmailMultiAlternatives(subject, body, settings.DEFAULT_FROM_EMAIL, recipients)
+                email_msg.send(fail_silently=False)
+            except Exception as e:
+                print("Failed to send staff request email to admin:", e)
+
+            return {
+                "detail": f"Password change request for staff user ({user.email}) has been submitted to Admin.",
+                "is_admin": False,
+                "user_id": user.pk,
+                "user_name": user_display_name,
+                "email": user.email
+            }
 
 
 class PasswordResetConfirmSerializer(serializers.Serializer):

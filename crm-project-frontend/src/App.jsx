@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -28,9 +29,23 @@ import TermsCategoryForm from "./components/terms_conditions/TermsCategoryForm";
 import TermsForm from "./components/terms_conditions/TermsForm";
 
 import RolesPage from "./pages/RolesPage";
+import NotificationsPage from "./pages/NotificationsPage";
 import { useUserRole } from "./hooks/useAuth";
 
+function ProtectedRoute({ children }) {
+  const token = localStorage.getItem("access");
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
+
 function ModuleProtectedRoute({ module, action = "view", children }) {
+  const token = localStorage.getItem("access");
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
   const baseApi = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
   const { isLoading, hasPermission } = useUserRole(baseApi);
 
@@ -51,6 +66,14 @@ function ModuleProtectedRoute({ module, action = "view", children }) {
 
 function AppRoutes() {
   const location = useLocation();
+  const [, setAuthTick] = useState(0);
+
+  useEffect(() => {
+    const handleAuthChange = () => setAuthTick((t) => t + 1);
+    window.addEventListener("authChange", handleAuthChange);
+    return () => window.removeEventListener("authChange", handleAuthChange);
+  }, []);
+
   const noNavPaths = ["/login", "/register", "/forgot-password"];
   const isLoggedIn = !!localStorage.getItem("access");
 
@@ -70,8 +93,30 @@ function AppRoutes() {
         element={isLoggedIn ? <Navigate to="/dashboard" replace /> : <Login />}
       />
       <Route path="/register" element={<Register />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/profile" element={<ProfileSection />} />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfileSection />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute>
+            <NotificationsPage />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/password-reset-confirm/:uid/:token" element={<ResetPasswordConfirm />} />
 
@@ -103,7 +148,9 @@ function AppRoutes() {
       <Route
         path="/projects"
         element={
-          <Project />
+          <ProtectedRoute>
+            <Project />
+          </ProtectedRoute>
         }
       />
       <Route

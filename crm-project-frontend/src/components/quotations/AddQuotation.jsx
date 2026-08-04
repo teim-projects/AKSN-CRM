@@ -523,6 +523,19 @@ export default function AddQuotation({ id, onBack }) {
         showConfirmButton: false,
       });
 
+      window.dispatchEvent(
+        new CustomEvent("newNotification", {
+          detail: {
+            title: isEdit ? "Quotation Version Updated" : "New Quotation Generated",
+            description: isEdit
+              ? `Quotation #${formData.quotation_number || ""} updated to a new version.`
+              : `New Quotation #${formData.quotation_number || ""} generated for ${formData.company_name || "Client"}.`,
+            type: "quotation",
+            badge: isEdit ? "Version" : "Quotation",
+          },
+        })
+      );
+
       onBack && onBack();
     } catch (err) {
       console.error("Error saving quotation:", err);

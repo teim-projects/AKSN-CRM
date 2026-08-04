@@ -297,8 +297,8 @@ export default function Project() {
         <span className="text-slate-900 font-semibold text-xs py-0.5 block">
           {r.project_value
             ? `₹${parseFloat(r.project_value).toLocaleString("en-IN", {
-                minimumFractionDigits: 2,
-              })}`
+              minimumFractionDigits: 2,
+            })}`
             : "—"}
         </span>
       ),
@@ -419,22 +419,22 @@ export default function Project() {
         {/* FILTER DRAWER - DARK OVERLAY WITHOUT BLUR */}
         {isFilterOpen && (
           <div
-            className="fixed inset-0 bg-black/40 z-[999]"
+            className="fixed inset-0 w-screen h-screen bg-black/40 z-[999]"
             onClick={() => setIsFilterOpen(false)}
           />
         )}
 
-        <div className={`fixed top-0 right-0 h-full w-[380px] bg-white shadow-2xl z-[1000] transition-transform duration-300 ease-in-out ${isFilterOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className={`fixed top-0 right-0 h-screen w-[380px] bg-white shadow-2xl z-[1000] transition-transform duration-300 ease-in-out ${isFilterOpen ? 'translate-x-0' : 'translate-x-full'}`}>
           <div className="flex items-center justify-between p-5 border-b border-slate-200">
             <h3 className="text-lg font-bold text-slate-900">Filters</h3>
             <button
               onClick={() => setIsFilterOpen(false)}
-              className="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1"
+              className="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1 cursor-pointer"
             >
               ×
             </button>
           </div>
-          <div className="p-5 overflow-y-auto h-[calc(100%-80px)]">
+          <div className="p-5 overflow-y-auto h-[calc(100vh-80px)]">
             <AdvancedTableFilter
               data={allRows}
               onFilter={setFilteredData}

@@ -521,6 +521,17 @@ export default function AddLeadForm({
         showConfirmButton: false,
       });
 
+      window.dispatchEvent(
+        new CustomEvent("newNotification", {
+          detail: {
+            title: lead ? "Lead Record Updated" : "New Lead Added",
+            description: `Lead ${lead ? "updated" : "created"} for ${formData.company_name || formData.contact_person || "Client"}.`,
+            type: "leads",
+            badge: lead ? "Updated" : "New Lead",
+          },
+        })
+      );
+
       onSuccess && onSuccess(data);
       onClose && onClose();
     } catch (err) {

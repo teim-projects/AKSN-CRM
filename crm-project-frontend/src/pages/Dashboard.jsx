@@ -98,7 +98,7 @@ export default function Dashboard() {
         const isNotClosed = (s) => s !== 'close_win' && s !== 'close_loss' && s !== 'closed';
         const todayFollowups = leads.filter(l => l.followup_date === today && isNotClosed(l.status)).length;
         const overdueFollowups = leads.filter(l => l.followup_date && l.followup_date < today && isNotClosed(l.status)).length;
-        
+
         const conversionRate = totalLeads > 0 ? ((convertedLeads / totalLeads) * 100).toFixed(1) : 0;
 
         // --- LEAD STATUS BREAKDOWN ---
@@ -261,9 +261,9 @@ export default function Dashboard() {
         // 1. Process all leads for leads count & won count
         leads.forEach((lead) => {
           const staffId = lead.assigned_executive_details?.id || lead.assigned_executive;
-          const staffName = lead.assigned_executive_details?.full_name || 
-                            (lead.assigned_executive ? `Executive #${lead.assigned_executive}` : "Unassigned");
-          
+          const staffName = lead.assigned_executive_details?.full_name ||
+            (lead.assigned_executive ? `Executive #${lead.assigned_executive}` : "Unassigned");
+
           const execEntry = getOrInitExec(staffId, staffName);
           execEntry.totalLeads += 1;
           if (lead.is_converted) {
@@ -277,14 +277,14 @@ export default function Dashboard() {
             (l) => (cust.lead && l.id === cust.lead) || (l.converted_to_customer === cust.id)
           );
 
-          const staffId = cust.sales_executive_details?.id || 
-                          cust.sales_executive || 
-                          convertedLead?.assigned_executive_details?.id || 
-                          convertedLead?.assigned_executive;
+          const staffId = cust.sales_executive_details?.id ||
+            cust.sales_executive ||
+            convertedLead?.assigned_executive_details?.id ||
+            convertedLead?.assigned_executive;
 
-          const staffName = cust.sales_executive_details?.full_name || 
-                            convertedLead?.assigned_executive_details?.full_name || 
-                            (staffId ? `Executive #${staffId}` : "Unassigned");
+          const staffName = cust.sales_executive_details?.full_name ||
+            convertedLead?.assigned_executive_details?.full_name ||
+            (staffId ? `Executive #${staffId}` : "Unassigned");
 
           const customerProjectVal = parseFloat(cust.project_value || 0);
           const leadAmt = parseFloat(convertedLead?.amount || 0);
@@ -385,7 +385,7 @@ export default function Dashboard() {
   return (
     <Base title="" filterTitle="Dashboard Filters">
       <div className="w-full space-y-5 font-sans antialiased text-slate-800 -mt-5 -mx-2 px-1">
-        
+
         {/* HEADER WELCOME BANNER */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-2 pt-2">
           <div className="flex items-center gap-3">
@@ -479,7 +479,7 @@ export default function Dashboard() {
 
         {/* 2. TOP ROW: LEAD SOURCE ANALYSIS, EXECUTIVE PERFORMANCE & FOLLOW-UP OVERVIEW */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          
+
           {/* LEAD SOURCE ANALYSIS WITH PIE/DONUT CHART */}
           <div className="bg-white rounded-xl border border-slate-200/70 shadow-sm p-5 lg:col-span-1 flex flex-col justify-between">
             <div>
@@ -538,8 +538,8 @@ export default function Dashboard() {
                         <span className="font-bold text-slate-900">{exec.formattedRevenue}</span>
                       </div>
                       <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-blue-600 rounded-full" 
+                        <div
+                          className="h-full bg-blue-600 rounded-full"
                           style={{ width: `${exec.progressWidth}%` }}
                         ></div>
                       </div>
@@ -591,7 +591,7 @@ export default function Dashboard() {
 
         {/* 3. SECOND ROW: REVENUE TREND & MONTHLY LEAD TREND */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          
+
           {/* REVENUE TREND ONLY */}
           <div className="bg-white rounded-xl border border-slate-200/70 shadow-sm p-5 flex flex-col justify-between">
             <div>
@@ -612,12 +612,12 @@ export default function Dashboard() {
 
                 <div className="ml-8 h-full flex flex-col justify-between">
                   <div className="relative h-36 w-full border-b border-slate-100">
-                    
+
                     {/* INTERACTIVE HOVER OVERLAY COLUMNS */}
                     <div className="absolute inset-0 flex justify-between z-20">
                       {getPoints().map((pt, idx) => (
                         <div key={idx} className="flex-1 group relative flex justify-center">
-                          
+
                           {/* HOVER TOOLTIP */}
                           <div className="absolute bottom-full mb-3 hidden group-hover:block z-30 bg-white border border-slate-200 shadow-xl rounded-xl p-3 text-left min-w-[120px]">
                             <p className="text-xs font-bold text-slate-900">{pt.month}</p>
@@ -628,7 +628,7 @@ export default function Dashboard() {
                           <div className="w-[1px] h-full bg-slate-200 opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
                           {/* DOT ON THE LINE */}
-                          <div 
+                          <div
                             className="absolute w-2.5 h-2.5 rounded-full bg-blue-600 border-2 border-white shadow opacity-0 group-hover:opacity-100 transition-opacity"
                             style={{ top: `${pt.y}%` }}
                           ></div>
@@ -692,7 +692,7 @@ export default function Dashboard() {
                   <div className="relative h-36 w-full border-b border-slate-100 flex items-end justify-between px-1">
                     {stats.monthlyTrend.map((bar, idx) => (
                       <div key={idx} className="flex-1 flex items-end justify-center gap-1 group relative h-full">
-                        
+
                         {/* HOVER TOOLTIP CARD */}
                         <div className="absolute bottom-full mb-2 hidden group-hover:block z-20 bg-white border border-slate-200 shadow-lg rounded-lg p-2.5 text-left min-w-[110px]">
                           <p className="text-xs font-bold text-slate-900">{bar.month}</p>
@@ -701,13 +701,13 @@ export default function Dashboard() {
                         </div>
 
                         {/* Total Leads Bar */}
-                        <div 
-                          className="w-3.5 bg-blue-200 rounded-t-md transition-all duration-200 group-hover:bg-blue-300" 
+                        <div
+                          className="w-3.5 bg-blue-200 rounded-t-md transition-all duration-200 group-hover:bg-blue-300"
                           style={{ height: `${bar.totalHeight}%` }}
                         ></div>
                         {/* Converted Leads Bar */}
-                        <div 
-                          className="w-3.5 bg-blue-600 rounded-t-md transition-all duration-200 group-hover:bg-blue-700" 
+                        <div
+                          className="w-3.5 bg-blue-600 rounded-t-md transition-all duration-200 group-hover:bg-blue-700"
                           style={{ height: `${bar.convertedHeight}%` }}
                         ></div>
                       </div>
@@ -740,7 +740,7 @@ export default function Dashboard() {
 
         {/* 4. BOTTOM ROW: LEAD STATUS, PIPELINE STAGES & RECENT ACTIVITIES */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          
+
           {/* LEAD STATUS BREAKDOWN */}
           <div className="bg-white rounded-xl border border-slate-200/70 shadow-sm p-5 lg:col-span-1 flex flex-col justify-between">
             <div>
@@ -821,11 +821,10 @@ export default function Dashboard() {
                         )}
                       </td>
                       <td className="py-2.5">
-                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                          row.status === 'close_win' || row.status === 'closed' ? 'bg-emerald-100 text-emerald-700' : 
-                          row.status === 'close_loss' ? 'bg-rose-100 text-rose-700' : 
-                          'bg-blue-100 text-blue-700'
-                        }`}>
+                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider ${row.status === 'close_win' || row.status === 'closed' ? 'bg-emerald-100 text-emerald-700' :
+                            row.status === 'close_loss' ? 'bg-rose-100 text-rose-700' :
+                              'bg-blue-100 text-blue-700'
+                          }`}>
                           {row.status === 'close_win' ? 'Close Win' : row.status === 'close_loss' ? 'Close Loss' : row.status || 'Open'}
                         </span>
                         {row.isConverted && (

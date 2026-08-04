@@ -215,9 +215,36 @@ export default function Lead() {
   const columns = [
     { key: "sr", label: "Sr.No", render: (_, idx) => <span className="text-slate-600 font-medium text-xs py-0.5 block">{(currentPage - 1) * itemsPerPage + (idx + 1)}</span> },
     { key: "date", label: "Date", render: (r) => <span className="text-slate-600 text-xs whitespace-nowrap py-0.5 block">{formatDate(r.enquiry_date || r.created_at)}</span> },
-    { key: "followup_date", label: "Next Followup Date", render: (r) => <span className="font-semibold text-slate-700 text-xs whitespace-nowrap py-0.5 block">{formatDate(r.followup_date)}</span> },
-    { key: "company_name", label: "Company Name", render: (r) => <span className="text-slate-900 font-semibold text-xs tracking-tight py-0.5 block">{r.company_name || "-"}</span> },
-    { key: "contact_person", label: "Contact Person", render: (r) => <span className="text-slate-700 text-xs py-0.5 block">{r.contact_person || "-"}</span> },
+    {
+      key: "followup_date",
+      label: (
+        <div className="leading-tight">
+          <div>Next Followup</div>
+          <div>Date</div>
+        </div>
+      ),
+      render: (r) => <span className="font-semibold text-slate-700 text-xs whitespace-nowrap py-0.5 block">{formatDate(r.followup_date)}</span>
+    },
+    {
+      key: "company_name",
+      label: (
+        <div className="leading-tight">
+          <div>Company</div>
+          <div>Name</div>
+        </div>
+      ),
+      render: (r) => <span className="text-slate-900 font-semibold text-xs tracking-tight py-0.5 block">{r.company_name || "-"}</span>
+    },
+    {
+      key: "contact_person",
+      label: (
+        <div className="leading-tight">
+          <div>Contact</div>
+          <div>Person</div>
+        </div>
+      ),
+      render: (r) => <span className="text-slate-700 text-xs py-0.5 block">{r.contact_person || "-"}</span>
+    },
     { key: "mobile_number", label: "Mobile", render: (r) => <span className="text-slate-700 text-xs font-medium whitespace-nowrap py-0.5 block">{r.mobile_number || "-"}</span> },
     {
       key: "lead_source",
@@ -239,7 +266,12 @@ export default function Lead() {
     ...(userRole?.name !== "sales"
       ? [{
         key: "assign_to",
-        label: "Assign To",
+        label: (
+          <div className="leading-tight">
+            <div>Assign</div>
+            <div>To</div>
+          </div>
+        ),
         render: (r) => <span className="text-slate-700 font-medium text-xs whitespace-nowrap py-0.5 block">{r.assigned_executive_details?.full_name || "-"}</span>
       }]
       : [])

@@ -1,1 +1,93 @@
 @import "tailwindcss";
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Dark Native-Style Scrollbar matching user image (#2b2b2b track, light gray thumb, up/down arrows) */
+::-webkit-scrollbar {
+  width: 15px;
+  height: 15px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #2b2b2b;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #b4b4b4;
+  border-radius: 7px;
+  border: 3px solid #2b2b2b;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #d4d4d4;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background-color: #888888;
+}
+
+/* Top Up Arrow Button */
+::-webkit-scrollbar-button:single-button:vertical:decrement {
+  background-color: #2b2b2b;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='%23a0a0a0'><polygon points='12,5 2,19 22,19'/></svg>");
+  background-repeat: no-repeat;
+  background-position: center;
+  height: 16px;
+  display: block;
+}
+
+/* Bottom Down Arrow Button */
+::-webkit-scrollbar-button:single-button:vertical:increment {
+  background-color: #2b2b2b;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='%23a0a0a0'><polygon points='12,19 2,5 22,5'/></svg>");
+  background-repeat: no-repeat;
+  background-position: center;
+  height: 16px;
+  display: block;
+}
+
+/* Firefox scrollbar support */
+* {
+  scrollbar-width: auto;
+  scrollbar-color: #b4b4b4 #2b2b2b;
+}
+
+/* Thin Scrollbar for Header Tabs & Utility Elements */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+.thin-scrollbar {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent !important;
+}
+
+.thin-scrollbar::-webkit-scrollbar {
+  height: 4px !important;
+  width: 4px !important;
+}
+
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25) !important;
+  border-radius: 9999px !important;
+  border: none !important;
+}
+
+.thin-scrollbar::-webkit-scrollbar-button {
+  display: none !important;
+}

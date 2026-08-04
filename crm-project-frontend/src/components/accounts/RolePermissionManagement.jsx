@@ -255,6 +255,16 @@ export default function RolePermissionManagement({ baseApi }) {
 
       // Notify application of auth/permissions change
       window.dispatchEvent(new Event("authChange"));
+      window.dispatchEvent(
+        new CustomEvent("newNotification", {
+          detail: {
+            title: "System Permissions Updated",
+            description: `Permissions matrix updated for role: ${selectedRole.name}.`,
+            type: "system",
+            badge: "Permissions",
+          },
+        })
+      );
 
       Swal.fire({
         icon: "success",

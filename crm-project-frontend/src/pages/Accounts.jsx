@@ -9,10 +9,11 @@ import AdvancedTableFilter from "../components/AdvancedTableFilter";
 import RecordViewer from "../components/RecordViewer";
 import { useUserRole } from "../hooks/useAuth";
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 export default function Accounts() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const BASE_API = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
 
   const { hasPermission } = useUserRole(BASE_API);
@@ -142,6 +143,23 @@ export default function Accounts() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Automatically open staff edit form when navigating with userId or email from Notification
+  useEffect(() => {
+    const userId = searchParams.get("userId");
+    const emailParam = searchParams.get("email");
+    if ((userId || emailParam) && allRows.length > 0) {
+      const match = allRows.find(
+        (r) =>
+          (userId && String(r.id) === String(userId)) ||
+          (emailParam && r.email && r.email.toLowerCase() === String(emailParam).toLowerCase())
+      );
+      if (match) {
+        setEditingStaff(match);
+        setShowStaffForm(true);
+      }
+    }
+  }, [searchParams, allRows]);
 
   // Update pagination when filtered data changes
   useEffect(() => {

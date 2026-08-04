@@ -9,6 +9,7 @@ import {
   faSignOutAlt
 } from "@fortawesome/free-solid-svg-icons";
 import { useUserRole } from "../hooks/useAuth";
+import NotificationDrawer from "./NotificationDrawer";
 
 // ✅ NEW: Terms & Conditions Icon
 function TermsIcon(props) {
@@ -51,6 +52,8 @@ const allSidebarItems = [
 
 export default function Sidebar({ children }) {
   const [isOpen, setIsOpen] = useState(true);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const location = useLocation();
   const currentPath = location.pathname;
 
@@ -87,11 +90,11 @@ export default function Sidebar({ children }) {
   const sections = ["OVERVIEW", "SALES", "OPERATIONS"];
 
   return (
-    <div className="min-h-screen bg-[#f4f5f9] flex flex-row font-sans antialiased relative w-full">
+    <div className="h-screen bg-[#12192c] flex flex-row font-sans antialiased relative w-full overflow-hidden">
 
       {/* SIDEBAR CONTAINER */}
       <aside
-        className={`bg-[#12192c] text-slate-300 min-h-screen flex flex-col transition-all duration-300 ease-in-out z-50 sticky top-0 h-screen ${isOpen ? "w-64 opacity-100" : "w-0 opacity-0 pointer-events-none"
+        className={`bg-[#12192c] text-slate-300 h-screen flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out z-50 ${isOpen ? "w-64 opacity-100" : "w-0 opacity-0 pointer-events-none"
           }`}
       >
         <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-800/60 min-w-[256px]">
@@ -130,24 +133,33 @@ export default function Sidebar({ children }) {
       </aside>
 
       {/* RIGHT SIDE CONTAINER */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto overflow-x-hidden bg-[#f4f5f9]">
 
         {/* NAVBAR */}
         <Navbar
           onMenuClick={() => setIsOpen(true)}
           pageTitle={getPageTitle()}
           isSidebarOpen={isOpen}
+          onNotificationClick={() => setIsNotificationOpen(true)}
+          unreadCount={unreadNotifCount}
         />
 
-        <main className="flex-1 p-5 md:p-6 overflow-x-hidden w-full">
+        <main className="flex-1 p-5 md:p-6 w-full bg-[#f4f5f9]">
           {children}
         </main>
       </div>
+
+      {/* NOTIFICATION DRAWER - SLIDES IN FROM RIGHT */}
+      <NotificationDrawer
+        isOpen={isNotificationOpen}
+        onClose={() => setIsNotificationOpen(false)}
+        onUnreadCountChange={setUnreadNotifCount}
+      />
     </div>
   );
 }
 
-const Navbar = ({ onMenuClick, pageTitle, isSidebarOpen }) => {
+const Navbar = ({ onMenuClick, pageTitle, isSidebarOpen, onNotificationClick, unreadCount }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -186,7 +198,7 @@ const Navbar = ({ onMenuClick, pageTitle, isSidebarOpen }) => {
   }, [location, checkAuth]);
 
   return (
-    <nav className="bg-white border-b border-gray-100 sticky top-0 z-40 w-full px-6 py-3.5 flex items-center justify-between shadow-md shadow-gray-200/40">
+    <nav className="bg-white border-b border-gray-100 flex-shrink-0 sticky top-0 z-40 w-full px-6 py-3.5 flex items-center justify-between shadow-md shadow-gray-200/40">
       <div className="flex items-center gap-4">
         {!isSidebarOpen && (
           <button
@@ -228,9 +240,20 @@ const Navbar = ({ onMenuClick, pageTitle, isSidebarOpen }) => {
           />
         </form>
 
-        <button className="p-2 text-gray-400 hover:text-gray-600 relative transition-colors">
+        <button
+          onClick={onNotificationClick}
+          className="p-2 text-gray-400 hover:text-blue-600 relative transition-colors cursor-pointer"
+          title="Notifications"
+        >
           <FontAwesomeIcon icon={faBell} className="text-base" />
-          <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+          {unreadCount > 0 && (
+            <>
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full animate-ping"></span>
+              <span className="absolute -top-0.5 -right-1 px-1 min-w-[15px] h-[15px] bg-blue-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center border border-white shadow-xs">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            </>
+          )}
         </button>
 
         {isAuthenticated ? (
