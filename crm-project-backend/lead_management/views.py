@@ -31,23 +31,14 @@ class CustomerViewsets(viewsets.ModelViewSet):
     @transaction.atomic
     def convert_to_project(self, request, pk=None):
         customer = self.get_object()
-        
-        # Check if project already exists for this customer
-        existing_project = Project.objects.filter(customer=customer).first()
-        if existing_project:
-            return Response({
-                "message": "Project already exists for this customer",
-                "project_id": existing_project.id,
-                "project_code": existing_project.project_code,
-            }, status=status.HTTP_200_OK)
 
         executive = customer.sales_executive
         if not executive and customer.lead and customer.lead.assigned_executive:
             executive = customer.lead.assigned_executive
 
-        products = customer.product_purchased or []
-        if not products and customer.lead and customer.lead.product_interested:
-            products = customer.lead.product_interested
+        products_data = customer.product_purchased or []
+        if not products_data and customer.lead and customer.lead.product_interested:
+            products_data = customer.lead.product_interested
 
         scope = ""
         if customer.lead:
@@ -57,27 +48,98 @@ class CustomerViewsets(viewsets.ModelViewSet):
         if (not project_val or project_val == 0) and customer.lead and customer.lead.amount:
             project_val = customer.lead.amount
 
-        project_data = {
-            "customer": customer.id,
-            "product": products,
-            "project_executive": executive.id if executive else None,
-            "project_value": float(project_val) if project_val else 0.0,
-            "project_scope_requirements": scope,
-            "start_date": timezone.now().date(),
-            "project_stage": "requirement_analysis",
-            "priority": "medium",
-        }
+        # Normalize product entries into list of dicts with AMC dates
+        normalized_products = []
+        if isinstance(products_data, list) and len(products_data) > 0:
+            for item in products_data:
+                if isinstance(item, dict):
+                    prod_name = item.get("product") or item.get("name") or item.get("product_name") or ""
+                    start_d = item.get("amc_start_date") or customer.amc_start_date
+                    end_d = item.get("amc_end_date") or customer.amc_end_date
+                    if prod_name:
+                        normalized_products.append({
+                            "name": prod_name,
+                            "amc_start_date": start_d,
+                            "amc_end_date": end_d
+                        })
+                elif isinstance(item, str) and item.strip():
+                    normalized_products.append({
+                        "name": item.strip(),
+                        "amc_start_date": customer.amc_start_date,
+                        "amc_end_date": customer.amc_end_date
+                    })
+                elif isinstance(item, (int, float)):
+                    normalized_products.append({
+                        "name": str(item),
+                        "amc_start_date": customer.amc_start_date,
+                        "amc_end_date": customer.amc_end_date
+                    })
 
-        serializer = ProjectSerializer(data=project_data, context={'request': request})
-        if serializer.is_valid():
-            project = serializer.save()
+        if not normalized_products:
+            normalized_products = [{
+                "name": None,
+                "amc_start_date": customer.amc_start_date,
+                "amc_end_date": customer.amc_end_date
+            }]
+
+        created_projects = []
+        already_existing_projects = []
+
+        for prod_item in normalized_products:
+            prod_name = prod_item["name"]
+            prod_list = [prod_name] if prod_name else []
+
+            # Check if project already exists for this customer & product
+            existing = None
+            if prod_name:
+                for p in Project.objects.filter(customer=customer):
+                    if p.product and (prod_name in p.product or prod_name == p.product):
+                        existing = p
+                        break
+            else:
+                existing = Project.objects.filter(customer=customer).first()
+
+            if existing:
+                already_existing_projects.append(existing)
+                continue
+
+            project_data = {
+                "customer": customer.id,
+                "product": prod_list,
+                "project_executive": executive.id if executive else None,
+                "project_value": float(project_val) if project_val else 0.0,
+                "project_scope_requirements": scope,
+                "start_date": timezone.now().date(),
+                "amc_start_date": prod_item["amc_start_date"],
+                "amc_end_date": prod_item["amc_end_date"],
+                "project_stage": "requirement_analysis",
+                "priority": "medium",
+            }
+
+            serializer = ProjectSerializer(data=project_data, context={'request': request})
+            if serializer.is_valid():
+                project = serializer.save()
+                created_projects.append(project)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        if not created_projects and already_existing_projects:
+            first_p = already_existing_projects[0]
             return Response({
-                "message": "Customer converted to Project successfully",
-                "project_id": project.id,
-                "project_code": project.project_code,
-            }, status=status.HTTP_201_CREATED)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                "message": f"Projects already exist for this customer ({len(already_existing_projects)} project(s))",
+                "project_id": first_p.id,
+                "project_code": first_p.project_code,
+                "total_projects": len(already_existing_projects)
+            }, status=status.HTTP_200_OK)
+
+        res_status = status.HTTP_201_CREATED if created_projects else status.HTTP_200_OK
+        return Response({
+            "message": f"Successfully created {len(created_projects)} project(s) for customer",
+            "created_count": len(created_projects),
+            "project_id": created_projects[0].id if created_projects else None,
+            "project_code": created_projects[0].project_code if created_projects else None,
+            "projects": [{"id": p.id, "project_code": p.project_code, "product": p.product} for p in created_projects]
+        }, status=res_status)
 
 
 class ProjectViewSet(viewsets.ModelViewSet):

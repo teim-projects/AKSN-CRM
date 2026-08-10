@@ -165,6 +165,59 @@ class QuotationViewSet(viewsets.ModelViewSet):
 
         return Response({"message": "Version deleted"})
 
+    @action(detail=True, methods=['post'], url_path='finalize')
+    def finalize(self, request, pk=None):
+        """Finalize the active version of a quotation"""
+        quotation = self.get_object()
+        active_version = quotation.versions.filter(is_active=True).first()
+        if not active_version:
+            return Response(
+                {"error": "No active version found to finalize."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        new_status = not active_version.is_finalized
+        quotation.versions.update(is_finalized=False)
+        active_version.is_finalized = new_status
+        active_version.save(update_fields=['is_finalized'])
+        quotation.is_finalized = new_status
+        quotation.save(update_fields=['is_finalized'])
+
+        return Response({
+            "message": "Quotation version marked as final." if new_status else "Quotation finalization removed.",
+            "is_finalized": new_status,
+            "version_id": active_version.id
+        })
+
+    @action(detail=True, methods=['post'], url_path='version/(?P<version_id>[^/.]+)/finalize')
+    def finalize_version(self, request, pk=None, version_id=None):
+        """Finalize a specific version of a quotation (active version only)"""
+        quotation = self.get_object()
+        version = get_object_or_404(
+            QuotationVersion,
+            pk=version_id,
+            quotation=quotation
+        )
+
+        if not version.is_active:
+            return Response(
+                {"error": "Archived versions cannot be finalized."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        new_status = not version.is_finalized
+        quotation.versions.update(is_finalized=False)
+        version.is_finalized = new_status
+        version.save(update_fields=['is_finalized'])
+        quotation.is_finalized = new_status
+        quotation.save(update_fields=['is_finalized'])
+
+        return Response({
+            "message": "Version marked as final." if new_status else "Version finalization removed.",
+            "is_finalized": new_status,
+            "version_id": version.id
+        })
+
     @action(detail=True, methods=['get'], url_path='pdf')
     def pdf(self, request, pk=None):
         """Generate and stream Quotation PDF using WeasyPrint"""

@@ -187,6 +187,7 @@ class QuotationSerializer(serializers.ModelSerializer):
         # Update quotation fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+        instance.is_finalized = False
         instance.save()
 
         # Deactivate old version
@@ -260,6 +261,7 @@ class QuotationCreateSerializer(serializers.ModelSerializer):
         # Update quotation fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+        instance.is_finalized = False
         instance.save()
 
         # Deactivate old version

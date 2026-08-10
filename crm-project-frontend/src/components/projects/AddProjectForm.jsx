@@ -47,6 +47,8 @@ export default function AddProjectForm({
     customer: "",
     start_date: "",
     expected_to_go_live: "",
+    amc_start_date: "",
+    amc_end_date: "",
     project_stage: "requirement_analysis",
     priority: "medium",
     project_executive: "",
@@ -105,6 +107,8 @@ export default function AddProjectForm({
         customer: project.customer || "",
         start_date: project.start_date || "",
         expected_to_go_live: project.expected_to_go_live || "",
+        amc_start_date: project.amc_start_date || "",
+        amc_end_date: project.amc_end_date || "",
         project_stage: project.project_stage || "requirement_analysis",
         priority: project.priority || "medium",
         project_executive: project.project_executive || "",
@@ -131,6 +135,8 @@ export default function AddProjectForm({
         customer: initialCustomer.id || "",
         start_date: "",
         expected_to_go_live: "",
+        amc_start_date: initialCustomer.amc_start_date || "",
+        amc_end_date: initialCustomer.amc_end_date || "",
         project_stage: "requirement_analysis",
         priority: "medium",
         project_executive: initialCustomer.sales_executive || initialCustomer.sales_executive_details?.id || "",
@@ -146,6 +152,8 @@ export default function AddProjectForm({
         customer: "",
         start_date: "",
         expected_to_go_live: "",
+        amc_start_date: "",
+        amc_end_date: "",
         project_stage: "requirement_analysis",
         priority: "medium",
         project_executive: "",
@@ -229,6 +237,8 @@ export default function AddProjectForm({
         project_value: formData.project_value ? parseFloat(formData.project_value) : 0.0,
         start_date: formData.start_date || null,
         expected_to_go_live: formData.expected_to_go_live || null,
+        amc_start_date: formData.amc_start_date || null,
+        amc_end_date: formData.amc_end_date || null,
       };
 
       const isEdit = !!project?.id;
@@ -391,6 +401,35 @@ export default function AddProjectForm({
                 type="date"
                 name="expected_to_go_live"
                 value={formData.expected_to_go_live}
+                onChange={handleChange}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              />
+            </div>
+          </div>
+
+          {/* AMC Dates Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-slate-600">
+                AMC Start Date
+              </label>
+              <input
+                type="date"
+                name="amc_start_date"
+                value={formData.amc_start_date}
+                onChange={handleChange}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-slate-600">
+                AMC End Date
+              </label>
+              <input
+                type="date"
+                name="amc_end_date"
+                value={formData.amc_end_date}
                 onChange={handleChange}
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
               />

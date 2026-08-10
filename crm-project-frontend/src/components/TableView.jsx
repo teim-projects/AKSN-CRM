@@ -60,13 +60,13 @@ export default function TableView({
                 <React.Fragment key={row.id ?? idx}>
                   <tr className={`border-b hover:bg-gray-50 ${rowClassName ? rowClassName(row) : ''}`}>
                     {columns.map(col => (
-                      <td key={col.key} className="py-2 px-3 text-center">
+                      <td key={col.key} className="py-1.5 px-3 text-center">
                         {col.render ? col.render(row, idx) : (row[col.key] ?? "")}
                       </td>
                     ))}
 
                     {actions && (
-                      <td className="py-2 px-3">
+                      <td className="py-1.5 px-3">
                         <div className="flex items-center justify-center text-center gap-2">
                           {actions(row)}
                         </div>

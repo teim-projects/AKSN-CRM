@@ -37,28 +37,55 @@ function ProjectIcon(props) {
   );
 }
 
+// ✅ NEW: AMC Icon
+function AmcIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 const allSidebarItems = [
   { key: "home", label: "Dashboard", icon: HomeIcon, path: "/dashboard", section: "OVERVIEW" },
+
+  // SALES (Pre-Sales & Deal Pipeline)
   { key: "leads", label: "Lead Management", icon: TargetIcon, path: "/leads", section: "SALES" },
   { key: "followups", label: "Follow-up Management", icon: FollowUpIcon, path: "/follow-up", section: "SALES" },
   { key: "quotes", label: "Quotations", icon: QuoteIcon, path: "/quotation", section: "SALES" },
-  { key: "products", label: "Product Master", icon: BoxIcon, path: "/products", section: "SALES" },
-  { key: "contacts", label: "Customers", icon: UserIcon, path: "/customer", section: "SALES" },
-  { key: "projects", label: "Project Management", icon: ProjectIcon, path: "/projects", section: "SALES" },
-  { key: "terms", label: "Terms & Conditions", icon: TermsIcon, path: "/terms", section: "SALES" },
-  { key: "accounts", label: "Accounts", icon: BuildingIcon, path: "/accounts", section: "OPERATIONS" },
-  { key: "roles", label: "Role Management", icon: ShieldIcon, path: "/roles", section: "OPERATIONS" },
+
+  // OPERATIONS (Post-Sales Delivery & Service)
+  { key: "contacts", label: "Customers", icon: UserIcon, path: "/customer", section: "OPERATIONS" },
+  { key: "projects", label: "Project Management", icon: ProjectIcon, path: "/projects", section: "OPERATIONS" },
+  { key: "amc", label: "AMC Contracts", icon: AmcIcon, path: "/amc", section: "OPERATIONS" },
+
+  // MASTER DATA (Catalog & Master Configurations)
+  { key: "products", label: "Product Master", icon: BoxIcon, path: "/products", section: "MASTER DATA" },
+  { key: "terms", label: "Terms & Conditions", icon: TermsIcon, path: "/terms", section: "MASTER DATA" },
+
+  // ADMINISTRATION (System & Role Management)
+  { key: "accounts", label: "Accounts", icon: BuildingIcon, path: "/accounts", section: "ADMINISTRATION" },
+  { key: "roles", label: "Role Management", icon: ShieldIcon, path: "/roles", section: "ADMINISTRATION" },
 ];
 
 export default function Sidebar({ children }) {
   const [isOpen, setIsOpen] = useState(true);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [collapsedSections, setCollapsedSections] = useState({});
   const location = useLocation();
   const currentPath = location.pathname;
 
   const baseApi = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
   const { userRole, isLoading: loadingRole, hasPermission } = useUserRole(baseApi);
+
+  const toggleSection = (sectionName) => {
+    setCollapsedSections((prev) => ({
+      ...prev,
+      [sectionName]: !prev[sectionName],
+    }));
+  };
 
   const filteredItems = React.useMemo(() => {
     if (loadingRole) return [];
@@ -71,6 +98,7 @@ export default function Sidebar({ children }) {
       products: "products",
       contacts: "customers",
       projects: "projects",
+      amc: "amc",
       terms: "terms",
       accounts: "accounts",
       roles: "roles",
@@ -78,6 +106,9 @@ export default function Sidebar({ children }) {
 
     return allSidebarItems.filter((item) => {
       const moduleKey = keyToModuleMap[item.key] || item.key;
+      if (moduleKey === "amc") {
+        return hasPermission("amc", "view") || hasPermission("projects", "view") || hasPermission("customers", "view");
+      }
       return hasPermission(moduleKey, "view");
     });
   }, [loadingRole, hasPermission]);
@@ -87,7 +118,7 @@ export default function Sidebar({ children }) {
     return currentItem ? currentItem.label : "Executive Dashboard";
   };
 
-  const sections = ["OVERVIEW", "SALES", "OPERATIONS"];
+  const sections = ["OVERVIEW", "SALES", "OPERATIONS", "MASTER DATA", "ADMINISTRATION"];
 
   return (
     <div className="h-screen bg-[#12192c] flex flex-row font-sans antialiased relative w-full overflow-hidden">
@@ -113,19 +144,32 @@ export default function Sidebar({ children }) {
           </Link>
         </div>
 
-        <nav className="flex-1 px-3 py-5 space-y-6 overflow-y-auto min-w-[256px]">
+        <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto min-w-[256px]">
           {sections.map(section => {
             const sectionItems = filteredItems.filter(item => item.section === section);
             if (sectionItems.length === 0) return null;
+            const isCollapsed = Boolean(collapsedSections[section]);
 
             return (
               <div key={section} className="space-y-1">
-                <span className="px-3 text-[10px] font-bold tracking-wider text-slate-500 block uppercase mb-2">
-                  {section}
-                </span>
-                {sectionItems.map((it) => (
-                  <SidebarItem key={it.key} item={it} active={isActive(it.path, currentPath)} />
-                ))}
+                <button
+                  type="button"
+                  onClick={() => toggleSection(section)}
+                  className="w-full flex items-center justify-between px-3 py-1 text-[10px] font-bold tracking-wider text-slate-500 hover:text-slate-300 uppercase transition-colors cursor-pointer"
+                >
+                  <span>{section}</span>
+                  <span className="text-[9px] text-slate-600">
+                    {isCollapsed ? "►" : "▼"}
+                  </span>
+                </button>
+
+                {!isCollapsed && (
+                  <div className="space-y-1 pt-0.5">
+                    {sectionItems.map((it) => (
+                      <SidebarItem key={it.key} item={it} active={isActive(it.path, currentPath)} />
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}

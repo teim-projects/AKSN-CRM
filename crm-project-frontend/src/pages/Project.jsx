@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Base from "../components/Base";
 import TableView from "../components/TableView";
-import { MdEdit, MdDelete, MdOutlineRemoveRedEye, MdFilterList, MdAdd, MdZoomIn } from "react-icons/md";
+import { MdEdit, MdDelete, MdOutlineRemoveRedEye, MdFilterList, MdAdd, MdZoomIn, MdHandshake } from "react-icons/md";
 import Swal from "sweetalert2";
 import AddProjectForm from "../components/projects/AddProjectForm";
+import AddAMCContractForm from "../components/amc/AddAMCContractForm";
 import RecordViewer from "../components/RecordViewer";
 import AdvancedTableFilter from "../components/AdvancedTableFilter";
 
@@ -23,6 +24,9 @@ export default function Project() {
 
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
+
+  const [showAMCForm, setShowAMCForm] = useState(false);
+  const [amcProject, setAmcProject] = useState(null);
   const [viewingProject, setViewingProject] = useState(null);
 
   // Record Viewer
@@ -329,6 +333,18 @@ export default function Project() {
         <MdOutlineRemoveRedEye />
       </button>
 
+      {/* Add to AMC */}
+      <button
+        onClick={() => {
+          setAmcProject(row);
+          setShowAMCForm(true);
+        }}
+        className="p-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 hover:text-emerald-700 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer"
+        title="Add to AMC Contract"
+      >
+        <MdHandshake />
+      </button>
+
       {/* Edit */}
       <button
         onClick={() => {
@@ -455,6 +471,16 @@ export default function Project() {
           project={editingProject}
         />
 
+        {/* ADD AMC CONTRACT FROM PROJECT MODAL */}
+        <AddAMCContractForm
+          open={showAMCForm}
+          onClose={() => {
+            setShowAMCForm(false);
+            setAmcProject(null);
+          }}
+          initialProject={amcProject}
+        />
+
         {/* RECORD VIEWER MODAL */}
         <RecordViewer
           isOpen={viewOpen}
@@ -518,6 +544,16 @@ export default function Project() {
                 <div>
                   <span className="font-semibold text-slate-500 block">Expected Go Live:</span>
                   <span className="text-slate-800 font-medium">{formatDate(viewingProject.expected_to_go_live)}</span>
+                </div>
+
+                <div>
+                  <span className="font-semibold text-slate-500 block">AMC Start Date:</span>
+                  <span className="text-slate-800 font-medium">{formatDate(viewingProject.amc_start_date)}</span>
+                </div>
+
+                <div>
+                  <span className="font-semibold text-slate-500 block">AMC End Date:</span>
+                  <span className="text-slate-800 font-medium">{formatDate(viewingProject.amc_end_date)}</span>
                 </div>
 
                 <div>

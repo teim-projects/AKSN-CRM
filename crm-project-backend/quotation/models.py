@@ -102,6 +102,7 @@ class Quotation(models.Model):
     msme_number = models.CharField(max_length=20, blank=True, null=True, verbose_name="MSME Number")
     address = models.TextField(blank=True, null=True, verbose_name="Address")
     terms_and_conditions = models.JSONField(blank=True, null=True, default=list, verbose_name="Terms & Conditions")
+    is_finalized = models.BooleanField(default=False, verbose_name="Is Finalized")
     
     # Quotation Details
     subject = models.CharField(max_length=255, verbose_name="Subject", null=True, blank=True)
@@ -169,6 +170,7 @@ class QuotationVersion(models.Model):
     
     version_no = models.CharField(max_length=100, verbose_name="Version Number")
     is_active = models.BooleanField(default=True, verbose_name="Is Active")
+    is_finalized = models.BooleanField(default=False, verbose_name="Is Finalized")
     
     # GST Type for this version
     gst_type = models.CharField(

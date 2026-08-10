@@ -49,7 +49,8 @@ urlpatterns = [
     path('lead/', include('lead_management.urls')),
     path('product/', include('product_management.urls')),
     path('quotation/', include('quotation.urls')),
-   
+    path('amc/', include('amc.urls')),
+    path('lead/amc/', include('amc.urls')),
 ]
 
 if settings.DEBUG:

@@ -563,6 +563,8 @@ class Project(models.Model):
     )
     start_date = models.DateField(blank=True, null=True, verbose_name="Start Date")
     expected_to_go_live = models.DateField(blank=True, null=True, verbose_name="Expected to Go Live")
+    amc_start_date = models.DateField(blank=True, null=True, verbose_name="AMC Start Date")
+    amc_end_date = models.DateField(blank=True, null=True, verbose_name="AMC End Date")
     project_stage = models.CharField(
         max_length=50,
         choices=ProjectStage.choices,

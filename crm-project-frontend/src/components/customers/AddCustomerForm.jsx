@@ -535,7 +535,7 @@ export default function AddCustomerForm({
   const productSelectOptions = products
     .filter(p => p.is_service !== true)
     .map((p) => ({
-      value: p.id,
+      value: p.name || String(p.id),
       label: p.name,
     }));
 
@@ -543,9 +543,42 @@ export default function AddCustomerForm({
   const serviceSelectOptions = services
     .filter(s => s.is_service === true)
     .map((s) => ({
-      value: s.id,
+      value: s.name || String(s.id),
       label: s.name,
     }));
+
+  const getSelectedProductList = () => {
+    const raw = formData.product_purchased || [];
+    if (!Array.isArray(raw)) return [];
+    return raw.map((item) => {
+      if (typeof item === "object" && item !== null) {
+        return {
+          product: item.product || item.name || item.product_name || "",
+          amc_start_date: item.amc_start_date || formData.amc_start_date || "",
+          amc_end_date: item.amc_end_date || formData.amc_end_date || "",
+        };
+      }
+      return {
+        product: String(item),
+        amc_start_date: formData.amc_start_date || "",
+        amc_end_date: formData.amc_end_date || "",
+      };
+    }).filter(p => p.product);
+  };
+
+  const handleProductAmcChange = (productName, field, value) => {
+    const currentList = getSelectedProductList();
+    const updated = currentList.map((p) => {
+      if (p.product === productName) {
+        return { ...p, [field]: value };
+      }
+      return p;
+    });
+    setFormData((prev) => ({
+      ...prev,
+      product_purchased: updated,
+    }));
+  };
 
   return (
     <>
@@ -765,16 +798,25 @@ export default function AddCustomerForm({
                     <CreatableSelect
                       isMulti
                       options={productSelectOptions}
-                      value={productSelectOptions.filter(option =>
-                        (formData.product_purchased || []).includes(option.value)
-                      )}
+                      value={getSelectedProductList().map((p) => {
+                        const match = productSelectOptions.find((opt) => String(opt.value) === String(p.product) || opt.label === p.product);
+                        return match || { value: p.product, label: p.product };
+                      })}
                       onChange={(selectedOptions) => {
-                        const values = selectedOptions
-                          ? selectedOptions.map((opt) => opt.value)
-                          : [];
+                        const selectedValues = selectedOptions ? selectedOptions.map((opt) => opt.value || opt.label) : [];
+                        const currentList = getSelectedProductList();
+                        const updatedList = selectedValues.map((val) => {
+                          const existing = currentList.find((p) => p.product === val || String(p.product) === String(val));
+                          if (existing) return existing;
+                          return {
+                            product: val,
+                            amc_start_date: formData.amc_start_date || "",
+                            amc_end_date: formData.amc_end_date || "",
+                          };
+                        });
                         setFormData(prev => ({
                           ...prev,
-                          product_purchased: values
+                          product_purchased: updatedList
                         }));
                       }}
                       placeholder="Select products..."
@@ -873,34 +915,51 @@ export default function AddCustomerForm({
                 </div>
               </div>
 
-              {/* AMC DETAILS */}
+              {/* PER-PRODUCT AMC DETAILS */}
               <div>
                 <h4 className="text-sm font-bold text-slate-700 mb-3 pb-1 border-b border-slate-200">
-                  AMC DETAILS
+                  PER-PRODUCT AMC DETAILS
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="block text-xs font-semibold text-slate-600">AMC Start Date</label>
-                    <input 
-                      name="amc_start_date"
-                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
-                      type="date"
-                      value={formData.amc_start_date} 
-                      onChange={handleChange}
-                    />
+                {getSelectedProductList().length === 0 ? (
+                  <div className="text-xs text-slate-400 italic p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                    Select product(s) in Commercial Details above to configure individual AMC dates.
                   </div>
-
-                  <div className="space-y-1">
-                    <label className="block text-xs font-semibold text-slate-600">AMC End Date</label>
-                    <input 
-                      name="amc_end_date"
-                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
-                      type="date"
-                      value={formData.amc_end_date} 
-                      onChange={handleChange}
-                    />
+                ) : (
+                  <div className="space-y-3">
+                    {getSelectedProductList().map((prodItem, idx) => (
+                      <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                        <div className="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1.5">
+                          <span className="w-2 h-2 bg-blue-600 rounded-full block"></span>
+                          Product: <span className="text-blue-700 font-semibold">{prodItem.product}</span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                              AMC Start Date
+                            </label>
+                            <input
+                              type="date"
+                              className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                              value={prodItem.amc_start_date || ""}
+                              onChange={(e) => handleProductAmcChange(prodItem.product, "amc_start_date", e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                              AMC End Date
+                            </label>
+                            <input
+                              type="date"
+                              className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                              value={prodItem.amc_end_date || ""}
+                              onChange={(e) => handleProductAmcChange(prodItem.product, "amc_end_date", e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
+                )}
               </div>
 
               {/* ADDRESS */}

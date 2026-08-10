@@ -204,6 +204,7 @@ export default function Customer() {
         showConfirmButton: false
       });
 
+      fetchData();
       setProjectCustomer(customer);
       setShowProjectForm(true);
     } catch (err) {
@@ -218,14 +219,14 @@ export default function Customer() {
     {
       key: "sr",
       label: "#",
-      render: (_, idx) => <span className="text-slate-400 font-medium text-[10px] py-0.5 block">{(currentPage - 1) * itemsPerPage + (idx + 1)}</span>,
+      render: (_, idx) => <span className="text-slate-400 font-medium text-[10px] py-0 block">{(currentPage - 1) * itemsPerPage + (idx + 1)}</span>,
       className: "w-8 text-center"
     },
     {
       key: "customer_code",
       label: "Code",
       render: (r) => (
-        <div className="py-0.5">
+        <div className="py-0">
           <span className="font-mono text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded tracking-wider">
             {r.customer_code || "-"}
           </span>
@@ -236,54 +237,54 @@ export default function Customer() {
     {
       key: "name",
       label: "Company Name",
-      render: (r) => <span className="text-slate-800 font-medium text-xs tracking-tight py-0.5 block">{r.name || "-"}</span>,
+      render: (r) => <span className="text-slate-800 font-medium text-xs tracking-tight py-0 block">{r.name || "-"}</span>,
       className: "min-w-[120px]"
     },
     {
       key: "contact_person",
       label: "Contact Person",
-      render: (r) => <span className="text-slate-600 text-xs py-0.5 block">{r.contact_person || "-"}</span>,
+      render: (r) => <span className="text-slate-600 text-xs py-0 block">{r.contact_person || "-"}</span>,
       className: "w-32"
     },
     {
       key: "sales_executive",
       label: "Sales Executive",
-      render: (r) => <span className="text-slate-600 text-xs py-0.5 block">{r.sales_executive_details?.full_name || "-"}</span>,
+      render: (r) => <span className="text-slate-600 text-xs py-0 block">{r.sales_executive_details?.full_name || "-"}</span>,
       className: "w-28"
     },
     {
       key: "contact_number",
       label: "Mobile",
-      render: (r) => <span className="text-slate-700 text-xs font-medium whitespace-nowrap py-0.5 block">{r.contact_number || "-"}</span>,
+      render: (r) => <span className="text-slate-700 text-xs font-medium whitespace-nowrap py-0 block">{r.contact_number || "-"}</span>,
       className: "w-28"
     },
     {
       key: "email",
       label: "Email",
       render: (r) => r.email ? (
-        <a href={`mailto:${r.email}`} className="text-blue-600 hover:underline text-xs py-0.5 inline-block truncate max-w-[120px]">
+        <a href={`mailto:${r.email}`} className="text-blue-600 hover:underline text-xs py-0 inline-block truncate max-w-[120px]">
           {r.email}
         </a>
-      ) : <span className="text-slate-400 text-xs py-0.5 block">-</span>,
+      ) : <span className="text-slate-400 text-xs py-0 block">-</span>,
       className: "min-w-[100px]"
     },
     {
       key: "city",
       label: "City",
-      render: (r) => <span className="text-slate-600 text-xs py-0.5 block">{r.city || "-"}</span>,
+      render: (r) => <span className="text-slate-600 text-xs py-0 block">{r.city || "-"}</span>,
       className: "w-24"
     },
     {
       key: "state",
       label: "State",
-      render: (r) => <span className="text-slate-600 text-xs py-0.5 block">{r.state || "-"}</span>,
+      render: (r) => <span className="text-slate-600 text-xs py-0 block">{r.state || "-"}</span>,
       className: "w-24"
     },
     {
       key: "customer_status",
       label: "Status",
       render: (r) => (
-        <div className="py-0.5">
+        <div className="py-0">
           <span className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full uppercase tracking-wider ${getStatusColor(r.customer_status)}`}>
             {r.customer_status || "Prospect"}
           </span>
@@ -294,13 +295,13 @@ export default function Customer() {
     {
       key: "created_at",
       label: "Created",
-      render: (r) => <span className="text-slate-400 text-[10px] whitespace-nowrap py-0.5 block">{formatDate(r.created_at)}</span>,
+      render: (r) => <span className="text-slate-400 text-[10px] whitespace-nowrap py-0 block">{formatDate(r.created_at)}</span>,
       className: "w-24"
     },
   ];
 
   const actionsRenderer = useCallback((row) => (
-    <div className="flex items-center justify-center gap-1 py-0.5">
+    <div className="flex items-center justify-center gap-1 py-0">
       {/* Convert to Project / Already Added Status */}
       {row.has_project ? (
         <span

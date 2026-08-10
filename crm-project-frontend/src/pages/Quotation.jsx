@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Base from "../components/Base";
 import TableView from "../components/TableView";
 import AddQuotation from "../components/quotations/AddQuotation";
-import { MdAdd, MdFilterList, MdHistory, MdEdit, MdDelete, MdRemoveRedEye, MdDownload, MdEmail } from "react-icons/md";
+import { MdAdd, MdFilterList, MdHistory, MdEdit, MdDelete, MdRemoveRedEye, MdDownload, MdEmail, MdTaskAlt } from "react-icons/md";
 import { FaWhatsapp } from "react-icons/fa";
 import Swal from "sweetalert2";
 import AdvancedTableFilter from "../components/AdvancedTableFilter";
@@ -179,6 +179,43 @@ export default function Quotation() {
     }
   };
 
+  const handleFinalizeVersion = async (quotationId, versionId = null, currentlyFinalized = false, versionNo = "") => {
+    const actionText = currentlyFinalized ? "remove final status from" : "make";
+    const statusText = currentlyFinalized ? "un-finalized" : "final";
+    const res = await Swal.fire({
+      title: currentlyFinalized ? "Remove Final Status?" : "Finalize Quotation Version?",
+      text: `Are you sure you want to ${actionText} ${versionNo ? `version ${versionNo}` : "this version"}?`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: currentlyFinalized ? "Yes, Un-finalize" : "Yes, Make Final",
+      confirmButtonColor: currentlyFinalized ? "#e11d48" : "#059669",
+      cancelButtonColor: "#64748b",
+    });
+
+    if (!res.isConfirmed) return;
+
+    try {
+      const url = versionId
+        ? `quotation/quotation/${quotationId}/version/${versionId}/finalize/`
+        : `quotation/quotation/${quotationId}/finalize/`;
+      const response = await api.post(url);
+      Swal.fire({
+        icon: "success",
+        text: response.data.message || `Version marked as ${statusText}`,
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      Swal.fire({
+        icon: "error",
+        title: "Action failed",
+        text: err.response?.data?.error || err.message || String(err),
+      });
+    }
+  };
+
   const handleViewPDF = async (quotationId, versionId = null) => {
     try {
       const query = versionId ? `version_id=${versionId}&disposition=inline` : `disposition=inline`;
@@ -273,7 +310,17 @@ export default function Quotation() {
       label: "Version",
       render: (r) => {
         const activeVersion = getActiveVersion(r);
-        return <span className="text-slate-700 text-xs py-0.5 block font-medium whitespace-nowrap">{activeVersion?.version_no || "v1"}</span>;
+        const isFinalized = r.is_finalized || activeVersion?.is_finalized;
+        return (
+          <div className="flex items-center gap-1.5 whitespace-nowrap py-0.5">
+            <span className="text-slate-700 text-xs font-medium">{activeVersion?.version_no || "v1"}</span>
+            {isFinalized && (
+              <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 border border-emerald-300 rounded text-[9px] font-bold uppercase tracking-wider">
+                Final
+              </span>
+            )}
+          </div>
+        );
       }
     },
     {
@@ -336,6 +383,20 @@ export default function Quotation() {
 
         {canEditQuotation && isLatest && (
           <button
+            onClick={() => handleFinalizeVersion(row.id, activeVersion?.id, activeVersion?.is_finalized, activeVersion?.version_no)}
+            className={`p-1 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer ${
+              activeVersion?.is_finalized
+                ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                : "bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-700"
+            }`}
+            title={activeVersion?.is_finalized ? "Finalized (Click to un-finalize)" : "Make Final"}
+          >
+            <MdTaskAlt />
+          </button>
+        )}
+
+        {canEditQuotation && isLatest && (
+          <button
             onClick={() => {
               setEditingQuotation(row);
               setShowQuotationForm(true);
@@ -380,7 +441,7 @@ export default function Quotation() {
         )}
       </div>
     );
-  }, [openRow, handleDelete, canEditQuotation, canDeleteQuotation]);
+  }, [openRow, handleDelete, handleFinalizeVersion, canEditQuotation, canDeleteQuotation]);
 
   // NESTED VERSION HISTORY ROW WITH PAGINATION
   const renderExpandedRow = useCallback((row) => {
@@ -435,6 +496,11 @@ export default function Quotation() {
                             Active
                           </span>
                         )}
+                        {v.is_finalized && (
+                          <span className="ml-1 px-1.5 py-0.5 bg-emerald-600 text-white rounded text-[8px] font-bold uppercase">
+                            Final
+                          </span>
+                        )}
                       </td>
                       <td className="px-3 py-1.5 text-slate-500">
                         {v.created_at?.split("T")[0]}
@@ -446,18 +512,39 @@ export default function Quotation() {
                         ₹{formatAmount(v.grand_total || v.total_amount)}
                       </td>
                       <td className="px-3 py-1.5 text-center">
-                        {isActive ? (
-                          <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[10px] font-bold uppercase tracking-wider">
-                            Active
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-medium uppercase tracking-wider">
-                            Archived
-                          </span>
-                        )}
+                        <div className="flex items-center justify-center gap-1">
+                          {isActive ? (
+                            <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[10px] font-bold uppercase tracking-wider">
+                              Active
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-medium uppercase tracking-wider">
+                              Archived
+                            </span>
+                          )}
+                          {v.is_finalized && (
+                            <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 border border-emerald-300 rounded text-[9px] font-bold uppercase tracking-wider">
+                              Finalized
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-3 py-1.5 text-center">
                         <div className="flex items-center justify-center gap-1">
+                          {isActive && (
+                            <button
+                              onClick={() => handleFinalizeVersion(row.id, v.id, v.is_finalized, v.version_no)}
+                              className={`p-1 rounded text-xs transition-colors cursor-pointer ${
+                                v.is_finalized
+                                  ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                  : "bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-700"
+                              }`}
+                              title={v.is_finalized ? "Finalized (Click to un-finalize)" : "Make Final"}
+                            >
+                              <MdTaskAlt size={14} />
+                            </button>
+                          )}
+
                           <button
                             onClick={() => handleViewPDF(row.id, v.id)}
                             className="p-1 bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-700 rounded text-xs transition-colors"
@@ -532,7 +619,7 @@ export default function Quotation() {
         </td>
       </tr>
     );
-  }, [openRow, columns.length, handleDeleteVersion, getPaginatedVersions, handleVersionPageChange, VERSIONS_PER_PAGE]);
+  }, [openRow, columns.length, handleDeleteVersion, getPaginatedVersions, handleVersionPageChange, handleFinalizeVersion, VERSIONS_PER_PAGE]);
 
   const currentPageData = getCurrentPageData();
 

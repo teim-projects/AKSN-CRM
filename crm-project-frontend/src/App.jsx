@@ -19,6 +19,7 @@ import Customer from "./pages/Customer";
 import Lead from "./pages/Lead";
 import Quotation from "./pages/Quotation";
 import Project from "./pages/Project";
+import AMC from "./pages/AMC";
 
 import ProductList from './components/products/ProductList';
 import ProductForm from './components/products/ProductForm';
@@ -150,6 +151,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Project />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/amc"
+        element={
+          <ProtectedRoute>
+            <AMC />
           </ProtectedRoute>
         }
       />
