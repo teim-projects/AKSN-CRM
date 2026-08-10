@@ -435,9 +435,8 @@ export default function NotificationDrawer({ isOpen, onClose, onUnreadCountChang
             <div className="flex items-center gap-2">
               <button
                 onClick={fetchDynamicNotifications}
-                className={`w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer ${
-                  loading ? "animate-spin text-blue-400" : ""
-                }`}
+                className={`w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer ${loading ? "animate-spin text-blue-400" : ""
+                  }`}
                 title="Refresh notifications"
               >
                 <FontAwesomeIcon icon={faRotateRight} className="text-xs" />
@@ -465,11 +464,10 @@ export default function NotificationDrawer({ isOpen, onClose, onUnreadCountChang
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer ${
-                  activeTab === tab.id
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer ${activeTab === tab.id
                     ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
                     : "bg-[#1c2640] text-slate-400 hover:bg-[#253254] hover:text-white"
-                }`}
+                  }`}
               >
                 {tab.label}
               </button>
@@ -509,109 +507,108 @@ export default function NotificationDrawer({ isOpen, onClose, onUnreadCountChang
 
           {/* NOTIFICATIONS LIST CARDS */}
           <div className="p-4 space-y-3">
-          {loading ? (
-            <div className="py-16 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
-              <FontAwesomeIcon icon={faRotateRight} className="animate-spin text-lg text-blue-600" />
-              <span>Fetching live notifications...</span>
-            </div>
-          ) : filteredNotifications.length > 0 ? (
-            filteredNotifications.map((item) => (
-              <div
-                key={item.id}
-                className={`p-3.5 rounded-xl border-2 transition-all duration-200 relative group bg-white ${
-                  !item.read
-                    ? "border-blue-300 shadow-md shadow-blue-500/10 hover:border-blue-400"
-                    : "border-slate-200/90 shadow-sm shadow-slate-200/50 hover:border-slate-300 opacity-90"
-                }`}
-              >
-                {!item.read && (
-                  <span className="absolute top-3.5 right-3.5 w-2 h-2 rounded-full bg-blue-500 ring-4 ring-blue-100 animate-pulse"></span>
-                )}
+            {loading ? (
+              <div className="py-16 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
+                <FontAwesomeIcon icon={faRotateRight} className="animate-spin text-lg text-blue-600" />
+                <span>Fetching live notifications...</span>
+              </div>
+            ) : filteredNotifications.length > 0 ? (
+              filteredNotifications.map((item) => (
+                <div
+                  key={item.id}
+                  className={`p-3.5 rounded-xl border-2 transition-all duration-200 relative group bg-white ${!item.read
+                      ? "border-blue-300 shadow-md shadow-blue-500/10 hover:border-blue-400"
+                      : "border-slate-200/90 shadow-sm shadow-slate-200/50 hover:border-slate-300 opacity-90"
+                    }`}
+                >
+                  {!item.read && (
+                    <span className="absolute top-3.5 right-3.5 w-2 h-2 rounded-full bg-blue-500 ring-4 ring-blue-100 animate-pulse"></span>
+                  )}
 
-                <div className="flex items-start gap-3">
-                  {/* ICON WITH GRADIENT BACKGROUND */}
-                  <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center text-white bg-gradient-to-br ${item.color} shadow-xs shrink-0 mt-0.5`}
-                  >
-                    <FontAwesomeIcon icon={item.icon || faBell} className="text-sm" />
-                  </div>
-
-                  <div className="flex-1 min-w-0 pr-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${item.bgColor}`}
-                      >
-                        {item.badge}
-                      </span>
-                      <span className="text-[11px] text-slate-400">
-                        {item.time}
-                      </span>
+                  <div className="flex items-start gap-3">
+                    {/* ICON WITH GRADIENT BACKGROUND */}
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center text-white bg-gradient-to-br ${item.color} shadow-xs shrink-0 mt-0.5`}
+                    >
+                      <FontAwesomeIcon icon={item.icon || faBell} className="text-sm" />
                     </div>
 
-                    <h3 className="text-xs font-bold text-slate-900 leading-snug">
-                      {item.title}
-                    </h3>
-                    <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
-                      {item.description}
-                    </p>
-
-                    {/* ACTION ROW */}
-                    <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100 text-[11px]">
-                      {item.type === "requests" || item.userId ? (
-                        <button
-                          onClick={() => {
-                            handleMarkAsRead(item.id);
-                            onClose && onClose();
-                            navigate(
-                              `/accounts?userId=${item.userId || ""}&email=${encodeURIComponent(item.userEmail || item.email || "")}`
-                            );
-                          }}
-                          className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-[11px] transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                    <div className="flex-1 min-w-0 pr-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${item.bgColor}`}
                         >
-                          <FontAwesomeIcon icon={faKey} className="text-[10px]" />
-                          Change Password
-                        </button>
-                      ) : !item.read ? (
-                        <button
-                          onClick={() => handleMarkAsRead(item.id)}
-                          className="text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1 cursor-pointer"
-                        >
-                          <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
-                          Mark as read
-                        </button>
-                      ) : (
-                        <span className="text-slate-400 flex items-center gap-1 text-[10px]">
-                          <FontAwesomeIcon icon={faCircleCheck} className="text-emerald-500" />
-                          Read
+                          {item.badge}
                         </span>
-                      )}
+                        <span className="text-[11px] text-slate-400">
+                          {item.time}
+                        </span>
+                      </div>
 
-                      <button
-                        onClick={() => handleDelete(item.id)}
-                        className="text-slate-300 hover:text-rose-500 transition-colors p-1 cursor-pointer"
-                        title="Remove notification"
-                      >
-                        <FontAwesomeIcon icon={faTrash} className="text-[11px]" />
-                      </button>
+                      <h3 className="text-xs font-bold text-slate-900 leading-snug">
+                        {item.title}
+                      </h3>
+                      <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
+                        {item.description}
+                      </p>
+
+                      {/* ACTION ROW */}
+                      <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100 text-[11px]">
+                        {item.type === "requests" || item.userId ? (
+                          <button
+                            onClick={() => {
+                              handleMarkAsRead(item.id);
+                              onClose && onClose();
+                              navigate(
+                                `/accounts?userId=${item.userId || ""}&email=${encodeURIComponent(item.userEmail || item.email || "")}`
+                              );
+                            }}
+                            className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-[11px] transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                          >
+                            <FontAwesomeIcon icon={faKey} className="text-[10px]" />
+                            Change Password
+                          </button>
+                        ) : !item.read ? (
+                          <button
+                            onClick={() => handleMarkAsRead(item.id)}
+                            className="text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1 cursor-pointer"
+                          >
+                            <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
+                            Mark as read
+                          </button>
+                        ) : (
+                          <span className="text-slate-400 flex items-center gap-1 text-[10px]">
+                            <FontAwesomeIcon icon={faCircleCheck} className="text-emerald-500" />
+                            Read
+                          </span>
+                        )}
+
+                        <button
+                          onClick={() => handleDelete(item.id)}
+                          className="text-slate-300 hover:text-rose-500 transition-colors p-1 cursor-pointer"
+                          title="Remove notification"
+                        >
+                          <FontAwesomeIcon icon={faTrash} className="text-[11px]" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
+              ))
+            ) : (
+              <div className="py-16 text-center flex flex-col items-center justify-center">
+                <div className="w-14 h-14 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-300 mb-3">
+                  <FontAwesomeIcon icon={faBell} className="text-2xl" />
+                </div>
+                <h4 className="text-xs font-bold text-slate-700">No Notifications</h4>
+                <p className="text-[11px] text-slate-400 mt-1 max-w-[200px]">
+                  You're all caught up! New CRM alerts will show up here.
+                </p>
               </div>
-            ))
-          ) : (
-            <div className="py-16 text-center flex flex-col items-center justify-center">
-              <div className="w-14 h-14 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-300 mb-3">
-                <FontAwesomeIcon icon={faBell} className="text-2xl" />
-              </div>
-              <h4 className="text-xs font-bold text-slate-700">No Notifications</h4>
-              <p className="text-[11px] text-slate-400 mt-1 max-w-[200px]">
-                You're all caught up! New CRM alerts will show up here.
-              </p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
-    </aside>
+      </aside>
     </>
   );
 }

@@ -260,6 +260,7 @@ class LeadSerializer(serializers.ModelSerializer):
             "pipeline_stage",
             "pipeline_stage_display",
             "is_tally_user",
+            "tally_number",
             "requirement_details",
             "remarks",
             "status",

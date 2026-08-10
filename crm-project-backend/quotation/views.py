@@ -64,15 +64,16 @@ class TermsConditionsViewSet(viewsets.ModelViewSet):
 @api_view(['GET'])
 def thank_you_suggestions(request):
     """Get thank you note suggestions based on search term"""
-    search = request.GET.get('search', '')
+    search = request.GET.get('search', '').strip()
     
-    if len(search) < 2:
-        return Response([])
-    
-    notes = Quotation.objects.filter(
-        thank_you_note__icontains=search,
+    query = Quotation.objects.filter(
         thank_you_note__isnull=False
-    ).exclude(thank_you_note='').values_list('thank_you_note', flat=True).distinct()[:10]
+    ).exclude(thank_you_note='')
+
+    if search:
+        query = query.filter(thank_you_note__icontains=search)
+    
+    notes = query.values_list('thank_you_note', flat=True).distinct()[:15]
     
     return Response([{'id': i, 'text': note} for i, note in enumerate(notes)])
 
@@ -82,14 +83,16 @@ def subject_suggestions(request):
     """Get subject suggestions based on search term"""
     search = request.GET.get('search', '').strip()
     
-    if not search or len(search) < 2:
-        return Response([])
+    query = Quotation.objects.filter(
+        subject__isnull=False
+    ).exclude(subject='')
+
+    if search:
+        query = query.filter(subject__icontains=search)
+
+    subjects = query.values_list('subject', flat=True).distinct()[:15]
     
-    quotations = Quotation.objects.filter(
-        subject__icontains=search
-    ).values('id', 'subject').distinct()[:10]
-    
-    return Response([{'id': q['id'], 'text': q['subject']} for q in quotations])
+    return Response([{'id': i, 'text': subj} for i, subj in enumerate(subjects)])
 
 
 class QuotationViewSet(viewsets.ModelViewSet):

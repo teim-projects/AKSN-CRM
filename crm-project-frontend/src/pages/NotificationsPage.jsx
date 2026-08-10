@@ -353,7 +353,7 @@ export default function NotificationsPage() {
   return (
     <Base title="">
       <div className="w-full space-y-5 font-sans antialiased text-slate-800 -mt-5 px-1">
-        
+
         {/* HEADER WELCOME BANNER */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-2 pt-2">
           <div className="flex items-center gap-3">
@@ -378,9 +378,8 @@ export default function NotificationsPage() {
           <div className="mt-3 md:mt-0 flex items-center gap-2">
             <button
               onClick={fetchDynamicNotifications}
-              className={`px-3.5 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer ${
-                loading ? "opacity-70" : ""
-              }`}
+              className={`px-3.5 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer ${loading ? "opacity-70" : ""
+                }`}
             >
               <FontAwesomeIcon icon={faRotateRight} className={loading ? "animate-spin text-blue-600" : ""} />
               Refresh
@@ -419,11 +418,10 @@ export default function NotificationsPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer ${
-                activeTab === tab.id
+              className={`px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer ${activeTab === tab.id
                   ? "bg-blue-600 text-white shadow-xs"
                   : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/60"
-              }`}
+                }`}
             >
               {tab.label}
             </button>
@@ -441,11 +439,10 @@ export default function NotificationsPage() {
             filteredNotifications.map((item) => (
               <div
                 key={item.id}
-                className={`p-4 rounded-xl border-2 transition-all duration-200 bg-white flex items-start justify-between gap-4 ${
-                  !item.read
+                className={`p-4 rounded-xl border-2 transition-all duration-200 bg-white flex items-start justify-between gap-4 ${!item.read
                     ? "border-blue-300 shadow-md shadow-blue-500/10 bg-blue-50/10"
                     : "border-slate-200/90 shadow-sm shadow-slate-200/50 opacity-90 hover:border-slate-300"
-                }`}
+                  }`}
               >
                 <div className="flex items-start gap-4 flex-1">
                   <div

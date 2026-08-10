@@ -211,6 +211,7 @@ class lead_management(models.Model):
         verbose_name="Pipeline Stage"
     )
     is_tally_user = models.CharField(max_length=10, blank=True, null=True, verbose_name="Is Tally User")
+    tally_number = models.CharField(max_length=50, blank=True, null=True, verbose_name="Tally Number")
 
     # Requirements & Notes
     requirement_details = models.TextField(blank=True, null=True, verbose_name="Requirement Details")

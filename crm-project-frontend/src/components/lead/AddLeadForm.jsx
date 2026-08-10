@@ -45,6 +45,7 @@ export default function AddLeadForm({
     pipeline_stage: "new_lead",
     status: "open",
     is_tally_user: "",
+    tally_number: "",
     requirement_details: "",
     remarks: "",
     amount: "",
@@ -243,6 +244,7 @@ export default function AddLeadForm({
         pipeline_stage: lead.pipeline_stage || "new_lead",
         status: lead.status || "open",
         is_tally_user: lead.is_tally_user || "",
+        tally_number: lead.tally_number || "",
         requirement_details: lead.requirement_details || "",
         remarks: lead.remarks || "",
         amount: lead.amount !== undefined && lead.amount !== null ? String(lead.amount) : "",
@@ -284,6 +286,7 @@ export default function AddLeadForm({
         pipeline_stage: "new_lead",
         status: "open",
         is_tally_user: "",
+        tally_number: "",
         requirement_details: "",
         remarks: "",
         amount: "",
@@ -471,6 +474,7 @@ export default function AddLeadForm({
         followup_date: formatDate(formData.followup_date),
         pipeline_stage: formData.pipeline_stage || "new_lead",
         is_tally_user: formData.is_tally_user || "",
+        tally_number: formData.is_tally_user === "yes" ? (formData.tally_number || "") : "",
         requirement_details: formData.requirement_details || "",
         remarks: formData.remarks || "",
         status: "open",
@@ -1152,6 +1156,22 @@ export default function AddLeadForm({
                       </label>
                     </div>
                   </div>
+
+                  {formData.is_tally_user === "yes" && (
+                    <div className="space-y-1 md:col-span-2">
+                      <label className="block text-xs font-semibold text-slate-600">
+                        Tally Serial / License Number
+                      </label>
+                      <input
+                        type="text"
+                        name="tally_number"
+                        value={formData.tally_number || ""}
+                        onChange={handleChange}
+                        placeholder="Enter Tally serial number (e.g. 745892103)..."
+                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                      />
+                    </div>
+                  )}
 
                   <div className="space-y-1 md:col-span-2">
                     <label className="block text-xs font-semibold text-slate-600">

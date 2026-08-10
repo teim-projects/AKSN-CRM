@@ -273,7 +273,9 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
                 <div className="md:col-span-3">
                   <span className="font-medium text-slate-600">Tally User:</span>{" "}
                   {lead.is_tally_user === "yes" ? (
-                    <span className="text-green-600 font-medium">Yes</span>
+                    <span className="text-green-600 font-medium">
+                      Yes {lead.tally_number ? `(Serial / License No: ${lead.tally_number})` : ""}
+                    </span>
                   ) : lead.is_tally_user === "no" ? (
                     <span className="text-red-600 font-medium">No</span>
                   ) : "—"}

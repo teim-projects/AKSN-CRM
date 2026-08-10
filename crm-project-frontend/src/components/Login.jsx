@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import loginVideo from "../assets/login_video.mp4";
 
 const Login = ({ forceForgot = false }) => {
   const navigate = useNavigate();
@@ -11,6 +12,32 @@ const Login = ({ forceForgot = false }) => {
 
   const [form, setForm] = useState({ email_or_mobile: "", password: "" });
   const [message, setMessage] = useState("");
+  const [stats, setStats] = useState({
+    leads: "1,042",
+    customers: "284",
+    projects: "156",
+    conversionRate: "27.3%",
+  });
+
+  useEffect(() => {
+    const fetchPublicMetrics = async () => {
+      try {
+        const res = await fetch(`${BASE_API}/lead/public-metrics/`);
+        if (res.ok) {
+          const data = await res.json();
+          setStats({
+            leads: data.total_leads !== undefined ? data.total_leads.toLocaleString() : "1,042",
+            customers: data.total_customers !== undefined ? data.total_customers.toLocaleString() : "284",
+            projects: data.total_projects !== undefined ? data.total_projects.toLocaleString() : "156",
+            conversionRate: data.conversion_rate || "27.3%",
+          });
+        }
+      } catch (err) {
+        // Keeps fallback stats if unauthenticated
+      }
+    };
+    fetchPublicMetrics();
+  }, [BASE_API]);
 
   // Forgot password in-place view state
   const [isForgotPassView, setIsForgotPassView] = useState(
@@ -45,7 +72,7 @@ const Login = ({ forceForgot = false }) => {
       if (data.refresh) localStorage.setItem("refresh", data.refresh);
 
       window.dispatchEvent(new Event("authChange"));
-      
+
       setMessage("✅ Login successful!");
       navigate("/dashboard");
     } catch (error) {
@@ -123,77 +150,148 @@ const Login = ({ forceForgot = false }) => {
   };
 
   return (
-    <div className="fixed inset-0 w-screen h-screen z-50 overflow-y-auto grid grid-cols-1 md:grid-cols-[2.2fr_1fr] bg-white font-sans antialiased selection:bg-blue-600 selection:text-white">
-      
-      {/* LEFT SIDE: PRODUCT MARKETING BANNER (REMAINS FIXED & VISIBLE) */}
-      <div className="hidden md:flex flex-col justify-between px-12 lg:px-24 py-20 bg-[#1D357E] text-white bg-gradient-to-b from-[#1E3A8A] to-[#1E293B] items-center">
-        
-        <div className="w-full max-w-xl flex flex-col justify-between h-full">
-          {/* Logo and Brand */}
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/10 rounded-xl border border-white/10 shadow-sm">
-              <svg className="w-5 h-5 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-            </div>
-            <span className="text-xl font-bold tracking-wide text-white">AKSN CRM</span>
-          </div>
+    <div className="fixed inset-0 w-full h-full z-50 overflow-hidden flex flex-col md:flex-row bg-[#0b1932] font-sans antialiased selection:bg-blue-600 selection:text-white">
 
-          {/* Main Content Area */}
-          <div className="my-auto py-12">
-            <h1 className="text-4xl lg:text-[44px] font-bold leading-[1.15] mb-6 tracking-tight text-white">
-              Complete CRM for <br /> Modern Sales Teams
-            </h1>
-            
-            <p className="text-slate-300 text-[15px] lg:text-[16px] leading-relaxed mb-10 opacity-90">
-              Manage leads, customers, projects, support, and renewals — all in one unified enterprise platform.
-            </p>
+      {/* LEFT SIDE: MARQUEE AT VERY TOP, VIDEO BELOW MARQUEE, METRIC CARDS AT BOTTOM */}
+      <div className="hidden md:flex flex-col justify-start items-start bg-[#0b1932] relative overflow-hidden shrink-0 pt-2" style={{ width: "min(66vw, calc(100vh * 1.04 * 16 / 9))" }}>
+        <style>{`
+          @keyframes tallyMarquee {
+            0% { transform: translateX(0%); }
+            100% { transform: translateX(-50%); }
+          }
+          .animate-tally-marquee {
+            display: flex;
+            width: max-content;
+            animation: tallyMarquee 26s linear infinite;
+          }
+          .animate-tally-marquee:hover {
+            animation-play-state: paused;
+          }
+        `}</style>
 
-            {/* Feature List Checklist */}
-            <ul className="space-y-4 text-[13.5px] font-medium text-slate-200/95">
-              <li className="flex items-center gap-3">
-                <span className="flex items-center justify-center w-5 h-5 rounded-full border border-teal-400/30 text-teal-400 text-xs font-bold bg-teal-500/5">✓</span>
-                Lead-to-Revenue Pipeline Management
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="flex items-center justify-center w-5 h-5 rounded-full border border-teal-400/30 text-teal-400 text-xs font-bold bg-teal-500/5">✓</span>
-                360° Customer Intelligence View
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="flex items-center justify-center w-5 h-5 rounded-full border border-teal-400/30 text-teal-400 text-xs font-bold bg-teal-500/5">✓</span>
-                AMC & Renewal Automation
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="flex items-center justify-center w-5 h-5 rounded-full border border-teal-400/30 text-teal-400 text-xs font-bold bg-teal-500/5">✓</span>
-                Real-time Analytics & Dashboards
-              </li>
-            </ul>
-          </div>
+        {/* 1. ROLLING TALLY PRODUCTS & SOFTWARE MARQUEE AT VERY TOP */}
+        <div className="w-full px-4 pt-1 pb-2 overflow-hidden relative z-10 opacity-85 hover:opacity-100 transition-opacity">
+          {/* Faded Left & Right Edge Overlays */}
+          <div className="absolute left-0 top-0 bottom-0 w-10 bg-gradient-to-r from-[#0b1932] to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-[#0b1932] to-transparent z-10 pointer-events-none" />
 
-          {/* Bottom Metrics Grid */}
-          <div className="flex gap-4">
-            <div className="w-[120px] bg-white/[0.07] rounded-xl p-4 border border-white/[0.08] backdrop-blur-md text-center">
-              <div className="text-xl font-bold tracking-tight text-white">1,042</div>
-              <div className="text-[10px] text-slate-400 font-medium mt-1">Leads This Year</div>
-            </div>
-            
-            <div className="w-[120px] bg-white/[0.07] rounded-xl p-4 border border-white/[0.08] backdrop-blur-md text-center">
-              <div className="text-xl font-bold tracking-tight text-white">284</div>
-              <div className="text-[10px] text-slate-400 font-medium mt-1">Active Customers</div>
-            </div>
-            
-            <div className="w-[120px] bg-white/[0.07] rounded-xl p-4 border border-white/[0.08] backdrop-blur-md text-center">
-              <div className="text-xl font-bold tracking-tight text-white">₹3.89Cr</div>
-              <div className="text-[10px] text-slate-400 font-medium mt-1">Revenue Dec</div>
-            </div>
+          {/* Marquee Track */}
+          <div className="animate-tally-marquee flex items-center whitespace-nowrap text-[11px] font-medium tracking-wide text-slate-300/70 uppercase">
+            {[1, 2].map((loopIdx) => (
+              <React.Fragment key={loopIdx}>
+                <span className="flex items-center gap-2 px-3 py-1 bg-white/[0.04] rounded-md border border-white/[0.06]">
+                  TallyPrime Enterprise
+                </span>
+                <span className="mx-2.5 text-blue-400/40">•</span>
+
+                <span className="flex items-center gap-2 px-3 py-1 bg-white/[0.04] rounded-md border border-white/[0.06]">
+                  TallyPrime Server
+                </span>
+                <span className="mx-2.5 text-blue-400/40">•</span>
+
+                <span className="flex items-center gap-2 px-3 py-1 bg-white/[0.04] rounded-md border border-white/[0.06]">
+                  TallyPrime Cloud AWS
+                </span>
+                <span className="mx-2.5 text-blue-400/40">•</span>
+
+                <span className="flex items-center gap-2 px-3 py-1 bg-white/[0.04] rounded-md border border-white/[0.06]">
+                  TallyPrime Edit Log
+                </span>
+                <span className="mx-2.5 text-blue-400/40">•</span>
+
+                <span className="flex items-center gap-2 px-3 py-1 bg-white/[0.04] rounded-md border border-white/[0.06]">
+                  Tally Customization & Addons
+                </span>
+                <span className="mx-2.5 text-blue-400/40">•</span>
+
+                <span className="flex items-center gap-2 px-3 py-1 bg-white/[0.04] rounded-md border border-white/[0.06]">
+                  Tally WhatsApp Integration
+                </span>
+                <span className="mx-2.5 text-blue-400/40">•</span>
+
+                <span className="flex items-center gap-2 px-3 py-1 bg-white/[0.04] rounded-md border border-white/[0.06]">
+                  Tally Mobile App & Dashboards
+                </span>
+                <span className="mx-2.5 text-blue-400/40">•</span>
+
+                <span className="flex items-center gap-2 px-3 py-1 bg-white/[0.04] rounded-md border border-white/[0.06]">
+                  Tally Data Sync & Backup
+                </span>
+                <span className="mx-2.5 text-blue-400/40">•</span>
+
+                <span className="flex items-center gap-2 px-3 py-1 bg-white/[0.04] rounded-md border border-white/[0.06]">
+                  Tally AMC & Support Services
+                </span>
+                <span className="mx-2.5 text-blue-400/40">•</span>
+
+                <span className="flex items-center gap-2 px-3 py-1 bg-white/[0.04] rounded-md border border-white/[0.06]">
+                  Tally Auditor Edition
+                </span>
+                <span className="mx-2.5 text-blue-400/40">•</span>
+              </React.Fragment>
+            ))}
           </div>
         </div>
 
+        {/* 2. VIDEO CONTAINER BELOW TOP MARQUEE */}
+        <div className="w-full relative flex items-start justify-start overflow-hidden pt-1">
+          <video
+            src={loginVideo}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-auto object-contain object-top object-left block transform origin-top-left scale-[1.03]"
+          />
+        </div>
+
+        {/* 3. 4 STATS BLOCKS: TOTAL LEADS, TOTAL CUSTOMERS, PROJECTS, CONVERSION RATE */}
+        <div className="w-full px-3.5 pt-5 pb-3 mt-2 z-10 relative">
+          <div className="grid grid-cols-4 gap-2.5">
+
+            {/* Block 1: Total Leads */}
+            <div className="bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.07] rounded-xl p-2.5 backdrop-blur-md transition-all duration-300 text-center flex flex-col items-center justify-center">
+              <div className="flex items-center gap-1 mb-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                <span className="text-[9.5px] font-bold text-slate-200 uppercase tracking-wider">Total Leads</span>
+              </div>
+              <div className="text-base font-bold text-white tracking-tight">{stats.leads}</div>
+            </div>
+
+            {/* Block 2: Total Customers */}
+            <div className="bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.07] rounded-xl p-2.5 backdrop-blur-md transition-all duration-300 text-center flex flex-col items-center justify-center">
+              <div className="flex items-center gap-1 mb-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                <span className="text-[9.5px] font-bold text-slate-200 uppercase tracking-wider">Total Customers</span>
+              </div>
+              <div className="text-base font-bold text-white tracking-tight">{stats.customers}</div>
+            </div>
+
+            {/* Block 3: Total Projects */}
+            <div className="bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.07] rounded-xl p-2.5 backdrop-blur-md transition-all duration-300 text-center flex flex-col items-center justify-center">
+              <div className="flex items-center gap-1 mb-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                <span className="text-[9.5px] font-bold text-slate-200 uppercase tracking-wider">Projects</span>
+              </div>
+              <div className="text-base font-bold text-white tracking-tight">{stats.projects}</div>
+            </div>
+
+            {/* Block 4: Conversion Rate */}
+            <div className="bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.07] rounded-xl p-2.5 backdrop-blur-md transition-all duration-300 text-center flex flex-col items-center justify-center">
+              <div className="flex items-center gap-1 mb-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                <span className="text-[9.5px] font-bold text-slate-200 uppercase tracking-wider">Conv. Rate</span>
+              </div>
+              <div className="text-base font-bold text-white tracking-tight">{stats.conversionRate}</div>
+            </div>
+
+          </div>
+        </div>
       </div>
 
-      {/* RIGHT SIDE: AUTHENTICATION / FORGOT PASSWORD IN-PLACE SWAP PANEL */}
-      <div className="flex flex-col justify-between p-8 md:p-12 lg:p-16 bg-white items-center">
-        
+      {/* RIGHT SIDE: WHITE LOGIN BLOCK EXTENDING TO MEET VIDEO */}
+      <div className="flex-1 h-full flex flex-col justify-between p-8 md:p-12 lg:p-16 bg-white items-center overflow-y-auto">
+
         {isForgotPassView ? (
           /* FORGOT PASSWORD IN-PLACE VIEW (OVER RIGHT WHITE PANEL ONLY) */
           <div className="w-full max-w-[340px] my-auto transition-all duration-300 animate-fade-in">
@@ -222,9 +320,8 @@ const Login = ({ forceForgot = false }) => {
               <button
                 type="submit"
                 disabled={forgotLoading}
-                className={`w-full h-[46px] rounded-lg text-white font-semibold text-sm bg-[#2563EB] hover:bg-blue-700 active:bg-blue-800 transition-all shadow-xs tracking-wide flex items-center justify-center gap-2 cursor-pointer ${
-                  forgotLoading ? "opacity-75 cursor-not-allowed" : ""
-                }`}
+                className={`w-full h-[46px] rounded-lg text-white font-semibold text-sm bg-[#2563EB] hover:bg-blue-700 active:bg-blue-800 transition-all shadow-xs tracking-wide flex items-center justify-center gap-2 cursor-pointer ${forgotLoading ? "opacity-75 cursor-not-allowed" : ""
+                  }`}
               >
                 {forgotLoading ? "Verifying Account..." : "Submit Reset Request"}
               </button>
@@ -232,11 +329,10 @@ const Login = ({ forceForgot = false }) => {
 
             {forgotStatus.message && (
               <div
-                className={`mt-4 p-3 rounded-lg border text-xs font-medium leading-relaxed ${
-                  forgotStatus.type === "success"
-                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                    : "bg-rose-50 text-rose-800 border-rose-200"
-                }`}
+                className={`mt-4 p-3 rounded-lg border text-xs font-medium leading-relaxed ${forgotStatus.type === "success"
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                  : "bg-rose-50 text-rose-800 border-rose-200"
+                  }`}
               >
                 {forgotStatus.message}
               </div>
@@ -266,7 +362,7 @@ const Login = ({ forceForgot = false }) => {
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              
+
               {/* Email Address Field */}
               <div>
                 <label className="block text-[12px] font-medium text-slate-600 mb-2">
@@ -300,14 +396,14 @@ const Login = ({ forceForgot = false }) => {
               {/* Checkbox and Forgot Link */}
               <div className="flex items-center justify-between text-sm pt-0.5">
                 <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     defaultChecked
-                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-0 accent-blue-600 cursor-pointer" 
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-0 accent-blue-600 cursor-pointer"
                   />
                   <span className="text-slate-700 text-[13px] font-medium">Remember me</span>
                 </label>
-                
+
                 <button
                   type="button"
                   onClick={() => {

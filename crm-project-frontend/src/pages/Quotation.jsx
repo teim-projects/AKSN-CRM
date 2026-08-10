@@ -75,7 +75,7 @@ export default function Quotation() {
       }
 
       const data = normalize(res.data);
-      
+
       setAllRows(data);
       setFilteredData(data);
       setRows(data);
@@ -95,8 +95,8 @@ export default function Quotation() {
     }
   }, [token, itemsPerPage]);
 
-  useEffect(() => { 
-    fetchData(); 
+  useEffect(() => {
+    fetchData();
   }, [fetchData]);
 
   // Update pagination when filtered data changes
@@ -120,7 +120,7 @@ export default function Quotation() {
     const endIndex = startIndex + VERSIONS_PER_PAGE;
     const paginatedVersions = versions.slice(startIndex, endIndex);
     const totalVersionPages = Math.max(1, Math.ceil(versions.length / VERSIONS_PER_PAGE));
-    
+
     return {
       versions: paginatedVersions,
       currentPage: currentVersionPage,
@@ -239,63 +239,63 @@ export default function Quotation() {
   };
 
   const columns = [
-    { 
-      key: "sr", 
-      label: "Sr.No", 
-      render: (_, idx) => <span className="text-slate-600 font-medium text-xs py-0.5 block">{(currentPage - 1) * itemsPerPage + (idx + 1)}</span> 
+    {
+      key: "sr",
+      label: "Sr.No",
+      render: (_, idx) => <span className="text-slate-600 font-medium text-xs py-0.5 block">{(currentPage - 1) * itemsPerPage + (idx + 1)}</span>
     },
-    { 
-      key: "quotation_no", 
-      label: "Quotation No", 
-      render: (r) => <span className="text-blue-600 font-bold text-xs whitespace-nowrap py-0.5 block">{r.quotation_no || "-"}</span> 
+    {
+      key: "quotation_no",
+      label: "Quotation No",
+      render: (r) => <span className="text-blue-600 font-bold text-xs whitespace-nowrap py-0.5 block">{r.quotation_no || "-"}</span>
     },
-    { 
-      key: "company_name", 
-      label: "Company Name", 
+    {
+      key: "company_name",
+      label: "Company Name",
       render: (r) => (
         <span className="text-slate-900 font-semibold text-xs tracking-tight py-0.5 block whitespace-nowrap">
           {r.company_name || "-"}
         </span>
-      ) 
+      )
     },
-    { 
-      key: "contact", 
-      label: "Contact", 
-      render: (r) => <span className="text-slate-700 text-xs py-0.5 block whitespace-nowrap">{r.contact_person || "-"}</span> 
+    {
+      key: "contact",
+      label: "Contact",
+      render: (r) => <span className="text-slate-700 text-xs py-0.5 block whitespace-nowrap">{r.contact_person || "-"}</span>
     },
-    { 
-      key: "mobile", 
-      label: "Mobile", 
-      render: (r) => <span className="text-slate-700 font-medium text-xs whitespace-nowrap py-0.5 block">{r.mobile_number || "-"}</span> 
+    {
+      key: "mobile",
+      label: "Mobile",
+      render: (r) => <span className="text-slate-700 font-medium text-xs whitespace-nowrap py-0.5 block">{r.mobile_number || "-"}</span>
     },
-    { 
-      key: "version", 
-      label: "Version", 
+    {
+      key: "version",
+      label: "Version",
       render: (r) => {
         const activeVersion = getActiveVersion(r);
         return <span className="text-slate-700 text-xs py-0.5 block font-medium whitespace-nowrap">{activeVersion?.version_no || "v1"}</span>;
-      } 
+      }
     },
-    { 
-      key: "products", 
-      label: "Products", 
+    {
+      key: "products",
+      label: "Products",
       render: (r) => {
         const activeVersion = getActiveVersion(r);
         return <span className="text-slate-700 text-xs py-0.5 block whitespace-nowrap">{getProductCount(activeVersion)} item(s)</span>;
-      } 
+      }
     },
-    { 
-      key: "total_amount", 
-      label: "Total Amount", 
+    {
+      key: "total_amount",
+      label: "Total Amount",
       render: (r) => {
         const activeVersion = getActiveVersion(r);
         return <span className="text-slate-900 font-bold text-xs py-0.5 block whitespace-nowrap">₹{formatAmount(activeVersion?.grand_total || activeVersion?.total_amount)}</span>;
-      } 
+      }
     },
-    { 
-      key: "date", 
-      label: "Date", 
-      render: (r) => <span className="text-slate-600 text-xs whitespace-nowrap py-0.5 block">{formatDate(r.created_at)}</span> 
+    {
+      key: "date",
+      label: "Date",
+      render: (r) => <span className="text-slate-600 text-xs whitespace-nowrap py-0.5 block">{formatDate(r.created_at)}</span>
     },
   ];
 
@@ -317,11 +317,10 @@ export default function Quotation() {
               }));
             }
           }}
-          className={`p-1 rounded transition-all duration-150 text-sm shadow-xs ${
-            openRow === row.id
+          className={`p-1 rounded transition-all duration-150 text-sm shadow-xs ${openRow === row.id
               ? "bg-purple-600 text-white"
               : "bg-purple-50 hover:bg-purple-100 text-purple-600"
-          }`}
+            }`}
           title="Version History"
         >
           <MdHistory />
@@ -337,9 +336,9 @@ export default function Quotation() {
 
         {canEditQuotation && isLatest && (
           <button
-            onClick={() => { 
-              setEditingQuotation(row); 
-              setShowQuotationForm(true); 
+            onClick={() => {
+              setEditingQuotation(row);
+              setShowQuotationForm(true);
             }}
             className="p-1 bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer"
             title="Edit Record"
@@ -412,7 +411,7 @@ export default function Quotation() {
                 </span>
               )}
             </div>
-            
+
             <table className="w-full text-xs">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
                 <tr>
@@ -540,7 +539,7 @@ export default function Quotation() {
   return (
     <Base title="">
       <div className="w-full space-y-4 font-sans antialiased text-slate-800 -mt-5 px-1">
-        
+
         {/* HEADER BLOCK */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-1 pt-1">
           <div className="flex items-center gap-3">
@@ -592,16 +591,16 @@ export default function Quotation() {
 
       {/* FILTER DRAWER */}
       {isFilterOpen && (
-        <div 
-          className="fixed inset-0 bg-black/40 z-[999]" 
-          onClick={() => setIsFilterOpen(false)} 
+        <div
+          className="fixed inset-0 bg-black/40 z-[999]"
+          onClick={() => setIsFilterOpen(false)}
         />
       )}
-      
+
       <div className={`fixed top-0 right-0 h-full w-[380px] bg-white shadow-2xl z-[1000] transition-transform duration-300 ease-in-out ${isFilterOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="flex items-center justify-between p-5 border-b border-slate-200">
           <h3 className="text-lg font-bold text-slate-900">Filters</h3>
-          <button 
+          <button
             onClick={() => setIsFilterOpen(false)}
             className="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1"
           >

@@ -1,4 +1,5 @@
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.response import Response
 from rest_framework import status, filters
@@ -295,3 +296,26 @@ class LeadFollowUpViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
+
+
+class PublicMetricsView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        total_leads = lead_management.objects.count()
+        total_customers = Customer.objects.count()
+        total_projects = Project.objects.count()
+
+        if total_leads > 0:
+            conversion_rate = round((total_customers / total_leads) * 100, 1)
+        else:
+            conversion_rate = 0.0
+
+        return Response({
+            "total_leads": total_leads,
+            "total_customers": total_customers,
+            "total_projects": total_projects,
+            "conversion_rate": f"{conversion_rate}%",
+            "conversion_rate_value": conversion_rate,
+        }, status=status.HTTP_200_OK)

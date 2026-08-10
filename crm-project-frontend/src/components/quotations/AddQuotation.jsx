@@ -69,6 +69,35 @@ export default function AddQuotation({ id, onBack }) {
   // ✅ Closed by default ({})
   const [openCategories, setOpenCategories] = useState({});
 
+  // Auto-suggestions states for Subject & Thank You Note
+  const [subjectSuggestions, setSubjectSuggestions] = useState([]);
+  const [showSubjectDropdown, setShowSubjectDropdown] = useState(false);
+
+  const [thankYouSuggestions, setThankYouSuggestions] = useState([]);
+  const [showThankYouDropdown, setShowThankYouDropdown] = useState(false);
+
+  const fetchSubjectSuggestions = async (searchTerm = "") => {
+    try {
+      const res = await api.get(`quotation/subject-suggestions/?search=${encodeURIComponent(searchTerm)}`);
+      const list = Array.isArray(res.data) ? res.data.map(item => item.text || item) : [];
+      setSubjectSuggestions(list);
+    } catch (err) {
+      console.error("Error fetching subject suggestions:", err);
+      setSubjectSuggestions([]);
+    }
+  };
+
+  const fetchThankYouSuggestions = async (searchTerm = "") => {
+    try {
+      const res = await api.get(`quotation/thank-you-suggestions/?search=${encodeURIComponent(searchTerm)}`);
+      const list = Array.isArray(res.data) ? res.data.map(item => item.text || item) : [];
+      setThankYouSuggestions(list);
+    } catch (err) {
+      console.error("Error fetching thank you note suggestions:", err);
+      setThankYouSuggestions([]);
+    }
+  };
+
   // Fetch Term Categories & Terms from backend
   useEffect(() => {
     const fetchTermCategories = async () => {
@@ -831,18 +860,42 @@ export default function AddQuotation({ id, onBack }) {
                     </h4>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1 md:col-span-2">
+                      <div className="space-y-1 md:col-span-2 relative">
                         <label className="block text-xs font-semibold text-slate-600">Subject *</label>
                         <input
                           type="text"
                           value={formData.subject}
-                          onChange={(e) =>
-                            setFormData((prev) => ({ ...prev, subject: e.target.value }))
-                          }
+                          onFocus={() => {
+                            fetchSubjectSuggestions(formData.subject);
+                            setShowSubjectDropdown(true);
+                          }}
+                          onBlur={() => setTimeout(() => setShowSubjectDropdown(false), 200)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setFormData((prev) => ({ ...prev, subject: val }));
+                            fetchSubjectSuggestions(val);
+                            setShowSubjectDropdown(true);
+                          }}
                           className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
                           placeholder="Quotation Subject"
                           required
                         />
+                        {showSubjectDropdown && subjectSuggestions.length > 0 && (
+                          <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-100">
+                            {subjectSuggestions.map((item, idx) => (
+                              <div
+                                key={idx}
+                                onMouseDown={() => {
+                                  setFormData((prev) => ({ ...prev, subject: item }));
+                                  setShowSubjectDropdown(false);
+                                }}
+                                className="px-3 py-2 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 cursor-pointer font-medium transition-colors"
+                              >
+                                {item}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       <div className="space-y-1">
@@ -859,18 +912,42 @@ export default function AddQuotation({ id, onBack }) {
                         </select>
                       </div>
 
-                      <div className="space-y-1 md:col-span-2">
+                      <div className="space-y-1 md:col-span-2 relative">
                         <label className="block text-xs font-semibold text-slate-600">Thank You Note *</label>
                         <textarea
                           value={formData.thank_you_note}
-                          onChange={(e) =>
-                            setFormData((prev) => ({ ...prev, thank_you_note: e.target.value }))
-                          }
+                          onFocus={() => {
+                            fetchThankYouSuggestions(formData.thank_you_note);
+                            setShowThankYouDropdown(true);
+                          }}
+                          onBlur={() => setTimeout(() => setShowThankYouDropdown(false), 200)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setFormData((prev) => ({ ...prev, thank_you_note: val }));
+                            fetchThankYouSuggestions(val);
+                            setShowThankYouDropdown(true);
+                          }}
                           className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
                           rows={2}
                           placeholder="Thank you note..."
                           required
                         />
+                        {showThankYouDropdown && thankYouSuggestions.length > 0 && (
+                          <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-100">
+                            {thankYouSuggestions.map((item, idx) => (
+                              <div
+                                key={idx}
+                                onMouseDown={() => {
+                                  setFormData((prev) => ({ ...prev, thank_you_note: item }));
+                                  setShowThankYouDropdown(false);
+                                }}
+                                className="px-3 py-2 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 cursor-pointer leading-relaxed transition-colors"
+                              >
+                                {item}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -930,7 +1007,18 @@ export default function AddQuotation({ id, onBack }) {
                                   <td className="px-3 py-2 text-slate-400 font-medium">{index + 1}</td>
                                   <td className="px-3 py-2">
                                     <div className="font-semibold text-slate-900">{item.product_name}</div>
-                                    <div className="text-[10px] text-slate-400">{item.product_code}</div>
+                                    {item.product_code && (
+                                      <div className="text-[10px] text-slate-400">{item.product_code}</div>
+                                    )}
+                                    <textarea
+                                      rows={2}
+                                      value={item.description || ""}
+                                      onChange={(e) =>
+                                        updateItem(index, "description", e.target.value)
+                                      }
+                                      placeholder="Product description..."
+                                      className="w-full mt-1 text-[11px] text-slate-600 border border-slate-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white resize-y"
+                                    />
                                   </td>
                                   <td className="px-3 py-2 text-slate-600">{item.hsn_sac_code || "-"}</td>
                                   <td className="px-3 py-2 text-center">
