@@ -67,7 +67,7 @@ export default function RenewAMCModal({
 
     setLoading(true);
     try {
-      const url = `${baseUrl.replace(/\/$/, "")}/amc/contracts/${amcContract.id}/renew/`;
+      const url = `${baseUrl.replace(/\/$/, "")}/lead/amc/contracts/${amcContract.id}/renew/`;
       const res = await fetch(url, {
         method: "POST",
         headers: {

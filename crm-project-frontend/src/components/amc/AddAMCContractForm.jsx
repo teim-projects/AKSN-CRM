@@ -23,7 +23,7 @@ export default function AddAMCContractForm({
     []
   );
 
-  const API_URL = `${BASE_API.replace(/\/$/, "")}/amc/contracts/`;
+  const API_URL = `${BASE_API.replace(/\/$/, "")}/lead/amc/contracts/`;
   const CUSTOMER_API_URL = `${BASE_API.replace(/\/$/, "")}/lead/customer/`;
   const PRODUCT_API_URL = `${BASE_API.replace(/\/$/, "")}/product/products/`;
   const STAFF_API_URL = `${BASE_API.replace(/\/$/, "")}/auth/staff/all/`;

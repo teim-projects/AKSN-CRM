@@ -31,7 +31,7 @@ export default function AMC() {
     []
   );
 
-  const API_URL = `${BASE_API.replace(/\/$/, "")}/amc/contracts/`;
+  const API_URL = `${BASE_API.replace(/\/$/, "")}/lead/amc/contracts/`;
 
   const [rows, setRows] = useState([]);
   const [allRows, setAllRows] = useState([]);
