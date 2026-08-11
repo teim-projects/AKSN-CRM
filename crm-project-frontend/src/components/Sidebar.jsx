@@ -70,7 +70,7 @@ const allSidebarItems = [
 ];
 
 export default function Sidebar({ children }) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(() => typeof window !== "undefined" && window.innerWidth >= 1024);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [collapsedSections, setCollapsedSections] = useState({});
@@ -79,6 +79,24 @@ export default function Sidebar({ children }) {
 
   const baseApi = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
   const { userRole, isLoading: loadingRole, hasPermission } = useUserRole(baseApi);
+
+  // Auto-close sidebar on mobile when navigating
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setIsOpen(false);
+    }
+  }, [currentPath]);
+
+  // Handle window resize gracefully
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsOpen(true);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const toggleSection = (sectionName) => {
     setCollapsedSections((prev) => ({
@@ -121,17 +139,28 @@ export default function Sidebar({ children }) {
   const sections = ["OVERVIEW", "SALES", "OPERATIONS", "MASTER DATA", "ADMINISTRATION"];
 
   return (
-    <div className="h-screen bg-[#12192c] flex flex-row font-sans antialiased relative w-full overflow-hidden">
+    <div className="h-screen h-[100dvh] bg-[#12192c] flex flex-row font-sans antialiased relative w-full overflow-hidden">
+
+      {/* MOBILE BACKDROP OVERLAY */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-40 lg:hidden transition-opacity duration-300"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
 
       {/* SIDEBAR CONTAINER */}
       <aside
-        className={`bg-[#12192c] text-slate-300 h-screen flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out z-50 ${isOpen ? "w-64 opacity-100" : "w-0 opacity-0 pointer-events-none"
-          }`}
+        className={`bg-[#12192c] text-slate-300 h-full flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out fixed lg:relative inset-y-0 left-0 z-50 ${
+          isOpen
+            ? "w-64 translate-x-0 opacity-100 shadow-2xl lg:shadow-none"
+            : "-translate-x-full lg:translate-x-0 lg:w-0 lg:opacity-0 pointer-events-none"
+        }`}
       >
         <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-800/60 min-w-[256px]">
           <button
             onClick={() => setIsOpen(false)}
-            className="w-9 h-9 rounded-xl bg-blue-600 flex flex-col items-center justify-center gap-1 text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 transition-colors"
+            className="w-9 h-9 rounded-xl bg-blue-600 flex flex-col items-center justify-center gap-1 text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 transition-colors cursor-pointer"
             title="Close Sidebar"
           >
             <span className="block w-4 h-0.5 bg-white rounded-full"></span>
@@ -166,7 +195,16 @@ export default function Sidebar({ children }) {
                 {!isCollapsed && (
                   <div className="space-y-1 pt-0.5">
                     {sectionItems.map((it) => (
-                      <SidebarItem key={it.key} item={it} active={isActive(it.path, currentPath)} />
+                      <SidebarItem
+                        key={it.key}
+                        item={it}
+                        active={isActive(it.path, currentPath)}
+                        onNavigate={() => {
+                          if (typeof window !== "undefined" && window.innerWidth < 1024) {
+                            setIsOpen(false);
+                          }
+                        }}
+                      />
                     ))}
                   </div>
                 )}
@@ -177,18 +215,18 @@ export default function Sidebar({ children }) {
       </aside>
 
       {/* RIGHT SIDE CONTAINER */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto overflow-x-hidden bg-[#f4f5f9]">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto overflow-x-hidden bg-[#f4f5f9]">
 
         {/* NAVBAR */}
         <Navbar
-          onMenuClick={() => setIsOpen(true)}
+          onMenuClick={() => setIsOpen((prev) => !prev)}
           pageTitle={getPageTitle()}
           isSidebarOpen={isOpen}
           onNotificationClick={() => setIsNotificationOpen(true)}
           unreadCount={unreadNotifCount}
         />
 
-        <main className="flex-1 p-5 md:p-6 w-full bg-[#f4f5f9]">
+        <main className="flex-1 p-3 sm:p-5 md:p-6 w-full bg-[#f4f5f9] overflow-x-hidden">
           {children}
         </main>
       </div>
@@ -242,38 +280,38 @@ const Navbar = ({ onMenuClick, pageTitle, isSidebarOpen, onNotificationClick, un
   }, [location, checkAuth]);
 
   return (
-    <nav className="bg-white border-b border-gray-100 flex-shrink-0 sticky top-0 z-40 w-full px-6 py-3.5 flex items-center justify-between shadow-md shadow-gray-200/40">
-      <div className="flex items-center gap-4">
-        {!isSidebarOpen && (
-          <button
-            onClick={onMenuClick}
-            className="w-9 h-9 rounded-xl bg-blue-600 flex flex-col items-center justify-center gap-1 text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 transition-colors mr-2"
-            title="Open Sidebar"
-          >
-            <span className="block w-4 h-0.5 bg-white rounded-full"></span>
-            <span className="block w-4 h-0.5 bg-white rounded-full"></span>
-            <span className="block w-4 h-0.5 bg-white rounded-full"></span>
-          </button>
-        )}
+    <nav className="bg-white border-b border-gray-100 flex-shrink-0 sticky top-0 z-30 w-full px-4 sm:px-6 py-3 flex items-center justify-between shadow-md shadow-gray-200/40">
+      <div className="flex items-center gap-3 sm:gap-4">
+        <button
+          onClick={onMenuClick}
+          className={`w-9 h-9 rounded-xl bg-blue-600 flex flex-col items-center justify-center gap-1 text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 transition-colors mr-1 sm:mr-2 cursor-pointer ${
+            isSidebarOpen ? "lg:hidden" : "block"
+          }`}
+          title="Toggle Sidebar"
+        >
+          <span className="block w-4 h-0.5 bg-white rounded-full"></span>
+          <span className="block w-4 h-0.5 bg-white rounded-full"></span>
+          <span className="block w-4 h-0.5 bg-white rounded-full"></span>
+        </button>
 
         <div className="flex flex-col">
-          <h1 className="text-sm font-bold text-gray-900 leading-tight">
+          <h1 className="text-xs sm:text-sm font-bold text-gray-900 leading-tight">
             {pageTitle === "Dashboard" ? "Executive Dashboard" : pageTitle}
           </h1>
-          <span className="text-[11px] text-gray-400 font-medium">
+          <span className="text-[10px] sm:text-[11px] text-gray-400 font-medium hidden sm:block">
             Real-time business overview
           </span>
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <form onSubmit={(e) => e.preventDefault()} className="relative hidden sm:block">
+      <div className="flex items-center gap-2 sm:gap-4">
+        <form onSubmit={(e) => e.preventDefault()} className="relative hidden md:block">
           <input
             type="text"
             placeholder="Quick search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-56 md:w-64 px-3 py-1.5 pl-9 rounded-lg border border-gray-200/80 
+            className="w-48 lg:w-64 px-3 py-1.5 pl-9 rounded-lg border border-gray-200/80 
               bg-gray-50/50 text-gray-800 text-xs font-medium
               focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500
               transition-all duration-200"
@@ -286,10 +324,10 @@ const Navbar = ({ onMenuClick, pageTitle, isSidebarOpen, onNotificationClick, un
 
         <button
           onClick={onNotificationClick}
-          className="p-2 text-gray-400 hover:text-blue-600 relative transition-colors cursor-pointer"
+          className="p-1.5 sm:p-2 text-gray-400 hover:text-blue-600 relative transition-colors cursor-pointer"
           title="Notifications"
         >
-          <FontAwesomeIcon icon={faBell} className="text-base" />
+          <FontAwesomeIcon icon={faBell} className="text-sm sm:text-base" />
           {unreadCount > 0 && (
             <>
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full animate-ping"></span>
@@ -301,24 +339,24 @@ const Navbar = ({ onMenuClick, pageTitle, isSidebarOpen, onNotificationClick, un
         </button>
 
         {isAuthenticated ? (
-          <div className="flex items-center gap-2 border-l border-gray-100 pl-2">
+          <div className="flex items-center gap-1 sm:gap-2 border-l border-gray-100 pl-1.5 sm:pl-2">
             <Link
               to="/profile"
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              className="p-1.5 sm:p-2 text-gray-400 hover:text-gray-600 transition-colors"
               title="Profile"
             >
-              <FontAwesomeIcon icon={faCircleUser} className="text-lg" />
+              <FontAwesomeIcon icon={faCircleUser} className="text-base sm:text-lg" />
             </Link>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-gray-500 hover:text-red-600 hover:bg-red-50/50 transition-all duration-150"
+              className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold text-gray-500 hover:text-red-600 hover:bg-red-50/50 transition-all duration-150 cursor-pointer"
             >
               <FontAwesomeIcon icon={faSignOutAlt} />
-              <span>Logout</span>
+              <span className="hidden sm:inline">Logout</span>
             </button>
           </div>
         ) : (
-          <Link to="/login" className="px-3.5 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150 text-xs font-semibold shadow-sm shadow-blue-500/10">
+          <Link to="/login" className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150 text-xs font-semibold shadow-sm shadow-blue-500/10">
             Login
           </Link>
         )}
@@ -327,10 +365,11 @@ const Navbar = ({ onMenuClick, pageTitle, isSidebarOpen, onNotificationClick, un
   );
 };
 
-const SidebarItem = ({ item, active }) => {
+const SidebarItem = ({ item, active, onNavigate }) => {
   return (
     <Link
       to={item.path || "#"}
+      onClick={onNavigate}
       className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-150 group ${active
         ? "bg-blue-600 text-white font-medium shadow-md shadow-blue-600/10"
         : "text-slate-400 hover:bg-white/5 hover:text-white"

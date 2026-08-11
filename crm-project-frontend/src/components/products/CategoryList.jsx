@@ -155,7 +155,7 @@ const CategoryList = () => {
 
     return (
         <Base title="">
-            <div className="w-full space-y-4 font-sans antialiased text-slate-800 -mt-5 px-1">
+            <div className="w-full space-y-4 font-sans antialiased text-slate-800 pt-1 sm:pt-2 px-1">
                 
                 {/* HEADER BLOCK */}
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-1 pt-1">

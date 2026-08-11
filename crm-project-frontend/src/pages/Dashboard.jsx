@@ -384,7 +384,7 @@ export default function Dashboard() {
 
   return (
     <Base title="" filterTitle="Dashboard Filters">
-      <div className="w-full space-y-5 font-sans antialiased text-slate-800 -mt-5 -mx-2 px-1">
+      <div className="w-full space-y-5 font-sans antialiased text-slate-800 pt-1 sm:pt-2 px-1">
 
         {/* HEADER WELCOME BANNER */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-2 pt-2">
@@ -671,7 +671,7 @@ export default function Dashboard() {
           </div>
 
           {/* MONTHLY LEAD TREND */}
-          <div className="bg-white rounded-xl border border-slate-200/70 shadow-sm p-5 flex flex-col justify-between">
+          <div className="bg-white rounded-xl border border-slate-200/70 shadow-sm p-3 sm:p-5 flex flex-col justify-between overflow-hidden">
             <div>
               <div className="mb-2">
                 <h3 className="text-sm font-bold text-slate-900">Monthly Lead Trend</h3>
@@ -680,7 +680,7 @@ export default function Dashboard() {
 
               <div className="relative h-48 w-full pt-4">
                 {/* Y-AXIS LABELS */}
-                <div className="absolute left-0 top-0 bottom-6 flex flex-col justify-between text-[10px] text-slate-400">
+                <div className="absolute left-0 top-0 bottom-6 flex flex-col justify-between text-[9px] sm:text-[10px] text-slate-400 z-10 bg-white/80 pr-1">
                   <span>160</span>
                   <span>120</span>
                   <span>80</span>
@@ -688,26 +688,26 @@ export default function Dashboard() {
                   <span>0</span>
                 </div>
 
-                <div className="ml-8 h-full flex flex-col justify-between">
-                  <div className="relative h-36 w-full border-b border-slate-100 flex items-end justify-between px-1">
+                <div className="ml-7 sm:ml-8 h-full flex flex-col justify-between overflow-x-auto thin-scrollbar">
+                  <div className="relative h-36 w-full min-w-[280px] border-b border-slate-100 flex items-end justify-between px-0.5 sm:px-1">
                     {stats.monthlyTrend.map((bar, idx) => (
-                      <div key={idx} className="flex-1 flex items-end justify-center gap-1 group relative h-full">
+                      <div key={idx} className="flex-1 flex items-end justify-center gap-0.5 sm:gap-1 group relative h-full">
 
                         {/* HOVER TOOLTIP CARD */}
-                        <div className="absolute bottom-full mb-2 hidden group-hover:block z-20 bg-white border border-slate-200 shadow-lg rounded-lg p-2.5 text-left min-w-[110px]">
+                        <div className="absolute bottom-full mb-2 hidden group-hover:block z-30 bg-white border border-slate-200 shadow-lg rounded-lg p-2 text-left min-w-[100px]">
                           <p className="text-xs font-bold text-slate-900">{bar.month}</p>
-                          <p className="text-[11px] text-blue-400 mt-1">Total Leads : {bar.total}</p>
+                          <p className="text-[11px] text-blue-400 mt-0.5">Total Leads : {bar.total}</p>
                           <p className="text-[11px] text-blue-700 font-semibold mt-0.5">Converted : {bar.converted}</p>
                         </div>
 
                         {/* Total Leads Bar */}
                         <div
-                          className="w-3.5 bg-blue-200 rounded-t-md transition-all duration-200 group-hover:bg-blue-300"
+                          className="w-1.5 sm:w-2.5 md:w-3.5 bg-blue-200 rounded-t-sm sm:rounded-t-md transition-all duration-200 group-hover:bg-blue-300"
                           style={{ height: `${bar.totalHeight}%` }}
                         ></div>
                         {/* Converted Leads Bar */}
                         <div
-                          className="w-3.5 bg-blue-600 rounded-t-md transition-all duration-200 group-hover:bg-blue-700"
+                          className="w-1.5 sm:w-2.5 md:w-3.5 bg-blue-600 rounded-t-sm sm:rounded-t-md transition-all duration-200 group-hover:bg-blue-700"
                           style={{ height: `${bar.convertedHeight}%` }}
                         ></div>
                       </div>
@@ -715,23 +715,23 @@ export default function Dashboard() {
                   </div>
 
                   {/* X-AXIS LABELS */}
-                  <div className="flex justify-between text-[10px] text-slate-400 pt-1">
+                  <div className="flex justify-between text-[8px] sm:text-[10px] text-slate-400 pt-1 min-w-[280px]">
                     {stats.monthlyTrend.map((item, idx) => (
-                      <span key={idx} className="flex-1 text-center">{item.month}</span>
+                      <span key={idx} className="flex-1 text-center truncate">{item.month}</span>
                     ))}
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-center gap-6 mt-3 text-xs">
+            <div className="flex justify-center gap-4 sm:gap-6 mt-3 text-xs">
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-sm bg-blue-200"></span>
-                <span className="text-slate-600 font-medium">Total Leads</span>
+                <span className="text-slate-600 font-medium text-[11px] sm:text-xs">Total Leads</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-sm bg-blue-600"></span>
-                <span className="text-slate-600 font-medium">Converted</span>
+                <span className="text-slate-600 font-medium text-[11px] sm:text-xs">Converted</span>
               </div>
             </div>
           </div>

@@ -265,7 +265,7 @@ export default function Accounts() {
 
   return (
     <Base title="">
-      <div className="w-full space-y-4 font-sans antialiased text-slate-800 -mt-5 px-1">
+      <div className="w-full space-y-4 font-sans antialiased text-slate-800 pt-1 sm:pt-2 px-1">
 
         {/* HEADER BLOCK WITH THE BLUE VERTICAL ACCENT LINE */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-1 pt-1">
@@ -338,7 +338,7 @@ export default function Accounts() {
         />
       )}
 
-      <div className={`fixed top-0 right-0 h-full w-[380px] bg-white shadow-2xl z-[1000] transition-transform duration-300 ease-in-out ${isFilterOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className={`fixed top-0 right-0 h-full w-full max-w-[380px] sm:w-[380px] bg-white shadow-2xl z-[1000] transition-transform duration-300 ease-in-out ${isFilterOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="flex items-center justify-between p-5 border-b border-slate-200">
           <h3 className="text-lg font-bold text-slate-900">Filters</h3>
           <button

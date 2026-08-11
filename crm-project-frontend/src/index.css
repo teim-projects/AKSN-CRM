@@ -3,10 +3,11 @@
 html,
 body,
 #root {
+  min-h-screen: 100vh;
   height: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 /* Dark Native-Style Scrollbar matching user image (#2b2b2b track, light gray thumb, up/down arrows) */

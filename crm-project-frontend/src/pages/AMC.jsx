@@ -553,7 +553,7 @@ export default function AMC() {
 
   return (
     <Base title="">
-      <div className="w-full space-y-4 font-sans antialiased text-slate-800 -mt-5 px-1">
+      <div className="w-full space-y-4 font-sans antialiased text-slate-800 pt-1 sm:pt-2 px-1">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-1 pt-1">
           <div className="flex items-center gap-3">
             <span className="w-1.5 h-10 bg-blue-600 rounded-full block"></span>
@@ -580,7 +580,7 @@ export default function AMC() {
               </button>
 
               {showFilterDropdown && (
-                <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1 text-xs animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1 text-xs animate-in fade-in zoom-in-95 duration-150">
                   {filterOptions.map((opt) => (
                     <button
                       key={opt.value}
@@ -678,7 +678,7 @@ export default function AMC() {
           />
         )}
         <div
-          className={`fixed top-0 right-0 h-full w-[380px] bg-white shadow-2xl z-[1000] transition-transform duration-300 ease-in-out ${isFilterOpen ? "translate-x-0" : "translate-x-full"
+          className={`fixed top-0 right-0 h-full w-full max-w-[380px] sm:w-[380px] bg-white shadow-2xl z-[1000] transition-transform duration-300 ease-in-out ${isFilterOpen ? "translate-x-0" : "translate-x-full"
             }`}
         >
           <div className="flex items-center justify-between p-5 border-b border-slate-200">

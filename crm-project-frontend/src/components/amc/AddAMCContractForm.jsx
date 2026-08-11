@@ -274,8 +274,8 @@ export default function AddAMCContractForm({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 font-sans">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 relative border border-slate-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 sm:p-4 font-sans">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[92vh] sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6 relative border border-slate-100">
         {/* Header matching design image */}
         <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">

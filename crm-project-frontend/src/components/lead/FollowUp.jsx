@@ -423,7 +423,7 @@ export default function FollowUp() {
 
   return (
     <Base title="">
-      <div className="w-full space-y-4 font-sans antialiased text-slate-800 -mt-5 px-1">
+      <div className="w-full space-y-4 font-sans antialiased text-slate-800 pt-1 sm:pt-2 px-1">
         {/* HEADER BLOCK WITH THE BLUE VERTICAL ACCENT LINE */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-1 pt-1">
           <div className="flex items-center gap-3">
@@ -448,7 +448,7 @@ export default function FollowUp() {
               </button>
               
               {showFilterDropdown && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10">
+                <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-30">
                   {filterOptions.map((option) => (
                     <button
                       key={option.value}
@@ -548,7 +548,7 @@ export default function FollowUp() {
           />
         )}
         
-        <div className={`fixed top-0 right-0 h-full w-[380px] bg-white shadow-2xl z-[1000] transition-transform duration-300 ease-in-out ${isFilterOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className={`fixed top-0 right-0 h-full w-full max-w-[380px] sm:w-[380px] bg-white shadow-2xl z-[1000] transition-transform duration-300 ease-in-out ${isFilterOpen ? 'translate-x-0' : 'translate-x-full'}`}>
           <div className="flex items-center justify-between p-5 border-b border-slate-200">
             <h3 className="text-lg font-bold text-slate-900">Advanced Filters</h3>
             <button 
