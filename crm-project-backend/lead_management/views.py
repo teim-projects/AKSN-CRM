@@ -13,10 +13,10 @@ from django.utils import timezone
 from .filters import LeadFilter
 from rest_framework.decorators import action
 from django.db import transaction
+from api.permissions import is_admin_or_subadmin
 
 
 class CustomerViewsets(viewsets.ModelViewSet):
-    queryset = Customer.objects.all().order_by('-created_at')
     serializer_class = CustomerSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -26,6 +26,24 @@ class CustomerViewsets(viewsets.ModelViewSet):
         'poc_name', 'poc_contact_number', 'land_line_no',
         'city', 'state', 'site_city', 'site_state', 'pin_code'
     ]
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Customer.objects.all().order_by('-created_at')
+        if not is_admin_or_subadmin(user):
+            queryset = queryset.filter(
+                Q(sales_executive=user) |
+                Q(lead__assigned_executive=user) |
+                Q(lead__created_by=user)
+            )
+        return queryset
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if not is_admin_or_subadmin(user) and 'sales_executive' not in serializer.validated_data:
+            serializer.save(sales_executive=user)
+        else:
+            serializer.save()
 
     @action(detail=True, methods=['post'], url_path='convert-to-project')
     @transaction.atomic
@@ -143,7 +161,6 @@ class CustomerViewsets(viewsets.ModelViewSet):
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
-    queryset = Project.objects.all().order_by('-created_at')
     serializer_class = ProjectSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -151,6 +168,26 @@ class ProjectViewSet(viewsets.ModelViewSet):
     filterset_fields = ['customer', 'project_executive', 'project_stage', 'priority']
     search_fields = ['project_code', 'customer__company_name', 'customer__name', 'project_scope_requirements']
     ordering_fields = ['created_at', 'start_date', 'expected_to_go_live', 'project_value', 'priority']
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Project.objects.all().order_by('-created_at')
+        if not is_admin_or_subadmin(user):
+            queryset = queryset.filter(
+                Q(project_executive=user) |
+                Q(created_by=user) |
+                Q(customer__sales_executive=user) |
+                Q(customer__lead__assigned_executive=user) |
+                Q(customer__lead__created_by=user)
+            )
+        return queryset
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        kwargs = {'created_by': user}
+        if not is_admin_or_subadmin(user) and not serializer.validated_data.get('project_executive'):
+            kwargs['project_executive'] = user
+        serializer.save(**kwargs)
 
 
 class LeadViewSet(viewsets.ModelViewSet):
@@ -180,7 +217,10 @@ class LeadViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        serializer.save(created_by=user)
+        kwargs = {'created_by': user}
+        if not is_admin_or_subadmin(user) and not serializer.validated_data.get('assigned_executive'):
+            kwargs['assigned_executive'] = user
+        serializer.save(**kwargs)
 
     def get_queryset(self):
         user = self.request.user
@@ -206,8 +246,8 @@ class LeadViewSet(viewsets.ModelViewSet):
             )
         )
 
-        if getattr(user, 'role', None) and user.role.name.lower() == "sales":
-            queryset = queryset.filter(assigned_executive=user)
+        if not is_admin_or_subadmin(user):
+            queryset = queryset.filter(Q(assigned_executive=user) | Q(created_by=user))
 
         lead_source = self.request.query_params.get("lead_source")
         if lead_source:
@@ -346,11 +386,18 @@ class LeadFollowUpViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        user = self.request.user
         qs = (
             LeadFollowUp.objects
             .select_related("lead", "created_by")
             .prefetch_related("faq_answers__faq")
         )
+        if not is_admin_or_subadmin(user):
+            qs = qs.filter(
+                Q(created_by=user) |
+                Q(lead__assigned_executive=user) |
+                Q(lead__created_by=user)
+            )
         lead_id = self.request.query_params.get("lead")
         if lead_id:
             qs = qs.filter(lead_id=lead_id)

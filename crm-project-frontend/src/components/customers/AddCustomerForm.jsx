@@ -5,6 +5,7 @@ import { CitySelect, StateSelect } from "react-country-state-city";
 import "react-country-state-city/dist/react-country-state-city.css";
 import { GetState, GetCity } from "react-country-state-city";
 import CreatableSelect from "react-select/creatable";
+import { useUserRole } from "../../hooks/useAuth";
 
 export default function AddCustomerForm({
   open,
@@ -14,6 +15,8 @@ export default function AddCustomerForm({
   customer = null
 }) {
   const BASE_API = baseApi;
+  const { userInfo } = useUserRole(BASE_API);
+  const isAdmin = userInfo?.is_superuser || ["admin", "sub-admin", "subadmin"].includes(userInfo?.role?.name?.toLowerCase());
   const API_URL = `${BASE_API}/lead/customer/`;
   const LEAD_API_URL = `${BASE_API}/lead/lead/`;
   const PRODUCT_API_URL = `${BASE_API}/product/products/`;
@@ -257,7 +260,7 @@ export default function AddCustomerForm({
         service_package: [],
         payment_terms: "",
         project_value: "",
-        sales_executive: "",
+        sales_executive: !isAdmin && userInfo?.id ? userInfo.id : "",
         amc_start_date: "",
         amc_end_date: "",
         customer_status: "prospect",
@@ -271,7 +274,7 @@ export default function AddCustomerForm({
       setCityid(null);
       setStateid(0);
     }
-  }, [open]);
+  }, [open, isAdmin, userInfo]);
 
   if (!open) return null;
 
@@ -880,13 +883,18 @@ export default function AddCustomerForm({
                   </div>
 
                   <div className="space-y-1">
-                    <label className="block text-xs font-semibold text-slate-600">Sales Executive</label>
+                    <label className="block text-xs font-semibold text-slate-600">
+                      Sales Executive
+                      {!isAdmin && (
+                        <span className="text-[11px] text-blue-600 font-normal ml-1.5">(Auto-mapped to your logged-in account)</span>
+                      )}
+                    </label>
                     <select
                       name="sales_executive"
                       value={formData.sales_executive}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
-                      disabled={loadingStaff}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white disabled:bg-slate-50 disabled:text-slate-600 cursor-pointer disabled:cursor-not-allowed"
+                      disabled={loadingStaff || (!isAdmin && Boolean(formData.sales_executive))}
                     >
                       <option value="">Select Executive</option>
                       {staffOptions.map((staff) => (
@@ -894,6 +902,11 @@ export default function AddCustomerForm({
                           {staff.name} {staff.email && `(${staff.email})`}
                         </option>
                       ))}
+                      {!isAdmin && userInfo?.id && !staffOptions.some(s => String(s.id) === String(userInfo.id)) && (
+                        <option value={userInfo.id}>
+                          {userInfo.full_name || userInfo.first_name || userInfo.email || "My Account"}
+                        </option>
+                      )}
                     </select>
                   </div>
 

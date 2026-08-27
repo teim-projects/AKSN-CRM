@@ -1,5 +1,17 @@
 from rest_framework.permissions import BasePermission
 
+def is_admin_or_subadmin(user):
+    """
+    Helper to check if user has admin or sub-admin level access.
+    """
+    if not (user and user.is_authenticated):
+        return False
+    if user.is_superuser:
+        return True
+    role_name = getattr(getattr(user, 'role', None), 'name', '') or ''
+    return role_name.lower() in ('admin', 'sub-admin', 'subadmin')
+
+
 class IsAdminOrSubAdmin(BasePermission):
     """
     Allow access to:
@@ -9,13 +21,7 @@ class IsAdminOrSubAdmin(BasePermission):
     Deny others.
     """
     def has_permission(self, request, view):
-        user = request.user
-        if not (user and user.is_authenticated):
-            return False
-        if user.is_superuser:
-            return True
-        role_name = getattr(getattr(user, 'role', None), 'name', '') or ''
-        return role_name.lower() in ('admin', 'sub-admin')
+        return is_admin_or_subadmin(request.user)
     
 
   

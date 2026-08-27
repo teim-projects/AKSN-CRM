@@ -4,7 +4,8 @@ from rest_framework.response import Response
 from rest_framework.decorators import action, api_view
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
-from .models import Quotation, QuotationVersion, TermCategory, TermsConditions
+from django.db.models import Q
+from api.permissions import is_admin_or_subadmin
 import logging
 from .serializers import (
     QuotationSerializer, QuotationCreateSerializer,
@@ -113,10 +114,18 @@ class QuotationViewSet(viewsets.ModelViewSet):
     filterset_fields = ['gst_type']
 
     def get_queryset(self):
-        return Quotation.objects.all().select_related('lead').prefetch_related(
+        user = self.request.user
+        qs = Quotation.objects.all().select_related('lead').prefetch_related(
             'versions',
             'versions__items'
         ).order_by('-created_at')
+        if not is_admin_or_subadmin(user):
+            qs = qs.filter(
+                Q(created_by=user) |
+                Q(lead__assigned_executive=user) |
+                Q(lead__created_by=user)
+            )
+        return qs
 
     def get_serializer_class(self):
         if self.action == 'create' or self.action == 'update':

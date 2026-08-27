@@ -17,10 +17,15 @@ import {
   MdAutorenew,
 } from "react-icons/md";
 import Swal from "sweetalert2";
+import { useUserRole } from "../hooks/useAuth";
 
 const BASE_API = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
 
 export default function AMC() {
+  const { hasPermission } = useUserRole(BASE_API);
+  const canCreateAMC = hasPermission("amc", "create");
+  const canEditAMC = hasPermission("amc", "edit");
+  const canDeleteAMC = hasPermission("amc", "delete");
   const token = useMemo(
     () =>
       localStorage.getItem("access") ||
@@ -379,16 +384,18 @@ export default function AMC() {
       </button>
 
       {/* Renew AMC Contract Button */}
-      <button
-        onClick={() => {
-          setRenewingAMC(row);
-          setShowRenewModal(true);
-        }}
-        className="p-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 hover:text-emerald-700 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer"
-        title="Renew AMC Contract"
-      >
-        <MdAutorenew size={16} />
-      </button>
+      {canEditAMC && (
+        <button
+          onClick={() => {
+            setRenewingAMC(row);
+            setShowRenewModal(true);
+          }}
+          className="p-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 hover:text-emerald-700 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer"
+          title="Renew AMC Contract"
+        >
+          <MdAutorenew size={16} />
+        </button>
+      )}
 
       {/* View Record Viewer Button */}
       <button
@@ -412,7 +419,7 @@ export default function AMC() {
       </button>
 
       {/* Status Toggle (Active / Inactive) */}
-      {(() => {
+      {canEditAMC && (() => {
         const isRowActive = row.status !== "inactive";
         return (
           <button
@@ -429,13 +436,15 @@ export default function AMC() {
       })()}
 
       {/* Delete Button */}
-      <button
-        onClick={() => handleDelete(row.id)}
-        className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer"
-        title="Delete Contract"
-      >
-        <MdDelete />
-      </button>
+      {canDeleteAMC && (
+        <button
+          onClick={() => handleDelete(row.id)}
+          className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer"
+          title="Delete Contract"
+        >
+          <MdDelete />
+        </button>
+      )}
     </div>
   );
 
@@ -607,16 +616,18 @@ export default function AMC() {
               Filter
             </button>
 
-            <button
-              onClick={() => {
-                setEditingAMC(null);
-                setShowForm(true);
-              }}
-              className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-xs shadow-blue-500/10 flex items-center gap-1 cursor-pointer"
-            >
-              <MdAdd className="text-sm" />
-              Add AMC Contract
-            </button>
+            {canCreateAMC && (
+              <button
+                onClick={() => {
+                  setEditingAMC(null);
+                  setShowForm(true);
+                }}
+                className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-xs shadow-blue-500/10 flex items-center gap-1 cursor-pointer"
+              >
+                <MdAdd className="text-sm" />
+                Add AMC Contract
+              </button>
+            )}
           </div>
         </div>
 

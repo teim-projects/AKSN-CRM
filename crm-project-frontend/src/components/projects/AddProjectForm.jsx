@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import Swal from "sweetalert2";
 import Select from "react-select";
 import { MdClose } from "react-icons/md";
+import { useUserRole } from "../../hooks/useAuth";
 
 export default function AddProjectForm({
   open,
@@ -11,6 +12,8 @@ export default function AddProjectForm({
   initialCustomer = null,
 }) {
   const BASE_API = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
+  const { userInfo } = useUserRole(BASE_API);
+  const isAdmin = userInfo?.is_superuser || ["admin", "sub-admin", "subadmin"].includes(userInfo?.role?.name?.toLowerCase());
   const token = useMemo(
     () =>
       localStorage.getItem("access") ||
@@ -139,7 +142,7 @@ export default function AddProjectForm({
         amc_end_date: initialCustomer.amc_end_date || "",
         project_stage: "requirement_analysis",
         priority: "medium",
-        project_executive: initialCustomer.sales_executive || initialCustomer.sales_executive_details?.id || "",
+        project_executive: initialCustomer.sales_executive || initialCustomer.sales_executive_details?.id || (!isAdmin && userInfo?.id ? userInfo.id : ""),
         no_of_user: "",
         project_value: initialCustomer.project_value !== undefined && initialCustomer.project_value !== null ? String(initialCustomer.project_value) : "",
         project_scope_requirements: initialCustomer.remarks || initialCustomer.requirement_details || "",
@@ -156,7 +159,7 @@ export default function AddProjectForm({
         amc_end_date: "",
         project_stage: "requirement_analysis",
         priority: "medium",
-        project_executive: "",
+        project_executive: !isAdmin && userInfo?.id ? userInfo.id : "",
         no_of_user: "",
         project_value: "",
         project_scope_requirements: "",
@@ -164,7 +167,7 @@ export default function AddProjectForm({
       });
       setSelectedProducts([]);
     }
-  }, [open, project, initialCustomer]);
+  }, [open, project, initialCustomer, isAdmin, userInfo]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -328,12 +331,16 @@ export default function AddProjectForm({
             <div className="space-y-1">
               <label className="block text-xs font-semibold text-slate-600">
                 Project Executive
+                {!isAdmin && (
+                  <span className="text-[11px] text-blue-600 font-normal ml-1.5">(Auto-mapped to your logged-in account)</span>
+                )}
               </label>
               <select
                 name="project_executive"
                 value={formData.project_executive}
                 onChange={handleChange}
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white h-[38px]"
+                disabled={!isAdmin && Boolean(formData.project_executive)}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white h-[38px] disabled:bg-slate-50 disabled:text-slate-600 cursor-pointer disabled:cursor-not-allowed"
               >
                 <option value="">Select Executive</option>
                 {staffOptions.map((s) => (
@@ -341,6 +348,11 @@ export default function AddProjectForm({
                     {s.name || s.full_name || s.username || s.email}
                   </option>
                 ))}
+                {!isAdmin && userInfo?.id && !staffOptions.some(s => String(s.id) === String(userInfo.id)) && (
+                  <option value={userInfo.id}>
+                    {userInfo.full_name || userInfo.first_name || userInfo.email || "My Account"}
+                  </option>
+                )}
               </select>
             </div>
           </div>

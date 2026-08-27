@@ -17,7 +17,8 @@ export default function AddLeadForm({
   const API_URL = `${baseApi.replace(/\/$/, "")}/lead/lead/`;
   const PRODUCT_API_URL = `${baseApi.replace(/\/$/, "")}/product/products/`;
   const STAFF_API_URL = `${baseApi.replace(/\/$/, "")}/auth/staff/all/`;
-  const { userRole } = useUserRole(baseApi);
+  const { userRole, userInfo } = useUserRole(baseApi);
+  const isAdmin = userInfo?.is_superuser || ["admin", "sub-admin", "subadmin"].includes(userInfo?.role?.name?.toLowerCase());
   const [step, setStep] = useState(1);
   const [convertingToCustomer, setConvertingToCustomer] = useState(false);
   const [showOtherLeadSource, setShowOtherLeadSource] = useState(false);
@@ -281,7 +282,7 @@ export default function AddLeadForm({
         industry_type_other: "",
         expected_budget: "",
         priority: "",
-        assigned_executive: "",
+        assigned_executive: !isAdmin && userInfo?.id ? userInfo.id : "",
         followup_date: "",
         pipeline_stage: "new_lead",
         status: "open",
@@ -300,7 +301,7 @@ export default function AddLeadForm({
       setShowOtherLeadSource(false);
       setShowOtherIndustry(false);
     }
-  }, [open, lead]);
+  }, [open, lead, isAdmin, userInfo]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -1058,6 +1059,9 @@ export default function AddLeadForm({
                   <div className="space-y-1">
                     <label className="block text-xs font-semibold text-slate-600">
                       Assigned Executive *
+                      {!isAdmin && (
+                        <span className="text-[11px] text-blue-600 font-normal ml-1.5">(Auto-mapped to your logged-in account)</span>
+                      )}
                     </label>
                     <select
                       name="assigned_executive"
@@ -1066,8 +1070,8 @@ export default function AddLeadForm({
                         clearError(e);
                         handleChange(e);
                       }}
-                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white h-[38px]"
-                      disabled={loadingStaff}
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white h-[38px] disabled:bg-slate-50 disabled:text-slate-600 cursor-pointer disabled:cursor-not-allowed"
+                      disabled={loadingStaff || (!isAdmin && Boolean(formData.assigned_executive))}
                     >
                       <option value="">{loadingStaff ? "Loading staff..." : "Select Executive"}</option>
                       {staffOptions.map((staff) => (
@@ -1075,6 +1079,11 @@ export default function AddLeadForm({
                           {staff.name} {staff.email && `(${staff.email})`}
                         </option>
                       ))}
+                      {!isAdmin && userInfo?.id && !staffOptions.some(s => String(s.id) === String(userInfo.id)) && (
+                        <option value={userInfo.id}>
+                          {userInfo.full_name || userInfo.first_name || userInfo.email || "My Account"}
+                        </option>
+                      )}
                     </select>
                   </div>
 

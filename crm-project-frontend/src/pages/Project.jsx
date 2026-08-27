@@ -7,10 +7,17 @@ import AddProjectForm from "../components/projects/AddProjectForm";
 import AddAMCContractForm from "../components/amc/AddAMCContractForm";
 import RecordViewer from "../components/RecordViewer";
 import AdvancedTableFilter from "../components/AdvancedTableFilter";
+import { useUserRole } from "../hooks/useAuth";
 
 export default function Project() {
   const BASE_API = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
   const API_URL = `${BASE_API.replace(/\/$/, "")}/lead/projects/`;
+
+  const { hasPermission } = useUserRole(BASE_API);
+  const canCreateProject = hasPermission("projects", "create");
+  const canEditProject = hasPermission("projects", "edit");
+  const canDeleteProject = hasPermission("projects", "delete");
+  const canCreateAMC = hasPermission("amc", "create");
 
   const [rows, setRows] = useState([]);
   const [allRows, setAllRows] = useState([]);
@@ -334,37 +341,43 @@ export default function Project() {
       </button>
 
       {/* Add to AMC */}
-      <button
-        onClick={() => {
-          setAmcProject(row);
-          setShowAMCForm(true);
-        }}
-        className="p-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 hover:text-emerald-700 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer"
-        title="Add to AMC Contract"
-      >
-        <MdHandshake />
-      </button>
+      {canCreateAMC && (
+        <button
+          onClick={() => {
+            setAmcProject(row);
+            setShowAMCForm(true);
+          }}
+          className="p-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 hover:text-emerald-700 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer"
+          title="Add to AMC Contract"
+        >
+          <MdHandshake />
+        </button>
+      )}
 
       {/* Edit */}
-      <button
-        onClick={() => {
-          setEditingProject(row);
-          setShowProjectForm(true);
-        }}
-        className="p-1 bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 rounded transition-all duration-150 text-sm shadow-sm cursor-pointer"
-        title="Edit Project"
-      >
-        <MdEdit />
-      </button>
+      {canEditProject && (
+        <button
+          onClick={() => {
+            setEditingProject(row);
+            setShowProjectForm(true);
+          }}
+          className="p-1 bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 rounded transition-all duration-150 text-sm shadow-sm cursor-pointer"
+          title="Edit Project"
+        >
+          <MdEdit />
+        </button>
+      )}
 
       {/* Delete */}
-      <button
-        onClick={() => handleDelete(row.id)}
-        className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 rounded transition-all duration-150 text-sm shadow-sm cursor-pointer"
-        title="Delete Project"
-      >
-        <MdDelete />
-      </button>
+      {canDeleteProject && (
+        <button
+          onClick={() => handleDelete(row.id)}
+          className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 rounded transition-all duration-150 text-sm shadow-sm cursor-pointer"
+          title="Delete Project"
+        >
+          <MdDelete />
+        </button>
+      )}
     </div>
   );
 
@@ -397,18 +410,20 @@ export default function Project() {
               Filter
             </button>
 
-            <button
-              onClick={() => {
-                setEditingProject(null);
-                setShowProjectForm(true);
-              }}
-              className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10 flex items-center gap-1 cursor-pointer"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-              </svg>
-              Add Project
-            </button>
+            {canCreateProject && (
+              <button
+                onClick={() => {
+                  setEditingProject(null);
+                  setShowProjectForm(true);
+                }}
+                className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10 flex items-center gap-1 cursor-pointer"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Project
+              </button>
+            )}
           </div>
         </div>
 

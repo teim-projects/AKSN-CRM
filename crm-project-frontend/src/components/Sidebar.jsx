@@ -124,9 +124,6 @@ export default function Sidebar({ children }) {
 
     return allSidebarItems.filter((item) => {
       const moduleKey = keyToModuleMap[item.key] || item.key;
-      if (moduleKey === "amc") {
-        return hasPermission("amc", "view") || hasPermission("projects", "view") || hasPermission("customers", "view");
-      }
       return hasPermission(moduleKey, "view");
     });
   }, [loadingRole, hasPermission]);

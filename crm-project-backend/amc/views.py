@@ -8,12 +8,13 @@ from rest_framework.response import Response
 from django.db import transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from django.db.models import Q
+from api.permissions import is_admin_or_subadmin
 from .models import AMCContract, AMCStatus, AMCCycle
 from .serializers import AMCContractSerializer
 
 
 class AMCContractViewSet(viewsets.ModelViewSet):
-    queryset = AMCContract.objects.all().order_by('-updated_at', '-created_at')
     serializer_class = AMCContractSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -23,11 +24,27 @@ class AMCContractViewSet(viewsets.ModelViewSet):
     ordering_fields = ['created_at', 'start_date', 'end_date', 'annual_value', 'status']
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        user = self.request.user
+        qs = AMCContract.objects.all().order_by('-updated_at', '-created_at')
+        if not is_admin_or_subadmin(user):
+            qs = qs.filter(
+                Q(support_coordinator=user) |
+                Q(created_by=user) |
+                Q(customer__sales_executive=user) |
+                Q(customer__lead__assigned_executive=user) |
+                Q(customer__lead__created_by=user)
+            )
         # Synchronize cycle dates and active statuses for fetched contracts
         for amc in qs[:50]:
             amc.sync_active_cycle_data()
         return qs
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        kwargs = {'created_by': user}
+        if not is_admin_or_subadmin(user) and not serializer.validated_data.get('support_coordinator'):
+            kwargs['support_coordinator'] = user
+        serializer.save(**kwargs)
 
     @action(detail=True, methods=['post'], url_path='toggle-status')
     def toggle_status(self, request, pk=None):

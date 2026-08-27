@@ -3,6 +3,7 @@ import Swal from "sweetalert2";
 import Select from "react-select";
 import CreatableSelect from "react-select/creatable";
 import { MdClose } from "react-icons/md";
+import { useUserRole } from "../../hooks/useAuth";
 
 export default function AddAMCContractForm({
   open,
@@ -13,6 +14,8 @@ export default function AddAMCContractForm({
   initialCustomer = null,
 }) {
   const BASE_API = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
+  const { userInfo } = useUserRole(BASE_API);
+  const isAdmin = userInfo?.is_superuser || ["admin", "sub-admin", "subadmin"].includes(userInfo?.role?.name?.toLowerCase());
   const token = useMemo(
     () =>
       localStorage.getItem("access") ||
@@ -144,7 +147,7 @@ export default function AddAMCContractForm({
         end_date: initialCustomer.amc_end_date || "",
         annual_value: initialCustomer.project_value ? String(initialCustomer.project_value) : "0",
         payment_frequency: "quarterly",
-        support_coordinator: initialCustomer.sales_executive || initialCustomer.sales_executive_details?.id || "",
+        support_coordinator: initialCustomer.sales_executive || initialCustomer.sales_executive_details?.id || (!isAdmin && userInfo?.id ? userInfo.id : ""),
         scope_of_support: "",
       });
     } else {
@@ -157,11 +160,11 @@ export default function AddAMCContractForm({
         end_date: "",
         annual_value: "0",
         payment_frequency: "quarterly",
-        support_coordinator: "",
+        support_coordinator: !isAdmin && userInfo?.id ? userInfo.id : "",
         scope_of_support: "",
       });
     }
-  }, [open, amcContract, initialProject, initialCustomer]);
+  }, [open, amcContract, initialProject, initialCustomer, isAdmin, userInfo]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -451,12 +454,16 @@ export default function AddAMCContractForm({
             <div className="space-y-1">
               <label className="block text-xs font-semibold text-slate-700">
                 Support Coordinator
+                {!isAdmin && (
+                  <span className="text-[11px] text-blue-600 font-normal ml-1.5">(Auto-mapped to your logged-in account)</span>
+                )}
               </label>
               <select
                 name="support_coordinator"
                 value={formData.support_coordinator}
                 onChange={handleChange}
-                className="w-full px-3.5 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white h-[42px]"
+                disabled={!isAdmin && Boolean(formData.support_coordinator)}
+                className="w-full px-3.5 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white h-[42px] disabled:bg-slate-50 disabled:text-slate-600 cursor-pointer disabled:cursor-not-allowed"
               >
                 <option value="">Select Staff Executive</option>
                 {staffOptions.map((s) => (
@@ -464,6 +471,11 @@ export default function AddAMCContractForm({
                     {s.name || `${s.first_name || ""} ${s.last_name || ""}`.trim() || s.email || s.username}
                   </option>
                 ))}
+                {!isAdmin && userInfo?.id && !staffOptions.some(s => String(s.id) === String(userInfo.id)) && (
+                  <option value={userInfo.id}>
+                    {userInfo.full_name || userInfo.first_name || userInfo.email || "My Account"}
+                  </option>
+                )}
               </select>
             </div>
           </div>

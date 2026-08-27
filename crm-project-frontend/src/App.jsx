@@ -149,17 +149,17 @@ function AppRoutes() {
       <Route
         path="/projects"
         element={
-          <ProtectedRoute>
+          <ModuleProtectedRoute module="projects">
             <Project />
-          </ProtectedRoute>
+          </ModuleProtectedRoute>
         }
       />
       <Route
         path="/amc"
         element={
-          <ProtectedRoute>
+          <ModuleProtectedRoute module="amc">
             <AMC />
-          </ProtectedRoute>
+          </ModuleProtectedRoute>
         }
       />
       <Route

@@ -41,6 +41,11 @@ export const SYSTEM_MODULES = [
     description: "Manage client implementation projects, timelines, and stages",
   },
   {
+    key: "amc",
+    name: "AMC Contracts",
+    description: "Manage Annual Maintenance Contracts, cycles, and renewals",
+  },
+  {
     key: "terms",
     name: "Terms & Conditions",
     description: "Manage quotation terms, conditions, and categories",

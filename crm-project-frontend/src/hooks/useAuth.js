@@ -8,6 +8,7 @@ const SYSTEM_MODULE_KEYS = [
   "products",
   "customers",
   "projects",
+  "amc",
   "terms",
   "accounts",
   "roles",
