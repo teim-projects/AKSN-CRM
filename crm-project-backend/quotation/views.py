@@ -14,7 +14,7 @@ from .serializers import (
 )
 
 from django.http import HttpResponse
-from .models import Quotation, QuotationVersion
+from .models import Quotation, QuotationVersion, TermCategory, TermsConditions
 from .serializers import QuotationSerializer, QuotationCreateSerializer
 
 logger = logging.getLogger(__name__)
