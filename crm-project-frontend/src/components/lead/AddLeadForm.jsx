@@ -68,6 +68,7 @@ export default function AddLeadForm({
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [loadingStaff, setLoadingStaff] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [mobileError, setMobileError] = useState("");
 
   const authToken = useMemo(() =>
     token ||
@@ -346,8 +347,50 @@ export default function AddLeadForm({
     const el = document.querySelector(`[name="${field}"]`);
     if (el) {
       el.classList.add("input-error");
-      el.focus();
     }
+  };
+
+  const checkDuplicateMobile = async (numToTest) => {
+    const rawVal = numToTest !== undefined ? numToTest : formData.mobile_number;
+    if (!rawVal) {
+      setMobileError("");
+      return false;
+    }
+    const digits = rawVal.replace(/\D/g, '');
+    if (digits.length < 10) {
+      setMobileError("");
+      return false;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}?search=${encodeURIComponent(digits)}`, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const results = Array.isArray(data.results) ? data.results : (Array.isArray(data) ? data : []);
+        
+        const duplicate = results.find((l) => {
+          if (lead?.id && String(l.id) === String(lead.id)) return false;
+          const lDigits = (l.mobile_number || "").replace(/\D/g, '');
+          return lDigits && (lDigits === digits || (digits.length >= 10 && lDigits.length >= 10 && digits.slice(-10) === lDigits.slice(-10)));
+        });
+
+        if (duplicate) {
+          const compMsg = duplicate.company_name ? ` (Company: ${duplicate.company_name})` : '';
+          const msg = `A lead with this mobile number already exists${compMsg}.`;
+          setMobileError(msg);
+          return true;
+        }
+      }
+    } catch (err) {
+      console.error("Error checking duplicate mobile number:", err);
+    }
+    setMobileError("");
+    return false;
   };
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -367,6 +410,10 @@ export default function AddLeadForm({
     }
     if (!/^\d{10}$/.test(formData.mobile_number.replace(/\s/g, ''))) {
       showError("mobile_number", "Please enter a valid 10-digit mobile number");
+      return false;
+    }
+    if (mobileError) {
+      showError("mobile_number", mobileError);
       return false;
     }
     if (formData.email_address && !emailRegex.test(formData.email_address)) {
@@ -400,6 +447,10 @@ export default function AddLeadForm({
     }
     if (!/^\d{10}$/.test(formData.mobile_number.replace(/\s/g, ''))) {
       showError("mobile_number", "Please enter a valid 10-digit mobile number");
+      return false;
+    }
+    if (mobileError) {
+      showError("mobile_number", mobileError);
       return false;
     }
     if (formData.email_address && !emailRegex.test(formData.email_address)) {
@@ -601,8 +652,13 @@ export default function AddLeadForm({
     }
   };
 
-  const handleNext = (e) => {
+  const handleNext = async (e) => {
     e.preventDefault();
+    const isDup = await checkDuplicateMobile();
+    if (isDup) {
+      showError("mobile_number", mobileError || "A lead with this mobile number already exists.");
+      return;
+    }
     if (validateStep1()) {
       setStep(2);
     }
@@ -709,12 +765,21 @@ export default function AddLeadForm({
                       type="text"
                       placeholder="+91 98765 43210"
                       value={formData.mobile_number}
+                      onBlur={(e) => checkDuplicateMobile(e.target.value)}
                       onChange={(e) => {
                         clearError(e);
+                        setMobileError("");
                         handleChange(e);
                       }}
-                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                      className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white ${
+                        mobileError ? "border-rose-500 bg-rose-50/50" : "border-slate-200"
+                      }`}
                     />
+                    {mobileError && (
+                      <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
+                        <span>⚠️</span> {mobileError}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-1">

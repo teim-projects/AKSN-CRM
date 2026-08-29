@@ -54,7 +54,6 @@ export default function RecordViewer({
     // Related fields that are not actual model fields
     "followups",
     "faq_answers",
-    "qualifying_answers",
     "converted_to_customer",
   ];
 
@@ -92,7 +91,6 @@ export default function RecordViewer({
       'amount': 'Amount (₹)',
       'linkedin_profile_url': 'LinkedIn Profile URL',
       'is_converted': 'Is Converted',
-      'is_qualified': 'Is Qualified',
       'discussion_summary': 'Discussion Summary',
       'commitment_client': 'Commitment by Client',
       'commitment_us': 'Commitment by Us',

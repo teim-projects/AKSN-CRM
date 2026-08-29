@@ -375,8 +375,8 @@ export default function AMC() {
           setOpenRow(openRow === row.id ? null : row.id);
         }}
         className={`p-1 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer ${openRow === row.id
-            ? "bg-purple-600 text-white"
-            : "bg-purple-50 hover:bg-purple-100 text-purple-600"
+          ? "bg-purple-600 text-white"
+          : "bg-purple-50 hover:bg-purple-100 text-purple-600"
           }`}
         title="Renewal History & Old AMC Versions"
       >
@@ -425,8 +425,8 @@ export default function AMC() {
           <button
             onClick={() => handleToggleStatus(row)}
             className={`p-1 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer ${isRowActive
-                ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-600"
-                : "bg-slate-100 hover:bg-slate-200 text-slate-500"
+              ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-600"
+              : "bg-slate-100 hover:bg-slate-200 text-slate-500"
               }`}
             title={isRowActive ? "Mark Inactive" : "Mark Active"}
           >
@@ -597,9 +597,8 @@ export default function AMC() {
                         setFilterType(opt.value);
                         setShowFilterDropdown(false);
                       }}
-                      className={`w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center justify-between transition-colors cursor-pointer ${
-                        filterType === opt.value ? "font-bold text-blue-600 bg-blue-50/50" : "text-slate-700"
-                      }`}
+                      className={`w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center justify-between transition-colors cursor-pointer ${filterType === opt.value ? "font-bold text-blue-600 bg-blue-50/50" : "text-slate-700"
+                        }`}
                     >
                       <span>{opt.label}</span>
                     </button>

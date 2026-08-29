@@ -822,8 +822,8 @@ export default function Dashboard() {
                       </td>
                       <td className="py-2.5">
                         <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider ${row.status === 'close_win' || row.status === 'closed' ? 'bg-emerald-100 text-emerald-700' :
-                            row.status === 'close_loss' ? 'bg-rose-100 text-rose-700' :
-                              'bg-blue-100 text-blue-700'
+                          row.status === 'close_loss' ? 'bg-rose-100 text-rose-700' :
+                            'bg-blue-100 text-blue-700'
                           }`}>
                           {row.status === 'close_win' ? 'Close Win' : row.status === 'close_loss' ? 'Close Loss' : row.status || 'Open'}
                         </span>

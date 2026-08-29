@@ -315,6 +315,22 @@ export default function Project() {
       ),
       className: "w-28",
     },
+    {
+      key: "amc_dates",
+      label: "AMC Period",
+      render: (r) => {
+        if (!r.amc_start_date && !r.amc_end_date) {
+          return <span className="text-slate-400 text-xs py-0.5 block italic">No AMC</span>;
+        }
+        return (
+          <div className="flex flex-col text-[11px] leading-tight py-0.5">
+            <span className="text-emerald-700 font-medium">Start: {formatDate(r.amc_start_date)}</span>
+            <span className="text-rose-700 font-medium">End: {formatDate(r.amc_end_date)}</span>
+          </div>
+        );
+      },
+      className: "w-36",
+    },
   ];
 
   const actionsRenderer = (row) => (

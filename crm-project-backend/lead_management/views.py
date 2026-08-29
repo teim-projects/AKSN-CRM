@@ -6,7 +6,7 @@ from rest_framework import status, filters
 from rest_framework.filters import OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
-from .models import lead_management, LeadFAQ, LeadFollowUp, Customer, Project
+from .models import lead_management, LeadFAQ, LeadFollowUp, Customer, Project, LeadStatus
 from .serializers import LeadSerializer, LeadFollowUpSerializer, LeadFAQSerializer, CustomerSerializer, ProjectSerializer
 from django.db.models import Q, Case, When, Value, IntegerField
 from django.utils import timezone
@@ -40,10 +40,17 @@ class CustomerViewsets(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
+        kwargs = {}
         if not is_admin_or_subadmin(user) and 'sales_executive' not in serializer.validated_data:
-            serializer.save(sales_executive=user)
-        else:
-            serializer.save()
+            kwargs['sales_executive'] = user
+        customer = serializer.save(**kwargs)
+
+        if customer.lead:
+            lead = customer.lead
+            lead.status = LeadStatus.CLOSE_WIN
+            lead.is_converted = True
+            lead.converted_to_customer = customer
+            lead.save(update_fields=['status', 'is_converted', 'converted_to_customer', 'updated_at'])
 
     @action(detail=True, methods=['post'], url_path='convert-to-project')
     @transaction.atomic
@@ -66,7 +73,7 @@ class CustomerViewsets(viewsets.ModelViewSet):
         if (not project_val or project_val == 0) and customer.lead and customer.lead.amount:
             project_val = customer.lead.amount
 
-        # Normalize product entries into list of dicts with AMC dates
+        # Normalize product entries into list of dicts with AMC dates and individual product values
         normalized_products = []
         if isinstance(products_data, list) and len(products_data) > 0:
             for item in products_data:
@@ -74,30 +81,35 @@ class CustomerViewsets(viewsets.ModelViewSet):
                     prod_name = item.get("product") or item.get("name") or item.get("product_name") or ""
                     start_d = item.get("amc_start_date") or customer.amc_start_date
                     end_d = item.get("amc_end_date") or customer.amc_end_date
+                    prod_val = item.get("value") or item.get("price") or item.get("project_value")
                     if prod_name:
                         normalized_products.append({
                             "name": prod_name,
                             "amc_start_date": start_d,
-                            "amc_end_date": end_d
+                            "amc_end_date": end_d,
+                            "value": prod_val
                         })
                 elif isinstance(item, str) and item.strip():
                     normalized_products.append({
                         "name": item.strip(),
                         "amc_start_date": customer.amc_start_date,
-                        "amc_end_date": customer.amc_end_date
+                        "amc_end_date": customer.amc_end_date,
+                        "value": None
                     })
                 elif isinstance(item, (int, float)):
                     normalized_products.append({
                         "name": str(item),
                         "amc_start_date": customer.amc_start_date,
-                        "amc_end_date": customer.amc_end_date
+                        "amc_end_date": customer.amc_end_date,
+                        "value": None
                     })
 
         if not normalized_products:
             normalized_products = [{
                 "name": None,
                 "amc_start_date": customer.amc_start_date,
-                "amc_end_date": customer.amc_end_date
+                "amc_end_date": customer.amc_end_date,
+                "value": None
             }]
 
         created_projects = []
@@ -121,11 +133,21 @@ class CustomerViewsets(viewsets.ModelViewSet):
                 already_existing_projects.append(existing)
                 continue
 
+            # Product specific value or fallback to customer total project value
+            p_val = prod_item.get("value")
+            if p_val is not None and p_val != "":
+                try:
+                    product_project_val = float(p_val)
+                except (ValueError, TypeError):
+                    product_project_val = float(project_val) if project_val else 0.0
+            else:
+                product_project_val = float(project_val) if project_val else 0.0
+
             project_data = {
                 "customer": customer.id,
                 "product": prod_list,
                 "project_executive": executive.id if executive else None,
-                "project_value": float(project_val) if project_val else 0.0,
+                "project_value": product_project_val,
                 "project_scope_requirements": scope,
                 "start_date": timezone.now().date(),
                 "amc_start_date": prod_item["amc_start_date"],
@@ -316,7 +338,8 @@ class LeadViewSet(viewsets.ModelViewSet):
             
             lead.converted_to_customer = existing_customer
             lead.is_converted = True
-            lead.save()
+            lead.status = LeadStatus.CLOSE_WIN
+            lead.save(update_fields=["converted_to_customer", "is_converted", "status", "updated_at"])
             
             return Response({
                 "message": "Lead linked to existing customer successfully",
@@ -360,7 +383,8 @@ class LeadViewSet(viewsets.ModelViewSet):
             
             lead.converted_to_customer = customer
             lead.is_converted = True
-            lead.save()
+            lead.status = LeadStatus.CLOSE_WIN
+            lead.save(update_fields=["converted_to_customer", "is_converted", "status", "updated_at"])
             
             return Response({
                 "message": "Lead converted to customer successfully",

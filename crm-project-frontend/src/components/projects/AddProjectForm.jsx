@@ -61,7 +61,7 @@ export default function AddProjectForm({
     team_members: "",
   });
 
-  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState("");
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
   const [staffOptions, setStaffOptions] = useState([]);
@@ -121,18 +121,19 @@ export default function AddProjectForm({
         team_members: project.team_members || "",
       });
 
-      if (Array.isArray(project.product)) {
-        setSelectedProducts(project.product);
+      let firstProd = "";
+      if (Array.isArray(project.product) && project.product.length > 0) {
+        const item = project.product[0];
+        firstProd = typeof item === "object" && item !== null ? (item.product || item.name || "") : String(item);
       } else if (typeof project.product === "string" && project.product.trim()) {
         try {
           const parsed = JSON.parse(project.product);
-          setSelectedProducts(Array.isArray(parsed) ? parsed : [project.product]);
+          firstProd = Array.isArray(parsed) ? String(parsed[0] || "") : project.product;
         } catch {
-          setSelectedProducts([project.product]);
+          firstProd = project.product;
         }
-      } else {
-        setSelectedProducts([]);
       }
+      setSelectedProduct(firstProd);
     } else if (initialCustomer) {
       setFormData({
         customer: initialCustomer.id || "",
@@ -149,7 +150,9 @@ export default function AddProjectForm({
         team_members: "",
       });
       const custProds = initialCustomer.product_purchased || initialCustomer.product_purchased_list || [];
-      setSelectedProducts(Array.isArray(custProds) ? custProds : [custProds].filter(Boolean));
+      const firstItem = Array.isArray(custProds) ? custProds[0] : custProds;
+      const firstProd = typeof firstItem === "object" && firstItem !== null ? (firstItem.product || firstItem.name || "") : String(firstItem || "");
+      setSelectedProduct(firstProd);
     } else {
       setFormData({
         customer: "",
@@ -165,7 +168,7 @@ export default function AddProjectForm({
         project_scope_requirements: "",
         team_members: "",
       });
-      setSelectedProducts([]);
+      setSelectedProduct("");
     }
   }, [open, project, initialCustomer, isAdmin, userInfo]);
 
@@ -183,9 +186,11 @@ export default function AddProjectForm({
           project_value: prev.project_value || (foundCustomer.project_value ? String(foundCustomer.project_value) : ""),
           project_scope_requirements: prev.project_scope_requirements || foundCustomer.remarks || foundCustomer.requirement_details || "",
         }));
-        if (selectedProducts.length === 0 && (foundCustomer.product_purchased || foundCustomer.product_purchased_list)) {
+        if (!selectedProduct && (foundCustomer.product_purchased || foundCustomer.product_purchased_list)) {
           const prods = foundCustomer.product_purchased || foundCustomer.product_purchased_list;
-          setSelectedProducts(Array.isArray(prods) ? prods : [prods]);
+          const firstItem = Array.isArray(prods) ? prods[0] : prods;
+          const firstProd = typeof firstItem === "object" && firstItem !== null ? (firstItem.product || firstItem.name || "") : String(firstItem || "");
+          setSelectedProduct(firstProd);
         }
         return;
       }
@@ -204,21 +209,18 @@ export default function AddProjectForm({
     [products]
   );
 
-  const selectedProductSelectOptions = useMemo(() => {
-    if (!Array.isArray(selectedProducts) || selectedProducts.length === 0) return [];
+  const selectedProductSelectOption = useMemo(() => {
+    if (!selectedProduct) return null;
 
-    return productSelectOptions.filter((opt) => {
+    return productSelectOptions.find((opt) => {
       const p = opt.productObj;
-      return selectedProducts.some((sel) => {
-        if (sel === null || sel === undefined || sel === "") return false;
-        if (p?.id !== undefined && String(p.id) === String(sel)) return true;
-        if (String(opt.value) === String(sel)) return true;
-        if (p?.name && String(p.name).trim().toLowerCase() === String(sel).trim().toLowerCase()) return true;
-        if (p?.product_name && String(p.product_name).trim().toLowerCase() === String(sel).trim().toLowerCase()) return true;
-        return false;
-      });
-    });
-  }, [selectedProducts, productSelectOptions]);
+      if (p?.id !== undefined && String(p.id) === String(selectedProduct)) return true;
+      if (String(opt.value) === String(selectedProduct)) return true;
+      if (p?.name && String(p.name).trim().toLowerCase() === String(selectedProduct).trim().toLowerCase()) return true;
+      if (p?.product_name && String(p.product_name).trim().toLowerCase() === String(selectedProduct).trim().toLowerCase()) return true;
+      return false;
+    }) || { value: selectedProduct, label: selectedProduct };
+  }, [selectedProduct, productSelectOptions]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -235,7 +237,7 @@ export default function AddProjectForm({
         ...formData,
         customer: parseInt(formData.customer, 10),
         project_executive: formData.project_executive ? parseInt(formData.project_executive, 10) : null,
-        product: selectedProducts,
+        product: selectedProduct ? [selectedProduct] : [],
         team_members: formData.team_members || "",
         project_value: formData.project_value ? parseFloat(formData.project_value) : 0.0,
         start_date: formData.start_date || null,
@@ -357,20 +359,20 @@ export default function AddProjectForm({
             </div>
           </div>
 
-          {/* Row 2: Product(s) & Team Members */}
+          {/* Row 2: Product & Team Members */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="block text-xs font-semibold text-slate-600">
-                Product(s)
+                Product
               </label>
               <Select
-                isMulti
+                isClearable
                 options={productSelectOptions}
-                value={selectedProductSelectOptions}
-                onChange={(opts) =>
-                  setSelectedProducts(opts ? opts.map((o) => o.value) : [])
+                value={selectedProductSelectOption}
+                onChange={(opt) =>
+                  setSelectedProduct(opt ? opt.value : "")
                 }
-                placeholder="Select Products..."
+                placeholder="Select Product..."
                 className="text-sm"
               />
             </div>

@@ -18,7 +18,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-export default function AddQuotation({ id, onBack }) {
+export default function AddQuotation({ id, leadData, onBack }) {
   const isEdit = !!id;
 
   // Step 1: Quotation Details & Items, Step 2: Terms & Conditions
@@ -216,6 +216,48 @@ export default function AddQuotation({ id, onBack }) {
 
     loadQuotation();
   }, [id, isEdit]);
+
+  // Auto-populate form data when leadData is passed from Lead table action
+  useEffect(() => {
+    if (isEdit || !leadData) return;
+
+    setLeadFound(leadData);
+    setFormData((prev) => ({
+      ...prev,
+      lead: leadData.id || prev.lead,
+      company_name: leadData.company_name || "",
+      contact_person: leadData.contact_person || "",
+      mobile_number: leadData.mobile_number || "",
+      email_address: leadData.email_address || "",
+      linkedin_profile_url: leadData.linkedin_profile_url || "",
+      gst_number: leadData.gst_number || "",
+      pan_number: leadData.pan_number || "",
+      msme_number: leadData.msme_number || "",
+      state: leadData.state || "",
+      city: leadData.city || "",
+      address: leadData.address || "",
+      industry_type: leadData.industry_type || "",
+      subject: leadData.company_name ? `Quotation for ${leadData.company_name}` : prev.subject,
+    }));
+
+    // Auto-map lead's interested products into quotation items
+    const prods = leadData.product_interested || leadData.product_interested_list || [];
+    if (Array.isArray(prods) && prods.length > 0) {
+      const mappedItems = prods.map((p, idx) => {
+        const prodName = typeof p === "string" ? p : (p?.product || p?.name || p?.product_name || `Item ${idx + 1}`);
+        const prodVal = typeof p === "object" && p !== null ? (p?.value || p?.price || p?.amount || 0) : (leadData.amount || 0);
+        return {
+          id: Date.now() + idx,
+          product_name: prodName,
+          description: "",
+          qty: 1,
+          rate: parseFloat(prodVal) || 0,
+          amount: parseFloat(prodVal) || 0,
+        };
+      });
+      setItems(mappedItems);
+    }
+  }, [isEdit, leadData]);
 
   // Load products
   useEffect(() => {

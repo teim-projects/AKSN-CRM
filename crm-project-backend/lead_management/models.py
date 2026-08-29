@@ -235,10 +235,6 @@ class lead_management(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
 
-    # Lead Qualifying Questions
-    is_qualified = models.BooleanField(default=False, verbose_name="Is Qualified")
-    qualifying_answers = models.JSONField(blank=True, null=True, default=dict, verbose_name="Qualifying Answers")
-
     # Relation to Customer (for conversion)
     converted_to_customer = models.ForeignKey(
         Customer,

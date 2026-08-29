@@ -214,6 +214,27 @@ class LeadSerializer(serializers.ModelSerializer):
         read_only=True
     )
     followups = LeadFollowUpSerializer(many=True, read_only=True)
+    ready_to_send_quotation = serializers.SerializerMethodField()
+
+    def get_ready_to_send_quotation(self, obj):
+        has_ready_followup = obj.followups.filter(ready_to_send_quotation=True).exists()
+        if not has_ready_followup:
+            return False
+
+        from quotation.models import Quotation
+
+        if obj.quotations.exists():
+            return False
+
+        if obj.mobile_number:
+            digits = "".join(filter(str.isdigit, str(obj.mobile_number)))
+            if digits:
+                for q in Quotation.objects.exclude(mobile_number__isnull=True).exclude(mobile_number=""):
+                    q_digits = "".join(filter(str.isdigit, str(q.mobile_number)))
+                    if q_digits and (q_digits == digits or (len(digits) >= 10 and len(q_digits) >= 10 and digits[-10:] == q_digits[-10:])):
+                        return False
+
+        return True
 
     # Display fields - now just return the value directly
     lead_source_display = serializers.CharField(source="lead_source", read_only=True)
@@ -273,13 +294,37 @@ class LeadSerializer(serializers.ModelSerializer):
             "created_by_details",
             "created_at",
             "updated_at",
-            "is_qualified",
-            "qualifying_answers",
             "converted_to_customer",
             "is_converted",
+            "ready_to_send_quotation",
             "followups",
         ]
         read_only_fields = ("id", "created_by", "created_at", "updated_at")
+
+    def validate_mobile_number(self, value):
+        if not value:
+            return value
+
+        digits = "".join(filter(str.isdigit, str(value)))
+        if not digits:
+            return value
+
+        qs = lead_management.objects.exclude(mobile_number__isnull=True).exclude(mobile_number="")
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+
+        for existing_lead in qs:
+            existing_digits = "".join(filter(str.isdigit, str(existing_lead.mobile_number)))
+            if existing_digits:
+                if existing_digits == digits or (
+                    len(digits) >= 10 and len(existing_digits) >= 10 and digits[-10:] == existing_digits[-10:]
+                ):
+                    comp_info = f" (Company: {existing_lead.company_name})" if existing_lead.company_name else ""
+                    raise serializers.ValidationError(
+                        f"A lead with mobile number '{value}' already exists{comp_info}."
+                    )
+
+        return value
 
     @transaction.atomic
     def create(self, validated_data):

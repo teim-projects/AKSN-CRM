@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Base from "../components/Base";
 import TableView from "../components/TableView";
 import AddQuotation from "../components/quotations/AddQuotation";
-import { MdAdd, MdFilterList, MdHistory, MdEdit, MdDelete, MdRemoveRedEye, MdDownload, MdEmail, MdTaskAlt } from "react-icons/md";
+import { MdAdd, MdFilterList, MdHistory, MdEdit, MdDelete, MdRemoveRedEye, MdDownload, MdEmail, MdTaskAlt, MdBlock } from "react-icons/md";
 import { FaWhatsapp } from "react-icons/fa";
 import Swal from "sweetalert2";
 import AdvancedTableFilter from "../components/AdvancedTableFilter";
@@ -43,6 +43,18 @@ export default function Quotation() {
   const [showQuotationForm, setShowQuotationForm] = useState(false);
   const [editingQuotation, setEditingQuotation] = useState(null);
 
+  // Quick Filter state
+  const [filterType, setFilterType] = useState("all");
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+
+  // Stats state
+  const [stats, setStats] = useState({
+    total_quotations: 0,
+    total_versions: 0,
+    dropped_quotations: 0,
+    finalized_quotations: 0,
+  });
+
   // Filter state
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filteredData, setFilteredData] = useState([]);
@@ -79,6 +91,34 @@ export default function Quotation() {
       setAllRows(data);
       setFilteredData(data);
       setRows(data);
+
+      // Calculate overall statistics
+      const totalQuotationsCount = data.length;
+      let totalVersionsCount = 0;
+      let droppedCount = 0;
+      let finalizedCount = 0;
+
+      data.forEach((q) => {
+        const versions = q.versions || [];
+        totalVersionsCount += versions.length > 0 ? versions.length : 1;
+
+        if (q.is_dropped) {
+          droppedCount += 1;
+        }
+
+        const activeVersion = q.versions?.find((v) => v.is_active);
+        if (q.is_finalized || activeVersion?.is_finalized) {
+          finalizedCount += 1;
+        }
+      });
+
+      setStats({
+        total_quotations: totalQuotationsCount,
+        total_versions: totalVersionsCount,
+        dropped_quotations: droppedCount,
+        finalized_quotations: finalizedCount,
+      });
+
       setTotalCount(data.length);
       setTotalPages(Math.max(1, Math.ceil(data.length / itemsPerPage)));
       setCurrentPage(1);
@@ -98,6 +138,47 @@ export default function Quotation() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Apply quick filter
+  const applyQuickFilter = useCallback(() => {
+    let filtered = allRows;
+
+    switch (filterType) {
+      case "finalized":
+        filtered = allRows.filter((q) => {
+          const activeVersion = q.versions?.find((v) => v.is_active);
+          return q.is_finalized || activeVersion?.is_finalized;
+        });
+        break;
+      case "dropped":
+        filtered = allRows.filter((q) => q.is_dropped);
+        break;
+      case "active":
+        filtered = allRows.filter((q) => {
+          const activeVersion = q.versions?.find((v) => v.is_active);
+          return !q.is_dropped && !q.is_finalized && !activeVersion?.is_finalized;
+        });
+        break;
+      default:
+        filtered = allRows;
+    }
+
+    setFilteredData(filtered);
+  }, [allRows, filterType]);
+
+  useEffect(() => {
+    applyQuickFilter();
+  }, [applyQuickFilter]);
+
+  const filterOptions = [
+    { value: "all", label: "All Records" },
+    { value: "finalized", label: "Finalized Quotations" },
+    { value: "dropped", label: "Dropped Quotations" },
+    { value: "active", label: "Active / Pending" },
+  ];
+
+  const currentFilterLabel = filterOptions.find((f) => f.value === filterType)?.label || "All Records";
+  const formatNumber = (num) => String(num).padStart(2, '0');
 
   // Update pagination when filtered data changes
   useEffect(() => {
@@ -275,6 +356,39 @@ export default function Quotation() {
     return version.items.length;
   };
 
+  const handleToggleDrop = useCallback(async (id, currentDroppedStatus) => {
+    const actionText = currentDroppedStatus ? "restore this quotation" : "mark this quotation as DROPPED";
+    const result = await Swal.fire({
+      title: currentDroppedStatus ? "Restore Quotation?" : "Drop Quotation?",
+      text: `Are you sure you want to ${actionText}?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: currentDroppedStatus ? "Yes, Restore" : "Yes, Drop It",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: currentDroppedStatus ? "#2563eb" : "#475569",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await api.patch(`quotation/quotation/${id}/toggle-drop/`, {
+        is_dropped: !currentDroppedStatus,
+      });
+
+      Swal.fire({
+        icon: "success",
+        title: "Updated",
+        text: `Quotation ${!currentDroppedStatus ? "marked as dropped" : "restored"} successfully.`,
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      fetchData();
+    } catch (err) {
+      console.error("Error toggling drop status:", err);
+      Swal.fire("Error", "Failed to update quotation status.", "error");
+    }
+  }, [fetchData]);
+
   const columns = [
     {
       key: "sr",
@@ -284,7 +398,18 @@ export default function Quotation() {
     {
       key: "quotation_no",
       label: "Quotation No",
-      render: (r) => <span className="text-blue-600 font-bold text-xs whitespace-nowrap py-0.5 block">{r.quotation_no || "-"}</span>
+      render: (r) => (
+        <div className="flex items-center justify-center gap-1.5 whitespace-nowrap py-0.5">
+          <span className={r.is_dropped ? "text-slate-700 font-bold text-xs line-through" : "text-blue-600 font-bold text-xs"}>
+            {r.quotation_no || "-"}
+          </span>
+          {r.is_dropped && (
+            <span className="px-1.5 py-0.5 bg-slate-700 text-slate-100 rounded text-[9px] font-extrabold uppercase tracking-wider shadow-xs">
+              DROPPED
+            </span>
+          )}
+        </div>
+      )
     },
     {
       key: "company_name",
@@ -349,6 +474,9 @@ export default function Quotation() {
   const actionsRenderer = useCallback((row) => {
     const activeVersion = getActiveVersion(row);
     const isLatest = activeVersion?.is_active;
+    const isFinalized = Boolean(row.is_finalized || activeVersion?.is_finalized);
+    const isDropped = Boolean(row.is_dropped);
+    const isEditable = !isFinalized && !isDropped;
 
     return (
       <div className="flex items-center justify-center gap-1 py-0.5">
@@ -365,8 +493,8 @@ export default function Quotation() {
             }
           }}
           className={`p-1 rounded transition-all duration-150 text-sm shadow-xs ${openRow === row.id
-              ? "bg-purple-600 text-white"
-              : "bg-purple-50 hover:bg-purple-100 text-purple-600"
+            ? "bg-purple-600 text-white"
+            : "bg-purple-50 hover:bg-purple-100 text-purple-600"
             }`}
           title="Version History"
         >
@@ -384,11 +512,10 @@ export default function Quotation() {
         {canEditQuotation && isLatest && (
           <button
             onClick={() => handleFinalizeVersion(row.id, activeVersion?.id, activeVersion?.is_finalized, activeVersion?.version_no)}
-            className={`p-1 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer ${
-              activeVersion?.is_finalized
+            className={`p-1 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer ${activeVersion?.is_finalized
                 ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
                 : "bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-700"
-            }`}
+              }`}
             title={activeVersion?.is_finalized ? "Finalized (Click to un-finalize)" : "Make Final"}
           >
             <MdTaskAlt />
@@ -398,11 +525,23 @@ export default function Quotation() {
         {canEditQuotation && isLatest && (
           <button
             onClick={() => {
+              if (!isEditable) return;
               setEditingQuotation(row);
               setShowQuotationForm(true);
             }}
-            className="p-1 bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer"
-            title="Edit Record"
+            disabled={!isEditable}
+            className={`p-1 rounded transition-all duration-150 text-sm shadow-xs ${
+              isEditable
+                ? "bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 cursor-pointer"
+                : "bg-slate-100 text-slate-400 opacity-50 cursor-not-allowed"
+            }`}
+            title={
+              isEditable
+                ? "Edit Record"
+                : isDropped
+                ? "Cannot edit a dropped quotation"
+                : "Cannot edit a finalized quotation"
+            }
           >
             <MdEdit />
           </button>
@@ -430,6 +569,19 @@ export default function Quotation() {
           <MdEmail />
         </button>
 
+        {canEditQuotation && (
+          <button
+            onClick={() => handleToggleDrop(row.id, row.is_dropped)}
+            className={`p-1 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer ${row.is_dropped
+                ? "bg-slate-700 text-slate-100 hover:bg-slate-800"
+                : "bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700"
+              }`}
+            title={row.is_dropped ? "Dropped (Click to restore)" : "Mark as Dropped"}
+          >
+            <MdBlock />
+          </button>
+        )}
+
         {canDeleteQuotation && isLatest && (
           <button
             onClick={() => handleDelete(row.id)}
@@ -441,7 +593,7 @@ export default function Quotation() {
         )}
       </div>
     );
-  }, [openRow, handleDelete, handleFinalizeVersion, canEditQuotation, canDeleteQuotation]);
+  }, [openRow, handleDelete, handleFinalizeVersion, handleToggleDrop, canEditQuotation, canDeleteQuotation]);
 
   // NESTED VERSION HISTORY ROW WITH PAGINATION
   const renderExpandedRow = useCallback((row) => {
@@ -534,11 +686,10 @@ export default function Quotation() {
                           {isActive && (
                             <button
                               onClick={() => handleFinalizeVersion(row.id, v.id, v.is_finalized, v.version_no)}
-                              className={`p-1 rounded text-xs transition-colors cursor-pointer ${
-                                v.is_finalized
+                              className={`p-1 rounded text-xs transition-colors cursor-pointer ${v.is_finalized
                                   ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
                                   : "bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-700"
-                              }`}
+                                }`}
                               title={v.is_finalized ? "Finalized (Click to un-finalize)" : "Make Final"}
                             >
                               <MdTaskAlt size={14} />
@@ -627,34 +778,98 @@ export default function Quotation() {
     <Base title="">
       <div className="w-full space-y-4 font-sans antialiased text-slate-800 pt-1 sm:pt-2 px-1">
 
-        {/* HEADER BLOCK */}
+        {/* HEADER BLOCK WITH THE BLUE VERTICAL ACCENT LINE */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-1 pt-1">
           <div className="flex items-center gap-3">
             <span className="w-1.5 h-10 bg-blue-600 rounded-full block"></span>
             <div>
               <h1 className="text-xl font-bold tracking-tight text-slate-900 leading-tight">Quotation Management</h1>
               <p className="text-xs text-slate-500 mt-0.5">
-                {loading ? "Synchronizing quotation records..." : `Total ${totalCount} records identified`}
+                {loading ? "Synchronizing quotation records..." : `${totalCount} records found`}
               </p>
             </div>
           </div>
+
           <div className="mt-3 md:mt-0 flex items-center gap-3">
+            {/* Quick Filter Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+              >
+                <MdFilterList className="text-slate-400" />
+                {currentFilterLabel}
+              </button>
+
+              {showFilterDropdown && (
+                <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-30">
+                  {filterOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setFilterType(option.value);
+                        setShowFilterDropdown(false);
+                        setCurrentPage(1);
+                      }}
+                      className={`w-full text-left px-4 py-2 text-xs hover:bg-slate-50 transition-colors ${
+                        filterType === option.value ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-700'
+                      }`}
+                    >
+                      {option.label}
+                      {filterType === option.value && (
+                        <span className="float-right text-blue-600">✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Advanced Filter Button */}
             <button
               onClick={() => setIsFilterOpen(true)}
-              className="px-4 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-1.5"
+              className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
             >
               <MdFilterList className="text-slate-400" />
               Filter
             </button>
+
             {canCreateQuotation && (
               <button
                 onClick={() => { setEditingQuotation(null); setShowQuotationForm(true); }}
-                className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10 flex items-center gap-1 cursor-pointer"
+                className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-xs flex items-center gap-1 cursor-pointer"
               >
                 <MdAdd className="text-sm" />
                 Add Quotation
               </button>
             )}
+          </div>
+        </div>
+
+        {/* 4 TOP KPI CARDS */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs p-4">
+            <p className="text-2xl font-bold text-slate-900">{formatNumber(stats.total_quotations)}</p>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">Total Quotations</p>
+            <p className="text-[10px] text-slate-400 mt-1">All records</p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs p-4">
+            <p className="text-2xl font-bold text-blue-600">{formatNumber(stats.total_versions)}</p>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">Total Versions</p>
+            <p className="text-[10px] text-slate-400 mt-1">Across all quotations</p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs p-4">
+            <p className="text-2xl font-bold text-slate-600">{formatNumber(stats.dropped_quotations)}</p>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">Dropped</p>
+            <p className="text-[10px] text-slate-400 mt-1">Marked as dropped</p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs p-4">
+            <p className="text-2xl font-bold text-emerald-600">{formatNumber(stats.finalized_quotations)}</p>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">Finalized</p>
+            <p className="text-[10px] text-slate-400 mt-1">Finalized contracts</p>
           </div>
         </div>
 
@@ -672,6 +887,9 @@ export default function Quotation() {
             actions={actionsRenderer}
             renderExpandedRow={renderExpandedRow}
             emptyMessage="No quotation records matched the criteria"
+            rowClassName={(row) =>
+              row.is_dropped ? "bg-slate-300/80 text-slate-700 font-medium border-slate-400" : ""
+            }
           />
         </div>
       </div>

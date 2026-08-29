@@ -103,6 +103,7 @@ class Quotation(models.Model):
     address = models.TextField(blank=True, null=True, verbose_name="Address")
     terms_and_conditions = models.JSONField(blank=True, null=True, default=list, verbose_name="Terms & Conditions")
     is_finalized = models.BooleanField(default=False, verbose_name="Is Finalized")
+    is_dropped = models.BooleanField(default=False, verbose_name="Is Dropped")
     
     # Quotation Details
     subject = models.CharField(max_length=255, verbose_name="Subject", null=True, blank=True)

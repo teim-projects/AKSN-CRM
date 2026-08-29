@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -6,7 +6,9 @@ import {
   faBars,
   faBell,
   faSearch,
-  faSignOutAlt
+  faSignOutAlt,
+  faTimes,
+  faArrowLeft
 } from "@fortawesome/free-solid-svg-icons";
 import { useUserRole } from "../hooks/useAuth";
 import NotificationDrawer from "./NotificationDrawer";
@@ -221,6 +223,7 @@ export default function Sidebar({ children }) {
           isSidebarOpen={isOpen}
           onNotificationClick={() => setIsNotificationOpen(true)}
           unreadCount={unreadNotifCount}
+          modules={filteredItems}
         />
 
         <main className="flex-1 p-3 sm:p-5 md:p-6 w-full bg-[#f4f5f9] overflow-x-hidden">
@@ -238,11 +241,17 @@ export default function Sidebar({ children }) {
   );
 }
 
-const Navbar = ({ onMenuClick, pageTitle, isSidebarOpen, onNotificationClick, unreadCount }) => {
+const Navbar = ({ onMenuClick, pageTitle, isSidebarOpen, onNotificationClick, unreadCount, modules = [] }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+
+  const searchRef = useRef(null);
+  const inputRef = useRef(null);
 
   const handleLogout = useCallback(() => {
     window.dispatchEvent(new Event("authChange"));
@@ -276,12 +285,83 @@ const Navbar = ({ onMenuClick, pageTitle, isSidebarOpen, onNotificationClick, un
     }
   }, [location, checkAuth]);
 
+  // Click outside listener for search suggestions dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Filter modules based on search query
+  const suggestions = React.useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return modules;
+    return modules.filter(
+      (item) =>
+        item.label.toLowerCase().includes(query) ||
+        item.section.toLowerCase().includes(query) ||
+        item.key.toLowerCase().includes(query)
+    );
+  }, [searchQuery, modules]);
+
+  // Reset selected index when suggestions change
+  useEffect(() => {
+    setSelectedIndex(suggestions.length > 0 ? 0 : -1);
+  }, [suggestions]);
+
+  const handleSelectModule = (item) => {
+    if (!item || !item.path) return;
+    navigate(item.path);
+    setSearchQuery("");
+    setIsDropdownOpen(false);
+    setIsMobileSearchOpen(false);
+  };
+
+  const handleKeyDown = (e) => {
+    if (!isDropdownOpen) {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        setIsDropdownOpen(true);
+      }
+      return;
+    }
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : 0));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
+        handleSelectModule(suggestions[selectedIndex]);
+      } else if (suggestions.length > 0) {
+        handleSelectModule(suggestions[0]);
+      }
+    } else if (e.key === "Escape") {
+      setIsDropdownOpen(false);
+      inputRef.current?.blur();
+    }
+  };
+
+  const handleGoBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/dashboard");
+    }
+  };
+
   return (
     <nav className="bg-white border-b border-gray-100 flex-shrink-0 sticky top-0 z-30 w-full px-4 sm:px-6 py-3 flex items-center justify-between shadow-md shadow-gray-200/40">
-      <div className="flex items-center gap-3 sm:gap-4">
+      <div className="flex items-center gap-2 sm:gap-3">
         <button
           onClick={onMenuClick}
-          className={`w-9 h-9 rounded-xl bg-blue-600 flex flex-col items-center justify-center gap-1 text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 transition-colors mr-1 sm:mr-2 cursor-pointer ${
+          className={`w-9 h-9 rounded-xl bg-blue-600 flex flex-col items-center justify-center gap-1 text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 transition-colors mr-1 cursor-pointer ${
             isSidebarOpen ? "lg:hidden" : "block"
           }`}
           title="Toggle Sidebar"
@@ -289,6 +369,15 @@ const Navbar = ({ onMenuClick, pageTitle, isSidebarOpen, onNotificationClick, un
           <span className="block w-4 h-0.5 bg-white rounded-full"></span>
           <span className="block w-4 h-0.5 bg-white rounded-full"></span>
           <span className="block w-4 h-0.5 bg-white rounded-full"></span>
+        </button>
+
+        <button
+          onClick={handleGoBack}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-600 border border-slate-200/80 text-xs font-semibold transition-all duration-150 shadow-xs cursor-pointer active:scale-95"
+          title="Go back to previous page"
+        >
+          <FontAwesomeIcon icon={faArrowLeft} className="text-xs text-slate-500" />
+          <span className="hidden sm:inline">Back</span>
         </button>
 
         <div className="flex flex-col">
@@ -302,22 +391,174 @@ const Navbar = ({ onMenuClick, pageTitle, isSidebarOpen, onNotificationClick, un
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4">
-        <form onSubmit={(e) => e.preventDefault()} className="relative hidden md:block">
-          <input
-            type="text"
-            placeholder="Quick search..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-48 lg:w-64 px-3 py-1.5 pl-9 rounded-lg border border-gray-200/80 
-              bg-gray-50/50 text-gray-800 text-xs font-medium
-              focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500
-              transition-all duration-200"
-          />
-          <FontAwesomeIcon
-            icon={faSearch}
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-[11px]"
-          />
-        </form>
+        {/* DESKTOP SEARCH BAR */}
+        <div ref={searchRef} className="relative hidden md:block">
+          <div className="relative">
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Search modules..."
+              value={searchQuery}
+              onFocus={() => setIsDropdownOpen(true)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setIsDropdownOpen(true);
+              }}
+              onKeyDown={handleKeyDown}
+              className="w-52 lg:w-72 px-3 py-1.5 pl-9 pr-8 rounded-lg border border-gray-200/80 
+                bg-gray-50/50 text-gray-800 text-xs font-medium
+                focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500
+                transition-all duration-200"
+            />
+            <FontAwesomeIcon
+              icon={faSearch}
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-[11px]"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedIndex(-1);
+                  inputRef.current?.focus();
+                }}
+                className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
+              >
+                <FontAwesomeIcon icon={faTimes} />
+              </button>
+            )}
+          </div>
+
+          {/* SUGGESTIONS DROPDOWN */}
+          {isDropdownOpen && (
+            <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-2xl border border-slate-100 z-50 overflow-hidden py-2 animate-in fade-in duration-150">
+              <div className="px-3 py-1.5 border-b border-slate-100 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">
+                  {searchQuery.trim() ? "Search Results" : "Quick Module Access"}
+                </span>
+                <span className="text-[9px] text-slate-400">Press ↑↓ to navigate</span>
+              </div>
+
+              <div className="max-h-64 overflow-y-auto py-1">
+                {suggestions.length > 0 ? (
+                  suggestions.map((item, idx) => {
+                    const isSelected = idx === selectedIndex;
+                    const IconComponent = item.icon;
+                    return (
+                      <div
+                        key={item.key}
+                        onClick={() => handleSelectModule(item)}
+                        onMouseEnter={() => setSelectedIndex(idx)}
+                        className={`px-3.5 py-2.5 flex items-center justify-between cursor-pointer transition-colors ${
+                          isSelected
+                            ? "bg-blue-50/90 text-blue-900 font-semibold border-l-4 border-blue-600 pl-2.5"
+                            : "text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span
+                            className={`p-1.5 rounded-lg flex-shrink-0 transition-colors ${
+                              isSelected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"
+                            }`}
+                          >
+                            {IconComponent && <IconComponent className="w-3.5 h-3.5" />}
+                          </span>
+                          <div className="flex flex-col min-w-0 truncate">
+                            <span className="text-xs font-medium leading-snug truncate">
+                              {item.label}
+                            </span>
+                            <span className="text-[9px] text-slate-400 font-normal">
+                              {item.path}
+                            </span>
+                          </div>
+                        </div>
+
+                        <span
+                          className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider flex-shrink-0 ml-2 ${
+                            isSelected
+                              ? "bg-blue-200/60 text-blue-800"
+                              : "bg-slate-100 text-slate-500"
+                          }`}
+                        >
+                          {item.section}
+                        </span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="px-4 py-6 text-center text-slate-400 text-xs">
+                    No modules found matching &ldquo;<span className="font-semibold text-slate-600">{searchQuery}</span>&rdquo;
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* MOBILE SEARCH TOGGLE BUTTON */}
+        <button
+          onClick={() => setIsMobileSearchOpen((prev) => !prev)}
+          className="p-1.5 sm:p-2 text-gray-400 hover:text-blue-600 md:hidden transition-colors cursor-pointer"
+          title="Search modules"
+        >
+          <FontAwesomeIcon icon={faSearch} className="text-sm sm:text-base" />
+        </button>
+
+        {/* MOBILE SEARCH DROPDOWN OVERLAY */}
+        {isMobileSearchOpen && (
+          <div className="absolute top-full left-0 right-0 bg-white border-b border-slate-200 p-3 shadow-xl md:hidden z-50">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search modules..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                autoFocus
+                className="w-full px-3 py-2 pl-9 pr-8 rounded-lg border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <FontAwesomeIcon
+                icon={faSearch}
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs"
+                >
+                  <FontAwesomeIcon icon={faTimes} />
+                </button>
+              )}
+            </div>
+
+            <div className="mt-2 max-h-56 overflow-y-auto space-y-1 py-1">
+              {suggestions.length > 0 ? (
+                suggestions.map((item) => {
+                  const IconComponent = item.icon;
+                  return (
+                    <div
+                      key={item.key}
+                      onClick={() => handleSelectModule(item)}
+                      className="p-2.5 rounded-lg bg-slate-50 flex items-center justify-between text-xs text-slate-700 hover:bg-blue-50 active:bg-blue-100 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        {IconComponent && <IconComponent className="w-4 h-4 text-blue-600" />}
+                        <span className="font-semibold">{item.label}</span>
+                      </div>
+                      <span className="text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold uppercase">
+                        {item.section}
+                      </span>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="px-3 py-4 text-center text-slate-400 text-xs">
+                  No modules found matching &ldquo;{searchQuery}&rdquo;
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         <button
           onClick={onNotificationClick}

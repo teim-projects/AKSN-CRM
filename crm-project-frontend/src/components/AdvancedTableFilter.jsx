@@ -27,7 +27,6 @@ export default function AdvancedTableFilter({
     "updated_by",
     "converted_to_customer",
     "is_converted",
-    "qualifying_answers",
     "followups",
   ];
 

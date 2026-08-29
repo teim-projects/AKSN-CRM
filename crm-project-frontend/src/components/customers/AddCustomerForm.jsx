@@ -64,6 +64,7 @@ export default function AddCustomerForm({
   const [services, setServices] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [loadingServices, setLoadingServices] = useState(false);
+  const [hasAmc, setHasAmc] = useState(false);
 
   const industryOptions = [
     { id: "it_services", name: "IT Services" },
@@ -218,6 +219,14 @@ export default function AddCustomerForm({
       lead: customer.lead || "",
     });
 
+    const prods = Array.isArray(customer.product_purchased) ? customer.product_purchased : [];
+    const hasExistingAmc = Boolean(
+      customer.amc_start_date ||
+      customer.amc_end_date ||
+      prods.some(p => typeof p === 'object' && p !== null && (p.amc_start_date || p.amc_end_date))
+    );
+    setHasAmc(hasExistingAmc);
+
     // Load states and cities
     GetState(INDIA_ID).then((states) => {
       const matchedState = states.find(
@@ -244,6 +253,7 @@ export default function AddCustomerForm({
   // Reset form when closed
   useEffect(() => {
     if (!open) {
+      setHasAmc(false);
       setFormData({
         customer_code: "",
         name: "",
@@ -557,12 +567,14 @@ export default function AddCustomerForm({
       if (typeof item === "object" && item !== null) {
         return {
           product: item.product || item.name || item.product_name || "",
+          value: item.value !== undefined && item.value !== null ? item.value : (item.price !== undefined ? item.price : (item.project_value !== undefined ? item.project_value : "")),
           amc_start_date: item.amc_start_date || formData.amc_start_date || "",
           amc_end_date: item.amc_end_date || formData.amc_end_date || "",
         };
       }
       return {
         product: String(item),
+        value: "",
         amc_start_date: formData.amc_start_date || "",
         amc_end_date: formData.amc_end_date || "",
       };
@@ -577,8 +589,21 @@ export default function AddCustomerForm({
       }
       return p;
     });
+
+    let extraUpdates = {};
+    if (field === "value") {
+      const calcTotal = updated.reduce((sum, item) => {
+        const num = parseFloat(item.value);
+        return sum + (isNaN(num) ? 0 : num);
+      }, 0);
+      if (calcTotal > 0) {
+        extraUpdates.project_value = String(calcTotal);
+      }
+    }
+
     setFormData((prev) => ({
       ...prev,
+      ...extraUpdates,
       product_purchased: updated,
     }));
   };
@@ -925,55 +950,111 @@ export default function AddCustomerForm({
                       ))}
                     </select>
                   </div>
+
+                  {/* PER-PRODUCT INDIVIDUAL VALUES */}
+                  {getSelectedProductList().length > 0 && (
+                    <div className="col-span-full p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                          Per-Product Values (₹)
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-normal">
+                          Values entered auto-sum into Total Project Value
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                        {getSelectedProductList().map((prodItem, idx) => (
+                          <div key={idx} className="space-y-1 bg-white p-2.5 rounded-lg border border-slate-200">
+                            <label className="block text-[11px] font-semibold text-slate-700 truncate" title={prodItem.product}>
+                              {prodItem.product}
+                            </label>
+                            <input
+                              type="number"
+                              className="w-full px-2.5 py-1 text-xs border border-slate-200 rounded focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                              placeholder="Product Value (₹)"
+                              value={prodItem.value || ""}
+                              onChange={(e) => handleProductAmcChange(prodItem.product, "value", e.target.value)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* PER-PRODUCT AMC DETAILS */}
-              <div>
-                <h4 className="text-sm font-bold text-slate-700 mb-3 pb-1 border-b border-slate-200">
-                  PER-PRODUCT AMC DETAILS
-                </h4>
-                {getSelectedProductList().length === 0 ? (
-                  <div className="text-xs text-slate-400 italic p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                    Select product(s) in Commercial Details above to configure individual AMC dates.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {getSelectedProductList().map((prodItem, idx) => (
-                      <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                        <div className="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1.5">
-                          <span className="w-2 h-2 bg-blue-600 rounded-full block"></span>
-                          Product: <span className="text-blue-700 font-semibold">{prodItem.product}</span>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                              AMC Start Date
-                            </label>
-                            <input
-                              type="date"
-                              className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
-                              value={prodItem.amc_start_date || ""}
-                              onChange={(e) => handleProductAmcChange(prodItem.product, "amc_start_date", e.target.value)}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                              AMC End Date
-                            </label>
-                            <input
-                              type="date"
-                              className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
-                              value={prodItem.amc_end_date || ""}
-                              onChange={(e) => handleProductAmcChange(prodItem.product, "amc_end_date", e.target.value)}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              {/* AMC ON/OFF TOGGLE SWITCH */}
+              <div className="flex items-center justify-between p-3.5 bg-blue-50/60 border border-blue-100 rounded-xl my-4">
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-slate-800">Has AMC for Products?</span>
+                  <span className="text-[11px] text-slate-500 font-normal">
+                    Turn ON to configure AMC Start & End dates for purchased products
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setHasAmc((prev) => !prev)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer focus:outline-hidden ${
+                    hasAmc ? "bg-blue-600" : "bg-slate-300"
+                  }`}
+                  title={hasAmc ? "Disable AMC Dates" : "Enable AMC Dates"}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      hasAmc ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
               </div>
+
+              {/* PER-PRODUCT AMC DETAILS (VISIBLE ONLY WHEN AMC TOGGLE IS ON) */}
+              {hasAmc && (
+                <div>
+                  <h4 className="text-sm font-bold text-slate-700 mb-3 pb-1 border-b border-slate-200">
+                    PER-PRODUCT AMC DETAILS
+                  </h4>
+                  {getSelectedProductList().length === 0 ? (
+                    <div className="text-xs text-slate-400 italic p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                      Select product(s) in Commercial Details above to configure individual AMC dates.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {getSelectedProductList().map((prodItem, idx) => (
+                        <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                          <div className="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1.5">
+                            <span className="w-2 h-2 bg-blue-600 rounded-full block"></span>
+                            Product: <span className="text-blue-700 font-semibold">{prodItem.product}</span>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                                AMC Start Date
+                              </label>
+                              <input
+                                type="date"
+                                className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                                value={prodItem.amc_start_date || ""}
+                                onChange={(e) => handleProductAmcChange(prodItem.product, "amc_start_date", e.target.value)}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                                AMC End Date
+                              </label>
+                              <input
+                                type="date"
+                                className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                                value={prodItem.amc_end_date || ""}
+                                onChange={(e) => handleProductAmcChange(prodItem.product, "amc_end_date", e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* ADDRESS */}
               <div>

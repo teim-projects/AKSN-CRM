@@ -213,7 +213,22 @@ export default function Lead() {
   };
 
   const columns = [
-    { key: "sr", label: "Sr.No", render: (_, idx) => <span className="text-slate-600 font-medium text-xs py-0.5 block">{(currentPage - 1) * itemsPerPage + (idx + 1)}</span> },
+    {
+      key: "sr",
+      label: "Sr.No",
+      render: (r, idx) => {
+        const isReady = Boolean(r.ready_to_send_quotation);
+        const srNum = (currentPage - 1) * itemsPerPage + (idx + 1);
+        return (
+          <div className="flex items-center gap-1.5 py-0.5" title={isReady ? "Ready to Send Quotation" : ""}>
+            <span className="text-slate-600 font-medium text-xs">{srNum}</span>
+            {isReady && (
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-200 animate-pulse inline-block shrink-0" />
+            )}
+          </div>
+        );
+      },
+    },
     { key: "date", label: "Date", render: (r) => <span className="text-slate-600 text-xs whitespace-nowrap py-0.5 block">{formatDate(r.enquiry_date || r.created_at)}</span> },
     {
       key: "followup_date",

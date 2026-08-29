@@ -128,12 +128,26 @@ class QuotationViewSet(viewsets.ModelViewSet):
         return qs
 
     def get_serializer_class(self):
-        if self.action == 'create' or self.action == 'update':
+        if self.action in ['create', 'update']:
+            return QuotationCreateSerializer
+        if self.action == 'partial_update' and hasattr(self, 'request') and self.request and 'items' in self.request.data:
             return QuotationCreateSerializer
         return QuotationSerializer
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
+
+    @action(detail=True, methods=['post', 'patch'], url_path='toggle-drop')
+    def toggle_drop(self, request, pk=None):
+        """Toggle or update quotation dropped status"""
+        quotation = self.get_object()
+        new_status = request.data.get("is_dropped", not quotation.is_dropped)
+        quotation.is_dropped = new_status
+        quotation.save(update_fields=['is_dropped', 'updated_at'])
+        return Response({
+            "message": f"Quotation marked as {'dropped' if quotation.is_dropped else 'active'}.",
+            "is_dropped": quotation.is_dropped
+        }, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['get'], url_path='latest-version')
     def latest_version(self, request, pk=None):

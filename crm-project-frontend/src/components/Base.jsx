@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import FiltersPanel from "./FiltersPanel";
-import { FaFilter } from "react-icons/fa";
+import { FaFilter, FaArrowLeft } from "react-icons/fa";
 
 
 export default function Base({
@@ -11,13 +12,23 @@ export default function Base({
   onFiltersChange = () => { },
   sidebarWidth = 230,
   drawerWidth = 320,
+  showBackButton = false,
   children,
 }) {
+  const navigate = useNavigate();
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const handleFilterChange = useCallback((filters) => {
     onFiltersChange && onFiltersChange(filters);
   }, [onFiltersChange]);
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/dashboard");
+    }
+  };
 
 
   // compute left offset for desktop (inline style)
@@ -66,11 +77,23 @@ export default function Base({
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
-        {/* Header (rendered if title is provided) */}
-        {title && (
+        {(title || showBackButton) && (
           <div className="flex items-center justify-between p-2 bg-transparent">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-semibold text-slate-800 ml-2 sm:ml-5">{title}</h2>
+            <div className="flex items-center gap-3 ml-2 sm:ml-5">
+              {showBackButton && (
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs cursor-pointer transition-all active:scale-95"
+                  title="Go back"
+                >
+                  <FaArrowLeft className="text-slate-500 text-xs" />
+                  <span>Back</span>
+                </button>
+              )}
+              {title && (
+                <h2 className="text-xl sm:text-2xl font-semibold text-slate-800">{title}</h2>
+              )}
             </div>
 
             <div className="flex items-center gap-3">
