@@ -226,10 +226,10 @@ export default function AddLeadForm({
         mobile_number: lead.mobile_number || "",
         linkedin_profile_url: lead.linkedin_profile_url || "",
         state: lead.state || "",
-        product_interested: Array.isArray(lead.product_interested) 
-          ? lead.product_interested 
-          : lead.product_interested 
-            ? [lead.product_interested] 
+        product_interested: Array.isArray(lead.product_interested)
+          ? lead.product_interested
+          : lead.product_interested
+            ? [lead.product_interested]
             : [],
         expected_closure_date: lead.expected_closure_date || "",
         lead_source: isLeadSourceOther ? "other" : (lead.lead_source || ""),
@@ -265,7 +265,7 @@ export default function AddLeadForm({
       const month = String(today.getMonth() + 1).padStart(2, '0');
       const day = String(today.getDate()).padStart(2, '0');
       const todayStr = `${year}-${month}-${day}`;
-      
+
       setFormData({
         enquiry_date: todayStr,
         company_name: "",
@@ -372,7 +372,7 @@ export default function AddLeadForm({
       if (res.ok) {
         const data = await res.json();
         const results = Array.isArray(data.results) ? data.results : (Array.isArray(data) ? data : []);
-        
+
         const duplicate = results.find((l) => {
           if (lead?.id && String(l.id) === String(lead.id)) return false;
           const lDigits = (l.mobile_number || "").replace(/\D/g, '');
@@ -603,7 +603,7 @@ export default function AddLeadForm({
 
   const handleConvertToCustomer = async () => {
     if (!lead || !lead.id) return;
-    
+
     const result = await Swal.fire({
       title: "Convert to Customer?",
       text: "This will create a customer record from this lead data.",
@@ -700,7 +700,7 @@ export default function AddLeadForm({
       </style>
       <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
         <div className="bg-white rounded-xl shadow-xl border border-slate-100 max-w-2xl w-full mx-auto my-8 relative max-h-[90vh] flex flex-col overflow-hidden">
-          
+
           {/* Header Bar */}
           <div className="bg-white px-6 pt-6 pb-2 flex justify-between items-start">
             <div>
@@ -722,7 +722,7 @@ export default function AddLeadForm({
             <form className="space-y-4 text-slate-800" onSubmit={handleSubmit}>
               {step === 1 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  
+
                   <div className="space-y-1">
                     <label className="block text-xs font-semibold text-slate-600">
                       Lead Date *
@@ -771,9 +771,8 @@ export default function AddLeadForm({
                         setMobileError("");
                         handleChange(e);
                       }}
-                      className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white ${
-                        mobileError ? "border-rose-500 bg-rose-50/50" : "border-slate-200"
-                      }`}
+                      className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white ${mobileError ? "border-rose-500 bg-rose-50/50" : "border-slate-200"
+                        }`}
                     />
                     {mobileError && (
                       <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
@@ -1120,7 +1119,7 @@ export default function AddLeadForm({
 
               {step === 2 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  
+
                   <div className="space-y-1">
                     <label className="block text-xs font-semibold text-slate-600">
                       Assigned Executive *

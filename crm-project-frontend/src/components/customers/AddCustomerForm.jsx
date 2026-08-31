@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import Swal from "sweetalert2";
-import { RxCross2 } from "react-icons/rx"; 
+import { RxCross2 } from "react-icons/rx";
 import { CitySelect, StateSelect } from "react-country-state-city";
 import "react-country-state-city/dist/react-country-state-city.css";
 import { GetState, GetCity } from "react-country-state-city";
@@ -55,7 +55,7 @@ export default function AddCustomerForm({
   const [leadFound, setLeadFound] = useState(null);
   const [staffOptions, setStaffOptions] = useState([]);
   const [loadingStaff, setLoadingStaff] = useState(false);
-  
+
   const INDIA_ID = 101;
   const [cityid, setCityid] = useState(null);
   const [stateid, setStateid] = useState(0);
@@ -307,7 +307,7 @@ export default function AddCustomerForm({
     try {
       const searchQuery = leadLookup.trim();
       let response;
-      
+
       response = await fetch(`${LEAD_API_URL}?search=${searchQuery}`, {
         headers: {
           "Content-Type": "application/json",
@@ -332,10 +332,10 @@ export default function AddCustomerForm({
       }
 
       if (leads.length === 0) {
-        Swal.fire({ 
-          icon: "info", 
-          title: "No Lead Found", 
-          text: "No lead found with this ID or mobile number" 
+        Swal.fire({
+          icon: "info",
+          title: "No Lead Found",
+          text: "No lead found with this ID or mobile number"
         });
         setLeadFound(null);
         return;
@@ -371,10 +371,10 @@ export default function AddCustomerForm({
 
     } catch (err) {
       console.error("Lead lookup error:", err);
-      Swal.fire({ 
-        icon: "error", 
-        title: "Error", 
-        text: "Failed to lookup lead" 
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Failed to lookup lead"
       });
     } finally {
       setLoadingLead(false);
@@ -386,7 +386,7 @@ export default function AddCustomerForm({
       Swal.fire({ icon: "error", title: "Validation", text: "Company Name is required" });
       return false;
     }
-    
+
     if (formData.contact_number && formData.contact_number.toString().trim()) {
       const cleanNumber = formData.contact_number.toString().replace(/\D/g, "");
       if (cleanNumber.length !== 10) {
@@ -394,7 +394,7 @@ export default function AddCustomerForm({
         return false;
       }
     }
-    
+
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       Swal.fire({ icon: "error", title: "Validation", text: "Email is invalid" });
       return false;
@@ -406,18 +406,18 @@ export default function AddCustomerForm({
         Swal.fire({ icon: "error", title: "Validation", text: "GST number must be exactly 15 characters" });
         return false;
       }
-      
+
       const gstPattern = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/;
       if (!gstPattern.test(gstTrimmed)) {
-        Swal.fire({ 
-          icon: "error", 
-          title: "GST Validation", 
-          text: "Invalid GST format. Expected format: 22AAAAA0000A1Z5" 
+        Swal.fire({
+          icon: "error",
+          title: "GST Validation",
+          text: "Invalid GST format. Expected format: 22AAAAA0000A1Z5"
         });
         return false;
       }
     }
-    
+
     return true;
   };
 
@@ -497,11 +497,11 @@ export default function AddCustomerForm({
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
           });
-          
+
           if (leadRes.ok) {
             const leadData = await leadRes.json();
             const leads = Array.isArray(leadData) ? leadData : leadData.results || [];
-            
+
             if (leads.length > 0) {
               const lead = leads[0];
               if (!lead.is_converted) {
@@ -516,7 +516,7 @@ export default function AddCustomerForm({
                     is_converted: true
                   })
                 });
-                
+
                 if (updateLeadRes.ok) {
                   console.log(`Lead ${lead.id} marked as converted to customer ${data.id}`);
                 }
@@ -676,9 +676,9 @@ export default function AddCustomerForm({
                     <label className="block text-xs font-semibold text-slate-600">
                       Customer Code <span className="text-red-500">*</span>
                     </label>
-                    <input 
+                    <input
                       className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50 text-slate-500"
-                      value={formData.customer_code || "Auto-generated"} 
+                      value={formData.customer_code || "Auto-generated"}
                       disabled
                     />
                   </div>
@@ -687,12 +687,12 @@ export default function AddCustomerForm({
                     <label className="block text-xs font-semibold text-slate-600">
                       Company Name <span className="text-red-500">*</span>
                     </label>
-                    <input 
+                    <input
                       name="name"
                       className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
-                      value={formData.name} 
-                      onChange={handleChange} 
-                      placeholder="Company name" 
+                      value={formData.name}
+                      onChange={handleChange}
+                      placeholder="Company name"
                     />
                   </div>
 
@@ -700,23 +700,23 @@ export default function AddCustomerForm({
                     <label className="block text-xs font-semibold text-slate-600">
                       Contact Person <span className="text-red-500">*</span>
                     </label>
-                    <input 
+                    <input
                       name="contact_person"
                       className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
-                      value={formData.contact_person} 
-                      onChange={handleChange} 
-                      placeholder="Primary contact name" 
+                      value={formData.contact_person}
+                      onChange={handleChange}
+                      placeholder="Primary contact name"
                     />
                   </div>
 
                   <div className="space-y-1">
                     <label className="block text-xs font-semibold text-slate-600">Designation</label>
-                    <input 
+                    <input
                       name="designation"
                       className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
-                      value={formData.designation} 
-                      onChange={handleChange} 
-                      placeholder="e.g. CTO, IT Manager" 
+                      value={formData.designation}
+                      onChange={handleChange}
+                      placeholder="e.g. CTO, IT Manager"
                     />
                   </div>
 
@@ -724,13 +724,13 @@ export default function AddCustomerForm({
                     <label className="block text-xs font-semibold text-slate-600">
                       Mobile <span className="text-red-500">*</span>
                     </label>
-                    <input 
+                    <input
                       name="contact_number"
                       className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
                       type="text"
                       inputMode="numeric"
                       maxLength={10}
-                      value={formData.contact_number} 
+                      value={formData.contact_number}
                       onChange={handleChange}
                       placeholder="+91 98765 43210"
                     />
@@ -738,25 +738,25 @@ export default function AddCustomerForm({
 
                   <div className="space-y-1">
                     <label className="block text-xs font-semibold text-slate-600">Email</label>
-                    <input 
+                    <input
                       name="email"
                       className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
                       type="email"
-                      value={formData.email} 
-                      onChange={handleChange} 
-                      placeholder="contact@company.com" 
+                      value={formData.email}
+                      onChange={handleChange}
+                      placeholder="contact@company.com"
                     />
                   </div>
 
                   <div className="space-y-1">
                     <label className="block text-xs font-semibold text-slate-600">Website</label>
-                    <input 
+                    <input
                       name="website"
                       className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
                       type="url"
-                      value={formData.website} 
-                      onChange={handleChange} 
-                      placeholder="www.company.com" 
+                      value={formData.website}
+                      onChange={handleChange}
+                      placeholder="www.company.com"
                     />
                   </div>
 
@@ -779,10 +779,10 @@ export default function AddCustomerForm({
 
                   <div className="space-y-1">
                     <label className="block text-xs font-semibold text-slate-600">GST Number</label>
-                    <input 
+                    <input
                       name="gst_number"
                       className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
-                      value={formData.gst_number} 
+                      value={formData.gst_number}
                       onChange={handleChange}
                       maxLength={15}
                       placeholder="29AAGCM0000A1ZP"
@@ -791,10 +791,10 @@ export default function AddCustomerForm({
 
                   <div className="space-y-1">
                     <label className="block text-xs font-semibold text-slate-600">PAN Number</label>
-                    <input 
+                    <input
                       name="pan_number"
                       className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
-                      value={formData.pan_number} 
+                      value={formData.pan_number}
                       onChange={handleChange}
                       maxLength={10}
                       placeholder="AAGCM0000A"
@@ -804,10 +804,10 @@ export default function AddCustomerForm({
                   {/* ✅ MSME Number Field */}
                   <div className="space-y-1">
                     <label className="block text-xs font-semibold text-slate-600">MSME Number</label>
-                    <input 
+                    <input
                       name="msme_number"
                       className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
-                      value={formData.msme_number} 
+                      value={formData.msme_number}
                       onChange={handleChange}
                       placeholder="UDYAM-XX-XX-XXXXXXX"
                     />
@@ -897,13 +897,13 @@ export default function AddCustomerForm({
 
                   <div className="space-y-1">
                     <label className="block text-xs font-semibold text-slate-600">Project Value</label>
-                    <input 
+                    <input
                       name="project_value"
                       className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
                       type="number"
-                      value={formData.project_value} 
-                      onChange={handleChange} 
-                      placeholder="Amount" 
+                      value={formData.project_value}
+                      onChange={handleChange}
+                      placeholder="Amount"
                     />
                   </div>
 
@@ -994,15 +994,13 @@ export default function AddCustomerForm({
                 <button
                   type="button"
                   onClick={() => setHasAmc((prev) => !prev)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer focus:outline-hidden ${
-                    hasAmc ? "bg-blue-600" : "bg-slate-300"
-                  }`}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer focus:outline-hidden ${hasAmc ? "bg-blue-600" : "bg-slate-300"
+                    }`}
                   title={hasAmc ? "Disable AMC Dates" : "Enable AMC Dates"}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      hasAmc ? "translate-x-6" : "translate-x-1"
-                    }`}
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${hasAmc ? "translate-x-6" : "translate-x-1"
+                      }`}
                   />
                 </button>
               </div>
@@ -1064,13 +1062,13 @@ export default function AddCustomerForm({
                 <div className="space-y-3">
                   <div className="space-y-1">
                     <label className="block text-xs font-semibold text-slate-600">Billing Address</label>
-                    <textarea 
+                    <textarea
                       name="billing_address"
                       className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
-                      value={formData.billing_address} 
-                      onChange={handleChange} 
-                      rows={2} 
-                      placeholder="Full billing address" 
+                      value={formData.billing_address}
+                      onChange={handleChange}
+                      rows={2}
+                      placeholder="Full billing address"
                     />
                   </div>
 
@@ -1127,14 +1125,14 @@ export default function AddCustomerForm({
 
               {/* Actions Footer */}
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 mt-4">
-                <button 
-                  type="button" 
-                  onClick={onClose} 
+                <button
+                  type="button"
+                  onClick={onClose}
                   className="px-4 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 bg-white hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm"
                   disabled={loading}

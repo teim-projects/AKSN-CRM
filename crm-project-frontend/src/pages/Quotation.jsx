@@ -90,23 +90,26 @@ export default function Quotation() {
     if (!highlightedQuotationId) return;
 
     const handleScreenClick = () => {
+      if (window._lastNotificationClickTime && Date.now() - window._lastNotificationClickTime < 600) {
+        return;
+      }
       setHighlightedQuotationId(null);
-      if (searchParams.get("quotationId") || searchParams.get("id")) {
-        setSearchParams({}, { replace: true });
+      if (window.location.search) {
+        window.history.replaceState({}, "", window.location.pathname);
       }
     };
 
     const timer = setTimeout(() => {
       window.addEventListener("click", handleScreenClick, { capture: true });
       window.addEventListener("pointerdown", handleScreenClick, { capture: true });
-    }, 150);
+    }, 400);
 
     return () => {
       clearTimeout(timer);
       window.removeEventListener("click", handleScreenClick, { capture: true });
       window.removeEventListener("pointerdown", handleScreenClick, { capture: true });
     };
-  }, [highlightedQuotationId, searchParams, setSearchParams]);
+  }, [highlightedQuotationId]);
 
   const token = useMemo(() => (
     localStorage.getItem("access") ||
@@ -163,7 +166,6 @@ export default function Quotation() {
 
       setTotalCount(data.length);
       setTotalPages(Math.max(1, Math.ceil(data.length / itemsPerPage)));
-      setCurrentPage(1);
     } catch (err) {
       console.error("Fetch error:", err);
       setError(err.message || String(err));
@@ -227,7 +229,9 @@ export default function Quotation() {
     setRows(filteredData);
     setTotalCount(filteredData.length);
     setTotalPages(Math.max(1, Math.ceil(filteredData.length / itemsPerPage)));
-    setCurrentPage(1);
+    if (!window.location.search.includes("quotationId") && !window.location.search.includes("id=") && !window.location.search.includes("highlight")) {
+      setCurrentPage(1);
+    }
   }, [filteredData, itemsPerPage]);
 
   // Get current page data

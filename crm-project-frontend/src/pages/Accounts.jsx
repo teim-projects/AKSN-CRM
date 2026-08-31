@@ -127,7 +127,6 @@ export default function Accounts() {
       setRows(results);
       setTotalCount(results.length);
       setTotalPages(Math.max(1, Math.ceil(results.length / itemsPerPage)));
-      setCurrentPage(1);
     } catch (err) {
       setError(err.message || String(err));
       setRows([]);
@@ -146,7 +145,7 @@ export default function Accounts() {
 
   const [highlightedUserId, setHighlightedUserId] = useState(null);
 
-  // Highlight target staff account row and paginate when redirected from notification (without auto-opening form modal)
+  // Highlight target staff account row and paginate when redirected from notification
   useEffect(() => {
     const userId = searchParams.get("userId");
     const emailParam = searchParams.get("email");
@@ -172,30 +171,35 @@ export default function Accounts() {
     if (!highlightedUserId) return;
 
     const handleScreenClick = () => {
+      if (window._lastNotificationClickTime && Date.now() - window._lastNotificationClickTime < 600) {
+        return;
+      }
       setHighlightedUserId(null);
-      if (searchParams.get("userId") || searchParams.get("email") || searchParams.get("id")) {
-        setSearchParams({}, { replace: true });
+      if (window.location.search) {
+        window.history.replaceState({}, "", window.location.pathname);
       }
     };
 
     const timer = setTimeout(() => {
       window.addEventListener("click", handleScreenClick, { capture: true });
       window.addEventListener("pointerdown", handleScreenClick, { capture: true });
-    }, 150);
+    }, 400);
 
     return () => {
       clearTimeout(timer);
       window.removeEventListener("click", handleScreenClick, { capture: true });
       window.removeEventListener("pointerdown", handleScreenClick, { capture: true });
     };
-  }, [highlightedUserId, searchParams, setSearchParams]);
+  }, [highlightedUserId]);
 
   // Update pagination when filtered data changes
   useEffect(() => {
     setRows(filteredData);
     setTotalCount(filteredData.length);
     setTotalPages(Math.max(1, Math.ceil(filteredData.length / itemsPerPage)));
-    setCurrentPage(1);
+    if (!window.location.search.includes("userId") && !window.location.search.includes("email=") && !window.location.search.includes("id=") && !window.location.search.includes("highlight")) {
+      setCurrentPage(1);
+    }
   }, [filteredData, itemsPerPage]);
 
   // Get current page data

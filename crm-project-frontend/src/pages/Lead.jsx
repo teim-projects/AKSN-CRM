@@ -53,43 +53,73 @@ export default function Lead() {
   const [filteredData, setFilteredData] = useState([]);
   const [highlightedLeadId, setHighlightedLeadId] = useState(null);
 
-  // Highlight target lead row and paginate when redirected from notification (without auto-opening popup modal)
+  const isLeadMatch = useCallback((r, targetId) => {
+    if (!targetId) return false;
+    const strTarget = String(targetId).toLowerCase().trim();
+    if (!strTarget) return false;
+
+    const idMatch = String(r.id).toLowerCase() === strTarget;
+    const leadIdMatch = String(r.lead_id || "").toLowerCase() === strTarget;
+    const enquiryIdMatch = String(r.enquiry_id || "").toLowerCase() === strTarget;
+
+    const companyName = String(r.company_name || "").toLowerCase().trim();
+    const contactPerson = String(r.contact_person || "").toLowerCase().trim();
+
+    const nameMatch =
+      (companyName && (companyName === strTarget || companyName.includes(strTarget) || strTarget.includes(companyName))) ||
+      (contactPerson && (contactPerson === strTarget || contactPerson.includes(strTarget) || strTarget.includes(contactPerson)));
+
+    return idMatch || leadIdMatch || enquiryIdMatch || nameMatch;
+  }, []);
+
+  // Highlight target lead row and paginate when redirected from notification
   useEffect(() => {
     const targetLeadId = searchParams.get("leadId") || searchParams.get("id");
-    if (targetLeadId) {
-      setHighlightedLeadId(targetLeadId);
-      if (allRows.length > 0) {
-        const itemIdx = allRows.findIndex((r) => String(r.id) === String(targetLeadId));
+    const isLatest = searchParams.get("highlight") === "latest" || targetLeadId === "latest";
+
+    if ((targetLeadId || isLatest) && allRows.length > 0) {
+      if (isLatest) {
+        setHighlightedLeadId(allRows[0].id);
+        setCurrentPage(1);
+      } else {
+        const itemIdx = allRows.findIndex((r) => isLeadMatch(r, targetLeadId));
         if (itemIdx !== -1) {
+          setHighlightedLeadId(allRows[itemIdx].id);
           const pageNum = Math.floor(itemIdx / itemsPerPage) + 1;
           setCurrentPage(pageNum);
+        } else {
+          setHighlightedLeadId(allRows[0].id);
+          setCurrentPage(1);
         }
       }
     }
-  }, [searchParams, allRows, itemsPerPage]);
+  }, [searchParams, allRows, itemsPerPage, isLeadMatch]);
 
   // Clear highlight and remove query parameters when user clicks anywhere on screen
   useEffect(() => {
     if (!highlightedLeadId) return;
 
     const handleScreenClick = () => {
+      if (window._lastNotificationClickTime && Date.now() - window._lastNotificationClickTime < 600) {
+        return;
+      }
       setHighlightedLeadId(null);
-      if (searchParams.get("leadId") || searchParams.get("id")) {
-        setSearchParams({}, { replace: true });
+      if (window.location.search) {
+        window.history.replaceState({}, "", window.location.pathname);
       }
     };
 
     const timer = setTimeout(() => {
       window.addEventListener("click", handleScreenClick, { capture: true });
       window.addEventListener("pointerdown", handleScreenClick, { capture: true });
-    }, 150);
+    }, 400);
 
     return () => {
       clearTimeout(timer);
       window.removeEventListener("click", handleScreenClick, { capture: true });
       window.removeEventListener("pointerdown", handleScreenClick, { capture: true });
     };
-  }, [highlightedLeadId, searchParams, setSearchParams]);
+  }, [highlightedLeadId]);
 
   const token = useMemo(() => (
     localStorage.getItem("access") ||
@@ -126,7 +156,6 @@ export default function Lead() {
       setRows(results);
       setTotalCount(results.length);
       setTotalPages(Math.max(1, Math.ceil(results.length / itemsPerPage)));
-      setCurrentPage(1);
     } catch (err) {
       setError(err.message || String(err));
       setRows([]);
@@ -137,7 +166,7 @@ export default function Lead() {
     } finally {
       setLoading(false);
     }
-  }, [token, API_URL]);
+  }, [token, API_URL, itemsPerPage]);
 
   useEffect(() => {
     fetchData();
@@ -148,7 +177,9 @@ export default function Lead() {
     setRows(filteredData);
     setTotalCount(filteredData.length);
     setTotalPages(Math.max(1, Math.ceil(filteredData.length / itemsPerPage)));
-    setCurrentPage(1);
+    if (!window.location.search.includes("leadId") && !window.location.search.includes("id=") && !window.location.search.includes("highlight")) {
+      setCurrentPage(1);
+    }
   }, [filteredData, itemsPerPage]);
 
   // Get current page data

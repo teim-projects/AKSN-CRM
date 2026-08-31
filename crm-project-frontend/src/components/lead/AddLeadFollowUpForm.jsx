@@ -29,7 +29,7 @@ const FollowupHistoryModal = ({ open, onClose, lead }) => {
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                     <div className="flex items-center gap-3 flex-wrap">
                       <span className="text-base font-bold text-slate-800">
-                        {fu.followup_date || "—"} · {fu.followup_time || ""} 
+                        {fu.followup_date || "—"} · {fu.followup_time || ""}
                         <span className="ml-3 text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md capitalize">{fu.followup_mode || "Call"}</span>
                       </span>
                     </div>
@@ -42,7 +42,7 @@ const FollowupHistoryModal = ({ open, onClose, lead }) => {
                       </span>
                     </div>
                   </div>
-                  
+
                   <div className="flex justify-between items-center border-b border-slate-50 pb-3 mb-4">
                     <p className="text-xs text-slate-400 font-semibold">
                       By {fu.created_by?.full_name || "User"} · {fu.contact_person || "Contact"}
@@ -122,7 +122,7 @@ const FollowupHistoryModal = ({ open, onClose, lead }) => {
                       <div className="flex items-center gap-1.5 text-slate-400 font-semibold">
                         <span>Next:</span>
                         <span className="font-bold text-slate-700">
-                          {fu.next_followup_date} 
+                          {fu.next_followup_date}
                           {fu.next_followup_mode && ` via ${fu.next_followup_mode}`}
                         </span>
                       </div>
@@ -400,14 +400,14 @@ export default function AddLeadFollowUpForm({
 
         const data = await res.json();
         setLeadData(data);
-        
+
         // Load products from lead - storing product IDs
         if (data.product_interested && Array.isArray(data.product_interested)) {
           // If product_interested contains product names, we need to find their IDs
           // For now, we'll store the names and match later
           setProductInterested(data.product_interested);
         }
-        
+
         if (!followup) {
           setFormData((prev) => ({
             ...prev,
@@ -518,7 +518,7 @@ export default function AddLeadFollowUpForm({
         const data = await res.json();
         const items = Array.isArray(data?.results) ? data.results : data;
         setFaqList(items || []);
-        
+
         if (!followup) {
           const initial = {};
           (items || []).forEach((faq) => {
@@ -694,7 +694,7 @@ export default function AddLeadFollowUpForm({
           {/* Form Body */}
           <div className="px-6 py-5 overflow-y-auto flex-1 bg-white text-slate-800 scrollbar-thin">
             <form className="space-y-6" onSubmit={handleSubmit}>
-              
+
               {/* FOLLOW-UP DETAILS */}
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 pb-1 border-b border-slate-200">
@@ -737,11 +737,10 @@ export default function AddLeadFollowUpForm({
                         key={mode.value}
                         type="button"
                         onClick={() => setFormData(prev => ({ ...prev, followup_mode: mode.value }))}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                          formData.followup_mode === mode.value
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${formData.followup_mode === mode.value
                             ? "bg-blue-600 text-white shadow-sm"
                             : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                        }`}
+                          }`}
                       >
                         {mode.label}
                       </button>
@@ -804,11 +803,10 @@ export default function AddLeadFollowUpForm({
                         key={response.value}
                         type="button"
                         onClick={() => setFormData(prev => ({ ...prev, client_response: response.value }))}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                          formData.client_response === response.value
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${formData.client_response === response.value
                             ? "bg-blue-600 text-white shadow-sm"
                             : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                        }`}
+                          }`}
                       >
                         {response.label}
                       </button>
@@ -822,7 +820,7 @@ export default function AddLeadFollowUpForm({
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 pb-1 border-b border-slate-200">
                   PRODUCTS INTERESTED <span className="font-normal text-slate-400">(Optional)</span>
                 </h3>
-                
+
                 <div className="space-y-2">
                   <Select
                     isMulti

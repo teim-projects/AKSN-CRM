@@ -81,23 +81,26 @@ export default function AMC() {
     if (!highlightedAmcId) return;
 
     const handleScreenClick = () => {
+      if (window._lastNotificationClickTime && Date.now() - window._lastNotificationClickTime < 600) {
+        return;
+      }
       setHighlightedAmcId(null);
-      if (searchParams.get("amcId") || searchParams.get("id")) {
-        setSearchParams({}, { replace: true });
+      if (window.location.search) {
+        window.history.replaceState({}, "", window.location.pathname);
       }
     };
 
     const timer = setTimeout(() => {
       window.addEventListener("click", handleScreenClick, { capture: true });
       window.addEventListener("pointerdown", handleScreenClick, { capture: true });
-    }, 150);
+    }, 400);
 
     return () => {
       clearTimeout(timer);
       window.removeEventListener("click", handleScreenClick, { capture: true });
       window.removeEventListener("pointerdown", handleScreenClick, { capture: true });
     };
-  }, [highlightedAmcId, searchParams, setSearchParams]);
+  }, [highlightedAmcId]);
 
   // Quick filter state
   const [filterType, setFilterType] = useState("all");
@@ -162,7 +165,6 @@ export default function AMC() {
       setRows(list);
       setTotalCount(list.length);
       setTotalPages(Math.max(1, Math.ceil(list.length / itemsPerPage)));
-      setCurrentPage(1);
     } catch (err) {
       console.error("Fetch AMC error:", err);
       setError(err.message || String(err));
@@ -202,7 +204,9 @@ export default function AMC() {
     setRows(result);
     setTotalCount(result.length);
     setTotalPages(Math.max(1, Math.ceil(result.length / itemsPerPage)));
-    setCurrentPage(1);
+    if (!window.location.search.includes("amcId") && !window.location.search.includes("id=") && !window.location.search.includes("highlight")) {
+      setCurrentPage(1);
+    }
   }, [filteredData, filterType, itemsPerPage]);
 
   const handleDelete = async (id) => {

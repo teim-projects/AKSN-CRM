@@ -68,23 +68,26 @@ export default function Project() {
     if (!highlightedProjectId) return;
 
     const handleScreenClick = () => {
+      if (window._lastNotificationClickTime && Date.now() - window._lastNotificationClickTime < 600) {
+        return;
+      }
       setHighlightedProjectId(null);
-      if (searchParams.get("projectId") || searchParams.get("id")) {
-        setSearchParams({}, { replace: true });
+      if (window.location.search) {
+        window.history.replaceState({}, "", window.location.pathname);
       }
     };
 
     const timer = setTimeout(() => {
       window.addEventListener("click", handleScreenClick, { capture: true });
       window.addEventListener("pointerdown", handleScreenClick, { capture: true });
-    }, 150);
+    }, 400);
 
     return () => {
       clearTimeout(timer);
       window.removeEventListener("click", handleScreenClick, { capture: true });
       window.removeEventListener("pointerdown", handleScreenClick, { capture: true });
     };
-  }, [highlightedProjectId, searchParams, setSearchParams]);
+  }, [highlightedProjectId]);
 
   const token = useMemo(
     () =>
@@ -122,7 +125,6 @@ export default function Project() {
       setRows(results);
       setTotalCount(results.length);
       setTotalPages(Math.max(1, Math.ceil(results.length / itemsPerPage)));
-      setCurrentPage(1);
     } catch (err) {
       setError(err.message || String(err));
       setRows([]);
@@ -143,7 +145,9 @@ export default function Project() {
     setRows(filteredData);
     setTotalCount(filteredData.length);
     setTotalPages(Math.max(1, Math.ceil(filteredData.length / itemsPerPage)));
-    setCurrentPage(1);
+    if (!window.location.search.includes("projectId") && !window.location.search.includes("id=") && !window.location.search.includes("highlight")) {
+      setCurrentPage(1);
+    }
   }, [filteredData, itemsPerPage]);
 
   const handleDelete = async (id) => {

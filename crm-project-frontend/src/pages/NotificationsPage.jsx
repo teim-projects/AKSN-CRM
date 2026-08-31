@@ -485,31 +485,39 @@ export default function NotificationsPage() {
         targetUrl = `/amc?amcId=${item.amcId}`;
       } else if (item.projectId) {
         targetUrl = `/projects?projectId=${item.projectId}`;
-      } else if (item.userId || item.userEmail || item.type === "requests") {
+      } else if (item.userId || item.userEmail) {
         targetUrl = `/accounts?userId=${item.userId || ""}&email=${encodeURIComponent(item.userEmail || item.email || "")}`;
       } else {
+        let extractedName = null;
+        if (item.description) {
+          const match = item.description.match(/(?:for|with|with client|lead|quotation)\s+([A-Za-z0-9_\-\s]+?)(?:\.|$)/i);
+          if (match && match[1] && match[1].trim().length > 1) {
+            extractedName = match[1].trim();
+          }
+        }
+
         switch (item.type) {
           case "followup":
           case "leads":
-            targetUrl = "/leads";
+            targetUrl = extractedName ? `/leads?leadId=${encodeURIComponent(extractedName)}` : "/leads?highlight=latest";
             break;
           case "quotation":
-            targetUrl = "/quotation";
+            targetUrl = extractedName ? `/quotation?quotationId=${encodeURIComponent(extractedName)}` : "/quotation?highlight=latest";
             break;
           case "requests":
-            targetUrl = "/accounts";
+            targetUrl = extractedName ? `/accounts?userId=${encodeURIComponent(extractedName)}` : "/accounts?highlight=latest";
             break;
           case "system":
             targetUrl = "/roles";
             break;
           case "customer":
-            targetUrl = "/customer";
+            targetUrl = extractedName ? `/customer?customerId=${encodeURIComponent(extractedName)}` : "/customer?highlight=latest";
             break;
           case "amc":
-            targetUrl = "/amc";
+            targetUrl = extractedName ? `/amc?amcId=${encodeURIComponent(extractedName)}` : "/amc?highlight=latest";
             break;
           case "projects":
-            targetUrl = "/projects";
+            targetUrl = extractedName ? `/projects?projectId=${encodeURIComponent(extractedName)}` : "/projects?highlight=latest";
             break;
           default:
             targetUrl = "/dashboard";
