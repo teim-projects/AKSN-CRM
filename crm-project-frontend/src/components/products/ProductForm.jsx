@@ -316,9 +316,38 @@ const ProductForm = ({ open, onClose, productId, baseApi, token, onSuccess }) =>
                                     value={formData.description}
                                     onChange={handleChange}
                                     rows={3}
-                                    placeholder="Detailed description parameters overview..."
+                                    placeholder="e.g. Hello. Hii. Say something."
                                     className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 text-slate-800 bg-white"
                                 />
+                                <p className="text-[11px] text-slate-400 mt-1">
+                                    💡 <strong className="text-slate-600">Bullet Format:</strong> End each point/sentence with a period (<code className="bg-slate-100 px-1 rounded text-blue-600 font-bold">.</code>) to format it into separate bullet points in Quotations & PDFs.
+                                </p>
+
+                                {formData.description && formData.description.trim().length > 0 && (
+                                    <div className="mt-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg">
+                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Live Bullet Preview:</p>
+                                        <ul className="space-y-1">
+                                            {(() => {
+                                                const raw = formData.description.trim();
+                                                const parts = raw.split('.');
+                                                const bullets = [];
+                                                parts.forEach(p => {
+                                                    const c = p.replace(/\s+/g, ' ').trim();
+                                                    if (c) bullets.push(c + '.');
+                                                });
+                                                if (!raw.endsWith('.') && bullets.length > 0) {
+                                                    bullets[bullets.length - 1] = bullets[bullets.length - 1].replace(/\.$/, '');
+                                                }
+                                                return bullets.map((b, i) => (
+                                                    <li key={i} className="text-xs text-slate-700 flex items-start gap-1.5">
+                                                        <span className="text-blue-500 font-bold leading-none mt-0.5">•</span>
+                                                        <span>{b}</span>
+                                                    </li>
+                                                ));
+                                            })()}
+                                        </ul>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Image Upload Row */}

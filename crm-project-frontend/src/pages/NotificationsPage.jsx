@@ -474,11 +474,11 @@ export default function NotificationsPage() {
 
     let targetUrl = item.targetUrl;
 
-    if (!targetUrl) {
-      if (item.leadId) {
-        targetUrl = `/leads?leadId=${item.leadId}`;
-      } else if (item.quotationId) {
+    if (!targetUrl || targetUrl === "/quotation") {
+      if (item.quotationId) {
         targetUrl = `/quotation?quotationId=${item.quotationId}`;
+      } else if (item.leadId) {
+        targetUrl = `/leads?leadId=${item.leadId}`;
       } else if (item.customerId) {
         targetUrl = `/customer?customerId=${item.customerId}`;
       } else if (item.amcId) {
@@ -490,8 +490,8 @@ export default function NotificationsPage() {
       } else {
         let extractedName = null;
         if (item.description) {
-          const match = item.description.match(/(?:for|with|with client|lead|quotation)\s+([A-Za-z0-9_\-\s]+?)(?:\.|$)/i);
-          if (match && match[1] && match[1].trim().length > 1) {
+          const match = item.description.match(/(?:#|for|with|with client|lead|quotation)\s*([A-Za-z0-9_\-]+)/i);
+          if (match && match[1] && match[1].trim().length > 0 && match[1].trim().toLowerCase() !== "updated") {
             extractedName = match[1].trim();
           }
         }

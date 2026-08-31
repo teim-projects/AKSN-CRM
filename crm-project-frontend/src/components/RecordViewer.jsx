@@ -190,6 +190,21 @@ export default function RecordViewer({
       }).format(value);
     }
 
+    // Format description text as bracketed comma-separated points
+    if (key === "description" && typeof value === "string" && value.trim()) {
+      const raw = value.trim();
+      const parts = raw.split(".");
+      const bullets = [];
+      parts.forEach((p) => {
+        const cleaned = p.replace(/\s+/g, " ").trim();
+        if (cleaned) bullets.push(cleaned + ".");
+      });
+      if (!raw.endsWith(".") && bullets.length > 0) {
+        bullets[bullets.length - 1] = bullets[bullets.length - 1].replace(/\.$/, "");
+      }
+      return bullets.length > 0 ? `[ ${bullets.join(", ")} ]` : raw;
+    }
+
     return String(value);
   };
 

@@ -72,14 +72,36 @@ export default function Quotation() {
 
   // Highlight target quotation row and paginate when redirected from notification (without auto-opening form modal)
   useEffect(() => {
-    const targetQuotationId = searchParams.get("quotationId") || searchParams.get("id");
+    const targetQuotationId =
+      searchParams.get("quotationId") ||
+      searchParams.get("id") ||
+      searchParams.get("quotation_id") ||
+      searchParams.get("highlight");
+
     if (targetQuotationId) {
-      setHighlightedQuotationId(targetQuotationId);
       if (allRows.length > 0) {
-        const itemIdx = allRows.findIndex((r) => String(r.id) === String(targetQuotationId));
-        if (itemIdx !== -1) {
+        let itemIdx = -1;
+        if (targetQuotationId === "latest") {
+          itemIdx = 0;
+        } else {
+          const targetStr = String(targetQuotationId).toLowerCase().trim();
+          itemIdx = allRows.findIndex(
+            (r) =>
+              String(r.id).toLowerCase().trim() === targetStr ||
+              String(r.quotation_no || "").toLowerCase().trim() === targetStr ||
+              String(r.quotation_number || "").toLowerCase().trim() === targetStr
+          );
+        }
+
+        if (itemIdx !== -1 && allRows[itemIdx]) {
+          const matchedItem = allRows[itemIdx];
+          setHighlightedQuotationId(String(matchedItem.id));
           const pageNum = Math.floor(itemIdx / itemsPerPage) + 1;
           setCurrentPage(pageNum);
+        } else {
+          // Fallback to highlighting top quotation if specific ID wasn't matched
+          setHighlightedQuotationId(String(allRows[0].id));
+          setCurrentPage(1);
         }
       }
     }

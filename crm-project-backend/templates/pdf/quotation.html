@@ -2,297 +2,408 @@
 {% load humanize %}
 <!doctype html>
 <html>
+
 <head>
     <meta charset="utf-8" />
     <title>Quotation {{ quotation_no }} ({{ version_no }})</title>
     <style>
         @page {
             size: A4 portrait;
-            margin: 0;
+            margin-top: 150px;
+            margin-bottom: 85px;
+            margin-left: 0;
+            margin-right: 0;
+
+            @top-center {
+                content: element(pageHeader);
+                width: 100%;
+            }
+
+            @bottom-center {
+                content: element(pageFooter);
+                width: 100%;
+            }
         }
 
         body {
-            font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
-            font-size: 10px;
+            font-family: "Helvetica Neue", Arial, sans-serif;
+            font-size: 10.5px;
             margin: 0;
             padding: 0;
-            line-height: 1.4;
+            line-height: 1.45;
             color: #0f172a;
-            width: 100%;
-        }
-
-        .pdf-container {
-            width: 100%;
-            margin: 0 auto;
-        }
-
-        /* HEADER BANNER - TALLER EXECUTIVE BANNER (FULL WIDTH EDGE TO EDGE) */
-        .header-banner {
-            width: 100%;
-            border-collapse: collapse;
-            background-color: #1a2b4c;
-            margin: 0;
-            border-radius: 0;
-        }
-
-        .header-banner td {
-            vertical-align: middle;
-        }
-
-        .logo-box {
             background-color: #ffffff;
-            border-radius: 8px;
-            padding: 10px 18px;
-            display: inline-block;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+            width: 100%;
         }
 
-        .header-right {
-            text-align: right;
-            color: #ffffff;
-            padding: 24px 30px;
+        /* REPEATING TOP HEADER FOR EVERY PAGE USING RUNNING ELEMENT */
+        #pageHeader {
+            position: running(pageHeader);
+            width: 100%;
+            display: block;
         }
 
-        .company-name {
-            font-size: 18px;
-            font-weight: 900;
-            color: #60a5fa;
-            letter-spacing: 0.8px;
-            margin-bottom: 3px;
+        .top-header-bg {
+            background-color: #eef2f4;
+            padding: 24px 32px 10px 32px;
+            width: 100%;
+            box-sizing: border-box;
         }
 
-        .company-address {
-            font-size: 9.5px;
-            color: #cbd5e1;
-            line-height: 1.4;
-        }
-
-        .company-contact {
-            font-size: 9.5px;
-            color: #ffffff;
-            margin-top: 4px;
-        }
-
-        .company-contact strong {
-            color: #60a5fa;
-        }
-
-        /* MAIN CONTENT AREA WITH PADDING */
-        .content-body {
-            padding: 20px 26px 26px 26px;
-        }
-
-        /* TITLE & META SECTION */
-        .title-meta-table {
+        .header-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 18px;
         }
 
-        .main-title {
-            font-size: 20px;
-            font-weight: 800;
-            color: #0f172a;
-            letter-spacing: 0.5px;
-            margin: 0 0 4px 0;
-            line-height: 1;
-            text-transform: uppercase;
-        }
-
-        .version-pill {
-            display: inline-block;
-            white-space: nowrap;
-            background-color: #3b82f6;
-            color: #ffffff;
-            font-weight: bold;
-            font-size: 9.5px;
-            padding: 3px 10px;
-            border-radius: 6px;
-        }
-
-        .meta-card {
-            border: 1px solid #cbd5e1;
-            background-color: #f8fafc;
-            border-radius: 6px;
-            padding: 6px 12px;
-            font-size: 10px;
-            color: #475569;
-            display: inline-block;
-            margin-left: 6px;
-        }
-
-        .meta-card strong {
-            color: #0f172a;
-        }
-
-        /* SINGLE CLEAN CUSTOMER INFORMATION BLOCK (NO TOP BLUE BORDER LINE) */
-        .info-block {
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            background-color: #f8fafc;
-            padding: 12px 18px;
-            margin-bottom: 16px;
-        }
-
-        .block-header {
-            font-size: 11px;
-            font-weight: bold;
-            color: #1e40af;
-            letter-spacing: 0.5px;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #e2e8f0;
-            padding-bottom: 6px;
-        }
-
-        .block-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 10px;
-        }
-
-        .block-table td {
-            padding: 4px 0;
+        .header-table td {
             vertical-align: top;
         }
 
-        .lbl {
-            width: 135px;
-            color: #64748b;
+        .logo-container {
+            display: inline-block;
         }
 
-        .val {
-            color: #0f172a;
+        .company-tagline {
+            font-size: 10.5px;
             font-weight: bold;
+            color: #3b7b99;
+            margin-top: 6px;
+            letter-spacing: 0.2px;
         }
 
-        /* SEPARATE DEDICATED SUBJECT BLOCK (NO ACCENT BORDER LINE) */
-        .subject-block {
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            background-color: #f8fafc;
-            padding: 10px 18px;
-            margin-bottom: 18px;
+        .company-right {
+            text-align: right;
+            color: #1e293b;
+        }
+
+        .company-name {
+            font-size: 19px;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -0.3px;
+            margin-bottom: 4px;
+        }
+
+        .company-address {
+            font-size: 10px;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 6px;
+        }
+
+        .company-meta {
+            font-size: 10px;
+            color: #0f172a;
+            font-weight: 700;
+        }
+
+        .header-wave-svg {
+            width: 100%;
+            height: 35px;
+            display: block;
+            margin-top: 0;
+        }
+
+        /* REPEATING BOTTOM FOOTER FOR EVERY PAGE USING RUNNING ELEMENT */
+        #pageFooter {
+            position: running(pageFooter);
+            width: 100%;
+            display: block;
+        }
+
+        .footer-wave-svg {
+            width: 100%;
+            height: 25px;
+            display: block;
+            margin: 0;
+        }
+
+        .footer-body {
+            background-color: #eef2f4;
+            text-align: center;
+            padding: 6px 0 10px 0;
+            box-sizing: border-box;
+        }
+
+        .footer-contact {
+            font-size: 10.5px;
+            font-weight: bold;
+            color: #3b7b99;
+            letter-spacing: 0.2px;
+            margin-bottom: 3px;
+        }
+
+        .footer-contact a {
+            color: #3b7b99;
+            text-decoration: none;
+        }
+
+        .footer-subtext {
+            font-size: 9.5px;
+            color: #1e293b;
+            font-weight: 500;
+        }
+
+        /* MAIN CONTENT AREA */
+        .pdf-container {
+            width: 100%;
+        }
+
+        .main-content {
+            padding: 10px 32px 0 32px;
+        }
+
+        /* CLIENT / BILL TO SECTION (UNBOXED CLEAN TEXT) */
+        .client-section {
+            margin-bottom: 16px;
+        }
+
+        .client-company {
+            font-size: 12.5px;
+            font-weight: bold;
+            color: #0f172a;
+            margin-bottom: 3px;
+        }
+
+        .client-details {
+            font-size: 10.5px;
+            color: #1e293b;
+            font-weight: 500;
+            line-height: 1.45;
+        }
+
+        /* SUBJECT / REQUIREMENT SECTION (POSITIONED ABOVE QUOTATION NUMBER) */
+        .subject-section {
+            background-color: #f6f9fb;
+            border: 1px solid #e1e8ed;
+            border-radius: 6px;
+            padding: 9px 14px;
+            margin-bottom: 16px;
         }
 
         .subject-header {
-            font-size: 10px;
+            font-size: 9.5px;
             font-weight: bold;
-            color: #1e40af;
-            letter-spacing: 0.5px;
+            color: #3b7b99;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
             margin-bottom: 3px;
         }
 
         .subject-text {
-            font-size: 11px;
+            font-size: 11.5px;
             font-weight: bold;
             color: #0f172a;
             line-height: 1.35;
         }
 
-        /* SECTION HEADER */
-        .section-header {
-            font-size: 11.5px;
-            font-weight: bold;
-            color: #0f172a;
-            letter-spacing: 0.5px;
-            margin-bottom: 10px;
+        /* TITLE & METADATA SECTION */
+        .title-meta-section {
+            margin-bottom: 20px;
         }
 
-        /* ITEMS TABLE */
+        .quotation-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #3b7b99;
+            margin-bottom: 12px;
+            letter-spacing: -0.4px;
+        }
+
+        .meta-card-box {
+            width: 100%;
+            background-color: #eef2f4;
+            border-radius: 8px;
+            border-collapse: collapse;
+        }
+
+        .meta-card-box td {
+            padding: 10px 18px;
+            vertical-align: middle;
+        }
+
+        .meta-label {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 2px;
+        }
+
+        .meta-value {
+            font-size: 12px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        /* ITEMS TABLE SECTION */
+        .items-section {
+            margin-bottom: 15px;
+        }
+
         .items-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 18px;
-            font-size: 9.5px;
+            margin-bottom: 10px;
         }
 
         .items-table th {
-            background-color: #0f172a;
-            color: #ffffff;
-            padding: 9px;
-            font-weight: bold;
-            text-transform: uppercase;
-            font-size: 9px;
-            letter-spacing: 0.3px;
+            color: #0f172a;
+            padding: 9px 10px;
+            font-weight: 700;
+            font-size: 11px;
+            border-bottom: 1px solid #cbd5e1;
+            text-align: left;
         }
 
-        .items-table td {
-            padding: 9px;
-            border-bottom: 1px solid #e2e8f0;
-            vertical-align: top;
-        }
-
-        .code-tag {
-            display: inline-block;
-            background-color: #e0f2fe;
-            color: #0369a1;
-            font-size: 8.5px;
-            font-weight: bold;
-            padding: 1px 6px;
-            border-radius: 4px;
-            margin-top: 2px;
-        }
-
-        .text-right {
+        .items-table th.text-right {
             text-align: right;
         }
 
-        .text-center {
+        .items-table th.text-center {
             text-align: center;
         }
 
-        /* TOTALS & TERMS ROW */
-        .bottom-section {
+        .items-table tbody td {
+            padding: 12px 10px;
+            background-color: #f4f7f9;
+            vertical-align: top;
+            border-bottom: 2px solid #ffffff;
+            font-size: 10.5px;
+            color: #0f172a;
+        }
+
+        .items-table tbody td.amount-col {
+            background-color: #f4f7f9;
+            text-align: right;
+            font-weight: bold;
+            color: #0f172a;
+        }
+
+        .product-name {
+            font-size: 11.5px;
+            font-weight: bold;
+            color: #0f172a;
+            margin-bottom: 3px;
+        }
+
+        .product-code {
+            font-size: 9.5px;
+            color: #3b7b99;
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+
+        .product-desc {
+            font-size: 10px;
+            color: #1e293b;
+            font-weight: 500;
+            line-height: 1.4;
+            white-space: pre-line;
+        }
+
+        .product-desc-bullets {
+            margin-top: 3px;
+        }
+
+        .desc-bullet-item {
+            font-size: 10px;
+            color: #1e293b;
+            font-weight: 500;
+            line-height: 1.4;
+            margin-bottom: 2px;
+        }
+
+        /* TOTALS CONTAINER (RIGHT ALIGNED, 45% WIDTH) */
+        .totals-container {
             width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 22px;
+            margin-bottom: 20px;
         }
 
         .totals-table {
-            width: 100%;
+            width: 45%;
+            float: right;
             border-collapse: collapse;
-            font-size: 10px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            overflow: hidden;
         }
 
         .totals-table td {
-            padding: 7px 12px;
-            border-bottom: 1px solid #e2e8f0;
+            padding: 8px 12px;
+            font-size: 10.5px;
+            background-color: #f4f7f9;
+            border-bottom: 1px solid #ffffff;
         }
 
-        .grand-row {
-            background-color: #eff6ff;
+        .totals-table td.total-label {
+            color: #1e293b;
+            font-weight: 600;
+        }
+
+        .totals-table td.total-val {
+            text-align: right;
+            color: #0f172a;
+            font-weight: 700;
+        }
+
+        .totals-table tr.grand-row td {
+            background-color: #e1ebf2;
+            border-top: 1px solid #cbd5e1;
+            border-bottom: 1px solid #cbd5e1;
+        }
+
+        .totals-table tr.grand-row td.total-label {
+            color: #3b7b99;
             font-weight: bold;
-            color: #1e40af;
+            font-size: 12px;
         }
 
-        .terms-card {
-            border: 1px solid #cbd5e1;
-            background-color: #f8fafc;
-            border-radius: 6px;
-            padding: 12px 14px;
+        .totals-table tr.grand-row td.total-val {
+            color: #3b7b99;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .clearfix::after {
+            content: "";
+            clear: both;
+            display: table;
+        }
+
+        /* TERMS & CONDITIONS SECTION (STARTS BELOW TOTALS, USES FULL 100% PAGE WIDTH) */
+        .terms-section {
+            clear: both;
+            margin-top: 15px;
+            margin-bottom: 20px;
+            width: 100%;
         }
 
         .terms-title {
             font-size: 10.5px;
-            font-weight: bold;
-            color: #1e40af;
+            font-style: italic;
+            color: #1e293b;
+            text-decoration: underline;
             margin-bottom: 6px;
+            font-weight: bold;
         }
 
-        .terms-item {
-            font-size: 9.5px;
-            color: #334155;
-            margin-bottom: 5px;
+        .terms-content {
+            font-size: 10px;
+            color: #1e293b;
+            font-weight: 500;
+            line-height: 1.45;
+            width: 100%;
         }
 
-        /* SIGNATURES */
+        .term-item {
+            margin-bottom: 4px;
+        }
+
+        /* SIGNATURES SECTION */
         .signature-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 35px;
+            margin-top: 20px;
+            margin-bottom: 15px;
+            clear: both;
+            page-break-inside: avoid;
         }
 
         .signature-table td {
@@ -301,228 +412,220 @@
         }
 
         .sig-line {
-            border-top: 1px solid #94a3b8;
-            width: 180px;
+            border-top: 1px solid #cbd5e1;
+            width: 170px;
             display: inline-block;
-            margin-top: 45px;
+            margin-top: 35px;
             padding-top: 4px;
             font-size: 10px;
             font-weight: bold;
-            color: #475569;
+            color: #1e293b;
         }
     </style>
 </head>
 
 <body>
-    <div class="pdf-container">
-        <!-- HEADER BANNER - PROMINENT TALL EXECUTIVE BANNER (FULL WIDTH EDGE TO EDGE) -->
-        <table class="header-banner">
-            <tr>
-                <td style="padding: 24px 30px; width: 45%;">
-                    <div class="logo-box">
-                        {% if logo_base64 %}
-                        <img src="{{ logo_base64 }}" style="max-height: 52px; max-width: 210px; object-fit: contain; display: block;" alt="AKSN Logo" />
-                        {% else %}
-                        <table style="border-collapse: collapse;">
-                            <tr>
-                                <td style="padding-right: 10px; vertical-align: middle;">
-                                    <!-- AKSN Paper Plane SVG Icon -->
-                                    <svg width="38" height="38" viewBox="0 0 50 50" fill="none">
-                                        <path d="M5 23L45 5L28 45L21 29L5 23Z" fill="#38bdf8" />
-                                        <path d="M21 29L45 5L28 45L21 29Z" fill="#2563eb" />
-                                    </svg>
-                                </td>
-                                <td style="vertical-align: middle;">
-                                    <div style="font-size: 19px; font-weight: 900; color: #1e3a8a; line-height: 1; letter-spacing: -0.5px;">
-                                        AKSN <span style="color: #38bdf8; font-weight: 700;">INFOTECH</span>
-                                    </div>
-                                    <div style="background-color: #38bdf8; color: #ffffff; font-size: 7.5px; font-weight: 800; padding: 2px 7px; letter-spacing: 0.8px; margin-top: 3px; border-radius: 2px; text-transform: uppercase;">
-                                        YES WE ARE THE SOLUTION!
-                                    </div>
-                                </td>
-                            </tr>
-                        </table>
-                        {% endif %}
-                    </div>
-                </td>
-                <td class="header-right" style="width: 55%;">
-                    <div class="company-name">AKSN INFOTECH</div>
-                    <div class="company-address">
-                        Office No:-10B, 2nd Floor, Prestige Point, Behind Telephone Exchange,<br>
-                        283, Bajirao Road, Shukrawar Peth, Pune, Maharashtra 411002
-                    </div>
-                    <div class="company-contact">
-                        <strong>GSTIN:</strong> 27AAXFA5487A1Z4 &nbsp;|&nbsp; <strong>Phone:</strong> +91 7350123999
-                    </div>
-                </td>
-            </tr>
-        </table>
-
-        <!-- MAIN CONTENT AREA -->
-        <div class="content-body">
-            <!-- TITLE & METADATA ROW -->
-            <table class="title-meta-table">
+    <!-- REPEATING HEADER BOX ON EVERY SINGLE PAGE -->
+    <div id="pageHeader">
+        <div class="top-header-bg">
+            <table class="header-table">
                 <tr>
-                    <td style="vertical-align: top;">
-                        <div class="main-title">QUOTATION</div>
-                        <div class="version-pill">
-                            {{ version_no|default:quotation_no }}
+                    <td style="width: 50%;">
+                        <div class="logo-container">
+                            {% if logo_base64 %}
+                            <img src="{{ logo_base64 }}" style="max-height: 55px; max-width: 220px; object-fit: contain; display: block;" alt="AKSN Logo" />
+                            {% else %}
+                            <table style="border-collapse: collapse;">
+                                <tr>
+                                    <td style="padding-right: 10px; vertical-align: middle;">
+                                        <svg width="40" height="40" viewBox="0 0 50 50" fill="none">
+                                            <path d="M5 23L45 5L28 45L21 29L5 23Z" fill="#38bdf8" />
+                                            <path d="M21 29L45 5L28 45L21 29Z" fill="#2563eb" />
+                                        </svg>
+                                    </td>
+                                    <td style="vertical-align: middle;">
+                                        <div style="font-size: 20px; font-weight: 900; color: #1e3a8a; line-height: 1; letter-spacing: -0.5px;">
+                                            AKSN <span style="color: #38bdf8; font-weight: 700;">INFOTECH</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                            {% endif %}
                         </div>
+                        <div class="company-tagline">Your Trusted Cloud & IT Infrastructure Partner</div>
                     </td>
-                    <td style="text-align: right; vertical-align: top;">
-                        <div class="meta-card">Quotation No: <strong>{{ quotation_no }}</strong></div>
-                        <div class="meta-card">Date: <strong>{{ quotation_date|date:"d/m/Y" }}</strong></div>
+                    <td class="company-right" style="width: 50%;">
+                        <div class="company-name">AKSN Infotech</div>
+                        <div class="company-address">
+                            Office No:-10B, 2nd Floor, Prestige Point,<br>
+                            Behind Telephone Exchange, Bajirao Road, 283, Shukrawar Peth,<br>
+                            PUNE 411002 India
+                        </div>
+                        <div class="company-meta">
+                            GSTIN: 27AAXFA5487A1Z4
+                        </div>
                     </td>
                 </tr>
             </table>
+        </div>
 
-            <!-- SINGLE CLEAN CUSTOMER INFORMATION BLOCK -->
-            <div class="info-block">
-                <div class="block-header">CUSTOMER INFORMATION</div>
-                <table class="block-table">
+        <!-- SMOOTH BOTTOM CURVE OF TOP HEADER -->
+        <svg class="header-wave-svg" viewBox="0 0 1000 60" preserveAspectRatio="none">
+            <path d="M0,0 L1000,0 L1000,15 Q600,60 0,20 Z" fill="#eef2f4" />
+        </svg>
+    </div>
+
+    <!-- REPEATING FOOTER BOX ON EVERY SINGLE PAGE -->
+    <div id="pageFooter">
+        <svg class="footer-wave-svg" viewBox="0 0 1000 30" preserveAspectRatio="none">
+            <path d="M0,30 Q500,0 1000,25 L1000,30 L0,30 Z" fill="#eef2f4" />
+        </svg>
+        <div class="footer-body">
+            <div class="footer-contact">
+                Phone: 020-2449 9991 &nbsp;|&nbsp; Email: info@aksninfotech.com &nbsp;|&nbsp; <a href="https://www.aksninfotech.com/" target="_blank">www.aksninfotech.com</a>
+            </div>
+            <div class="footer-subtext">AKSN Infotech &bull; Office No:-10B, 2nd Floor, Prestige Point, Shukrawar Peth, Pune</div>
+        </div>
+    </div>
+
+    <!-- DOCUMENT CONTAINER -->
+    <div class="pdf-container">
+        <!-- MAIN CONTENT AREA BELOW HEADER -->
+        <div class="main-content">
+            <!-- CLIENT / BILL TO SECTION -->
+            <div class="client-section">
+                <div class="client-company">{{ company_name }}</div>
+                <div class="client-details">
+                    {% if address %}{{ address }}<br>{% endif %}
+                    {% if city %}{{ city }}{% endif %}{% if state %}{% if city %}, {% endif %}{{ state }}{% endif %}{% if city or state %}<br>{% endif %}
+                    {% if contact_person %}<strong>Contact:</strong> {{ contact_person }}<br>{% endif %}
+                    {% if mobile_number or email_address %}
+                    {% if mobile_number %}<strong>Phone:</strong> {{ mobile_number }}{% endif %}
+                    {% if email_address %} | <strong>Email:</strong> {{ email_address }}{% endif %}<br>
+                    {% endif %}
+                    {% if gst_number %}<strong>GSTIN:</strong> {{ gst_number }}{% endif %}
+                </div>
+            </div>
+
+            <!-- SUBJECT / REQUIREMENT SECTION (POSITIONED ABOVE QUOTATION NUMBER) -->
+            {% if subject %}
+            <div class="subject-section">
+                <div class="subject-header">SUBJECT / REQUIREMENT</div>
+                <div class="subject-text">{{ subject }}</div>
+            </div>
+            {% endif %}
+
+            <!-- TITLE & METADATA SECTION -->
+            <div class="title-meta-section">
+                <div class="quotation-title">Quotation # {{ quotation_no }}</div>
+                <table class="meta-card-box">
                     <tr>
-                        <td style="width: 50%; vertical-align: top; padding-right: 12px;">
-                            <table style="width: 100%;">
-                                <tr>
-                                    <td class="lbl">Customer / Co.:</td>
-                                    <td class="val">{{ company_name }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="lbl">Contact Person:</td>
-                                    <td class="val">{{ contact_person }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="lbl">Mobile Number:</td>
-                                    <td class="val">{{ mobile_number }}</td>
-                                </tr>
-                            </table>
+                        <td style="width: 50%;">
+                            <div class="meta-label">Quotation Date</div>
+                            <div class="meta-value">{{ quotation_date|date:"d/m/Y" }}</div>
                         </td>
-                        <td style="width: 50%; vertical-align: top; padding-left: 12px; border-left: 1px solid #e2e8f0;">
-                            <table style="width: 100%;">
-                                <tr>
-                                    <td class="lbl">Email Address:</td>
-                                    <td class="val">{{ email_address }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="lbl">City / Location:</td>
-                                    <td class="val">
-                                        {% if city %}{{ city }}{% endif %}{% if state %}{% if city %}, {% endif %}{{ state }}{% endif %}
-                                    </td>
-                                </tr>
-                                {% if gst_number %}
-                                <tr>
-                                    <td class="lbl">GST Number:</td>
-                                    <td class="val">{{ gst_number }}</td>
-                                </tr>
-                                {% endif %}
-                                <tr>
-                                    <td class="lbl">Assigned Executive:</td>
-                                    <td class="val">{{ assigned_executive }}</td>
-                                </tr>
-                            </table>
+                        <td style="width: 50%;">
+                            <div class="meta-label">Salesperson</div>
+                            <div class="meta-value">{{ assigned_executive }}</div>
                         </td>
                     </tr>
                 </table>
             </div>
 
-            <!-- SEPARATE DEDICATED SUBJECT BLOCK -->
-            <div class="subject-block">
-                <div class="subject-header">SUBJECT / REQUIREMENT</div>
-                <div class="subject-text">{{ subject }}</div>
+            <!-- ITEMS SECTION -->
+            <div class="items-section">
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 45%;">Description</th>
+                            <th style="width: 12%;" class="text-center">Quantity</th>
+                            <th style="width: 15%;" class="text-right">Unit Price</th>
+                            <th style="width: 13%;" class="text-right">Taxes</th>
+                            <th style="width: 15%;" class="text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in quotation_items %}
+                        <tr>
+                            <td>
+                                <div class="product-name">{{ item.product_name }}</div>
+                                {% if item.product_code %}
+                                <div class="product-code">Product Code: {{ item.product_code }}</div>
+                                {% endif %}
+                                {% if item.description_bullets %}
+                                <div class="product-desc-bullets">
+                                    {% for bullet in item.description_bullets %}
+                                    <div class="desc-bullet-item">&bull; {{ bullet }}</div>
+                                    {% endfor %}
+                                </div>
+                                {% elif item.description %}
+                                <div class="product-desc">{{ item.description }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="text-center" style="color: #0f172a; font-weight: 500;">{{ item.quantity|floatformat:2 }} {{ item.unit }}</td>
+                            <td class="text-right" style="color: #0f172a; font-weight: 500;">{{ item.unit_price|floatformat:2|intcomma }}</td>
+                            <td class="text-right" style="color: #0f172a; font-weight: 500;">GST {{ item.gst_percentage|default:"18"|floatformat:0 }}%</td>
+                            <td class="amount-col">₹ {{ item.total_with_gst|floatformat:2|intcomma }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center" style="color: #64748b; padding: 16px;">No quotation items found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
 
-            <!-- PRODUCTS & SERVICES BREAKDOWN -->
-            <div class="section-header">PRODUCTS & SERVICES BREAKDOWN</div>
-            <table class="items-table">
-                <thead>
+            <!-- TOTALS SECTION (RIGHT ALIGNED, 45% WIDTH) -->
+            <div class="totals-container clearfix">
+                <table class="totals-table">
                     <tr>
-                        <th style="width: 30px;" class="text-center">#</th>
-                        <th style="text-align: left;">PRODUCT DESCRIPTION & KEY FEATURES</th>
-                        <th style="width: 45px;" class="text-center">QTY</th>
-                        <th style="width: 45px;" class="text-center">UNIT</th>
-                        <th style="width: 90px;" class="text-right">UNIT PRICE (₹)</th>
-                        <th style="width: 95px;" class="text-right">TOTAL (₹)</th>
+                        <td class="total-label">Untaxed Amount</td>
+                        <td class="total-val">₹ {{ subtotal|floatformat:2|intcomma }}</td>
                     </tr>
-                </thead>
-                <tbody>
-                    {% for item in quotation_items %}
-                    <tr style="background-color: {% cycle '#ffffff' '#f8fafc' %};">
-                        <td class="text-center">{{ item.sr }}</td>
-                        <td>
-                            <div style="font-weight: bold; color: #0f172a;">{{ item.product_name }}</div>
-                            {% if item.product_code %}
-                            <div class="code-tag">Product Code: {{ item.product_code }}</div>
-                            {% endif %}
-                            {% if item.description %}
-                            <div style="color: #475569; font-size: 9px; margin-top: 4px; line-height: 1.35; white-space: pre-line;">{{ item.description }}</div>
-                            {% endif %}
-                        </td>
-                        <td class="text-center">{{ item.quantity|floatformat:2 }}</td>
-                        <td class="text-center">{{ item.unit }}</td>
-                        <td class="text-right">{{ item.unit_price|floatformat:2|intcomma }}</td>
-                        <td class="text-right" style="font-weight: bold; color: #0f172a;">{{ item.total_with_gst|floatformat:2|intcomma }}</td>
-                    </tr>
-                    {% empty %}
                     <tr>
-                        <td colspan="6" class="text-center" style="color: #64748b; padding: 12px;">No quotation items.</td>
+                        <td class="total-label">SGST</td>
+                        <td class="total-val">₹ {{ sgst_amount|floatformat:2|intcomma }}</td>
                     </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                    <tr>
+                        <td class="total-label">CGST</td>
+                        <td class="total-val">₹ {{ cgst_amount|floatformat:2|intcomma }}</td>
+                    </tr>
+                    <tr class="grand-row">
+                        <td class="total-label">Total</td>
+                        <td class="total-val">₹ {{ grand_total|floatformat:2|intcomma }}</td>
+                    </tr>
+                </table>
+            </div>
 
-            <!-- TOTALS SECTION (RIGHT ALIGNED) -->
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
-                <tr>
-                    <td style="width: 55%;"></td>
-                    <td style="width: 45%; vertical-align: top;">
-                        <table class="totals-table">
-                            <tr>
-                                <td style="color: #475569; font-weight: bold;">Subtotal:</td>
-                                <td class="text-right">₹ {{ subtotal|floatformat:2|intcomma }}</td>
-                            </tr>
-                            <tr>
-                                <td style="color: #475569; font-weight: bold;">GST Amount:</td>
-                                <td class="text-right">₹ {{ gst_amount|floatformat:2|intcomma }}</td>
-                            </tr>
-                            <tr class="grand-row">
-                                <td style="font-weight: bold; font-size: 11px;">Grand Total:</td>
-                                <td class="text-right" style="font-weight: bold; font-size: 11px;">₹ {{ grand_total|floatformat:2|intcomma }}</td>
-                            </tr>
-                        </table>
-                    </td>
-                </tr>
-            </table>
-
-            <!-- TERMS & CONDITIONS SECTION (BELOW GRAND TOTAL, ON LEFT SIDE) -->
+            <!-- TERMS & CONDITIONS SECTION (STARTS BELOW TOTALS, USES FULL 100% PAGE WIDTH) -->
             {% if terms_list or thank_you_note %}
-            <div style="margin-bottom: 16px;">
+            <div class="terms-section">
                 {% if terms_list %}
-                <div class="terms-card" style="width: 65%; margin-bottom: 8px;">
-                    <div class="terms-title">TERMS & CONDITIONS</div>
+                <div class="terms-title">Terms Condition</div>
+                <div class="terms-content">
                     {% for term in terms_list %}
-                    <div class="terms-item">
-                        <strong style="color: #0f172a;">• {{ term.name }}:</strong> {{ term.description }}
-                    </div>
+                    <div class="term-item"><strong>&bull; {{ term.name }}:</strong> {{ term.description }}</div>
                     {% endfor %}
                 </div>
                 {% endif %}
 
                 {% if thank_you_note %}
-                <p style="margin-top: 6px; font-size: 9.5px; font-style: italic; color: #475569;">
+                <div style="margin-top: 8px; font-size: 9px; font-style: italic; color: #1e293b;">
                     {{ thank_you_note }}
-                </p>
+                </div>
                 {% endif %}
             </div>
             {% endif %}
 
-            <!-- SIGNATURES -->
+            <!-- SIGNATURES SECTION -->
             <table class="signature-table">
                 <tr>
                     <td>
                         <div class="sig-line">Customer Acceptance</div>
                     </td>
                     <td style="text-align: right;">
-                        <div style="font-weight: bold; font-size: 10px; color: #1e40af;">For AKSN Infotech</div>
+                        <div style="font-weight: bold; font-size: 10px; color: #3b7b99;">For AKSN Infotech</div>
                         <div class="sig-line">Authorized Signatory</div>
                     </td>
                 </tr>
@@ -530,4 +633,5 @@
         </div>
     </div>
 </body>
+
 </html>

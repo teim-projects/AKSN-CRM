@@ -24,6 +24,21 @@ def get_user_display_name(user_obj):
     return full_name
 
 
+def parse_description_bullets(text):
+    if not text or not str(text).strip():
+        return []
+    raw = str(text).strip()
+    parts = raw.split('.')
+    bullets = []
+    for p in parts:
+        cleaned = ' '.join(p.split())
+        if cleaned:
+            bullets.append(cleaned + '.')
+    if not raw.endswith('.') and bullets:
+        bullets[-1] = bullets[-1].rstrip('.')
+    return bullets
+
+
 def _build_quotation_pdf_context(quotation, version):
     items = list(version.items.all())
     
@@ -53,12 +68,15 @@ def _build_quotation_pdf_context(quotation, version):
             except Exception:
                 pass
 
+        description_bullets = parse_description_bullets(item_desc)
+
         formatted_items.append({
             'sr': idx,
             'product_name': item.product_name,
             'product_code': item.product_code or '',
             'hsn_sac_code': item.hsn_sac_code or '',
             'description': item_desc,
+            'description_bullets': description_bullets,
             'quantity': qty,
             'unit': item.unit or 'NOS',
             'unit_price': rate,
@@ -144,6 +162,8 @@ def _build_quotation_pdf_context(quotation, version):
         'terms_list': raw_terms,
         'subtotal': subtotal,
         'gst_amount': gst_amount,
+        'sgst_amount': (gst_amount / Decimal('2')) if gst_amount else Decimal('0'),
+        'cgst_amount': (gst_amount / Decimal('2')) if gst_amount else Decimal('0'),
         'gst_percentage': gst_percentage,
         'grand_total': grand_total,
         'total_quantity': total_quantity,

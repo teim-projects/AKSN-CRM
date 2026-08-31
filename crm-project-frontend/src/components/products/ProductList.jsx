@@ -10,6 +10,24 @@ import AdvancedTableFilter from '../AdvancedTableFilter';
 import RecordViewer from '../RecordViewer';
 import { useUserRole } from '../../hooks/useAuth';
 
+const formatDescriptionAsBracketedCommas = (text) => {
+    if (!text || typeof text !== "string" || !text.trim()) return "";
+    const raw = text.trim();
+    const parts = raw.split(".");
+    const bullets = [];
+    parts.forEach((p) => {
+        const cleaned = p.replace(/\s+/g, " ").trim();
+        if (cleaned) {
+            bullets.push(cleaned + ".");
+        }
+    });
+    if (!raw.endsWith(".") && bullets.length > 0) {
+        bullets[bullets.length - 1] = bullets[bullets.length - 1].replace(/\.$/, "");
+    }
+    if (bullets.length === 0) return raw;
+    return `[ ${bullets.join(", ")} ]`;
+};
+
 const ProductList = () => {
     const BASE_API = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
     const { hasPermission } = useUserRole(BASE_API);
@@ -331,8 +349,8 @@ const ProductList = () => {
                                             {product.product_code || "—"}
                                         </div>
 
-                                        <p className="text-xs text-slate-500 font-normal line-clamp-2 pt-1 leading-relaxed">
-                                            {product.description || "No item description overview configured inside system metadata parameters."}
+                                        <p className="text-xs text-slate-600 font-medium bg-slate-50 border border-slate-200/60 px-2.5 py-1.5 rounded-lg line-clamp-3 leading-relaxed mt-1">
+                                            {formatDescriptionAsBracketedCommas(product.description) || "No item description overview configured inside system metadata parameters."}
                                         </p>
                                     </div>
                                 </div>

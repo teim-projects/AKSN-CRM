@@ -159,6 +159,8 @@ export default function AddQuotation({ id, leadData, onBack }) {
         const mobile = q.mobile_number || "";
 
         setFormData({
+          quotation_no: q.quotation_no || q.quotation_number || "",
+          quotation_number: q.quotation_number || q.quotation_no || "",
           lead: q.lead || "",
           company_name: q.company_name || "",
           contact_person: q.contact_person || "",
@@ -581,28 +583,41 @@ export default function AddQuotation({ id, leadData, onBack }) {
     };
 
     try {
+      let savedQuotationId = id;
+      let resObj = null;
       if (isEdit) {
-        await api.put(`quotation/quotation/${id}/`, payload);
+        resObj = await api.put(`quotation/quotation/${id}/`, payload);
+        savedQuotationId = resObj.data?.id || id;
       } else {
-        await api.post("quotation/quotation/", payload);
+        resObj = await api.post("quotation/quotation/", payload);
+        savedQuotationId = resObj.data?.id || id;
       }
 
       Swal.fire({
         icon: "success",
-        text: isEdit ? "Quotation updated successfully" : "Quotation created successfully",
+        text: isEdit ? "Quotation version updated successfully" : "Quotation created successfully",
         timer: 1200,
         showConfirmButton: false,
       });
+
+      const qNumberStr =
+        resObj.data?.quotation_no ||
+        resObj.data?.quotation_number ||
+        formData.quotation_number ||
+        formData.quotation_no ||
+        (savedQuotationId ? `AKSN-${String(savedQuotationId).padStart(3, "0")}` : "");
 
       window.dispatchEvent(
         new CustomEvent("newNotification", {
           detail: {
             title: isEdit ? "Quotation Version Updated" : "New Quotation Generated",
             description: isEdit
-              ? `Quotation #${formData.quotation_number || ""} updated to a new version.`
-              : `New Quotation #${formData.quotation_number || ""} generated for ${formData.company_name || "Client"}.`,
+              ? `Quotation #${qNumberStr} updated to a new version.`
+              : `New Quotation #${qNumberStr} generated for ${formData.company_name || "Client"}.`,
             type: "quotation",
             badge: isEdit ? "Version" : "Quotation",
+            quotationId: savedQuotationId,
+            targetUrl: `/quotation?quotationId=${savedQuotationId}`,
           },
         })
       );
@@ -1058,9 +1073,31 @@ export default function AddQuotation({ id, leadData, onBack }) {
                                       onChange={(e) =>
                                         updateItem(index, "description", e.target.value)
                                       }
-                                      placeholder="Product description..."
+                                      placeholder="Description (end points with . for bullets)..."
                                       className="w-full mt-1 text-[11px] text-slate-600 border border-slate-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white resize-y"
                                     />
+                                    {item.description && item.description.trim().length > 0 && (
+                                      <div className="mt-1 space-y-0.5">
+                                        {(() => {
+                                          const raw = item.description.trim();
+                                          const parts = raw.split(".");
+                                          const bullets = [];
+                                          parts.forEach((p) => {
+                                            const c = p.replace(/\s+/g, " ").trim();
+                                            if (c) bullets.push(c + ".");
+                                          });
+                                          if (!raw.endsWith(".") && bullets.length > 0) {
+                                            bullets[bullets.length - 1] = bullets[bullets.length - 1].replace(/\.$/, "");
+                                          }
+                                          return bullets.map((b, i) => (
+                                            <div key={i} className="text-[10px] text-slate-600 flex items-start gap-1">
+                                              <span className="text-blue-500 font-bold leading-none mt-0.5">•</span>
+                                              <span>{b}</span>
+                                            </div>
+                                          ));
+                                        })()}
+                                      </div>
+                                    )}
                                   </td>
                                   <td className="px-3 py-2 text-slate-600">{item.hsn_sac_code || "-"}</td>
                                   <td className="px-3 py-2 text-center">
