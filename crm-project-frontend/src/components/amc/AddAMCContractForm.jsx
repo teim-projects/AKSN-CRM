@@ -262,6 +262,26 @@ export default function AddAMCContractForm({
       }
 
       const savedData = await res.json();
+      
+      // Dispatch custom notification for real-time drawer update
+      const customNotif = {
+        id: `custom_amc_${savedData.id || Date.now()}`,
+        title: isEdit ? "AMC Contract Updated" : "New AMC Contract Created",
+        description: `AMC contract ${savedData.contract_id || `#${savedData.id}`} created for client.`,
+        type: "amc",
+        amcId: savedData.id,
+        targetUrl: `/amc?amcId=${savedData.id}`,
+        time: "Just now",
+        timestamp: Date.now(),
+        read: false,
+        priority: "high",
+        badge: isEdit ? "AMC Edit" : "New AMC",
+      };
+
+      const existingNotifs = JSON.parse(localStorage.getItem("crm_custom_notifs") || "[]");
+      localStorage.setItem("crm_custom_notifs", JSON.stringify([customNotif, ...existingNotifs]));
+      window.dispatchEvent(new Event("crm_notification_updated"));
+
       Swal.fire("Success", `AMC Contract ${isEdit ? "updated" : "created"} successfully!`, "success");
 
       if (onSuccess) onSuccess(savedData);

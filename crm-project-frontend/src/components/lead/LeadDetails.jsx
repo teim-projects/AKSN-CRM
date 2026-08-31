@@ -10,7 +10,7 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
 
   useEffect(() => {
     if (!open) return;
-    
+
     const fetchProducts = async () => {
       try {
         const response = await axios.get(`${baseApi}/product/products/`, {
@@ -25,7 +25,7 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
         console.error("Failed to fetch products:", err);
       }
     };
-    
+
     fetchProducts();
   }, [open, baseApi, token]);
 
@@ -112,21 +112,29 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center mt-10 justify-center bg-black/40">
-      <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 relative">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[1000] bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+      style={{ backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)" }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 relative border border-slate-100 my-auto"
+      >
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 p-1 rounded-full hover:bg-slate-100"
+          className="absolute top-3 right-3 p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer transition-colors"
+          aria-label="Close"
         >
           <MdClose size={22} />
         </button>
 
-        <h2 className="text-xl font-semibold mb-4">Lead Details</h2>
+        <h2 className="text-xl font-semibold mb-4 text-slate-900">Lead Details</h2>
 
-        {loading && <div className="text-sm text-slate-500">Loading…</div>}
-        {error && <div className="text-sm text-red-600 mb-2">{error}</div>}
+        {loading && <div className="text-sm text-slate-500 py-4">Loading…</div>}
+        {error && <div className="text-sm text-red-600 mb-2 py-2">{error}</div>}
         {!loading && !lead && !error && (
-          <div className="text-sm text-slate-500">No data found</div>
+          <div className="text-sm text-slate-500 py-4">No data found</div>
         )}
 
         {!loading && lead && (
@@ -149,40 +157,40 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
             )}
 
             {/* Basic Information */}
-            <div className="border rounded-lg p-4">
+            <div className="border border-slate-200/80 rounded-lg p-4 bg-white">
               <h3 className="font-semibold mb-3 text-slate-700">Basic Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="font-medium text-slate-600">Company Name:</span>{" "}
-                  {lead.company_name || "—"}
+                  <span className="text-slate-800 font-medium">{lead.company_name || "—"}</span>
                 </div>
                 <div>
                   <span className="font-medium text-slate-600">Contact Person:</span>{" "}
-                  {lead.contact_person || "—"}
+                  <span className="text-slate-800 font-medium">{lead.contact_person || "—"}</span>
                 </div>
                 <div>
                   <span className="font-medium text-slate-600">Mobile Number:</span>{" "}
-                  {lead.mobile_number || "—"}
+                  <span className="text-slate-800 font-medium">{lead.mobile_number || "—"}</span>
                 </div>
                 <div>
                   <span className="font-medium text-slate-600">Email:</span>{" "}
-                  {lead.email_address || "—"}
+                  <span className="text-slate-800">{lead.email_address || "—"}</span>
                 </div>
                 <div>
                   <span className="font-medium text-slate-600">State:</span>{" "}
-                  {lead.state || "—"}
+                  <span className="text-slate-800">{lead.state || "—"}</span>
                 </div>
                 <div>
                   <span className="font-medium text-slate-600">City:</span>{" "}
-                  {lead.city || "—"}
+                  <span className="text-slate-800">{lead.city || "—"}</span>
                 </div>
                 <div>
                   <span className="font-medium text-slate-600">Industry:</span>{" "}
-                  {getDisplayValue(lead.industry_type, industryOptions)}
+                  <span className="text-slate-800">{getDisplayValue(lead.industry_type, industryOptions)}</span>
                 </div>
                 <div>
                   <span className="font-medium text-slate-600">Lead Source:</span>{" "}
-                  {getDisplayValue(lead.lead_source, leadSourceOptions)}
+                  <span className="text-slate-800">{getDisplayValue(lead.lead_source, leadSourceOptions)}</span>
                 </div>
                 <div>
                   <span className="font-medium text-slate-600">Priority:</span>{" "}
@@ -197,15 +205,15 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
                 </div>
                 <div>
                   <span className="font-medium text-slate-600">Lead Date:</span>{" "}
-                  {lead.enquiry_date || "—"}
+                  <span className="text-slate-800">{lead.enquiry_date || "—"}</span>
                 </div>
                 <div>
                   <span className="font-medium text-slate-600">Expected Closure:</span>{" "}
-                  {lead.expected_closure_date || "—"}
+                  <span className="text-slate-800">{lead.expected_closure_date || "—"}</span>
                 </div>
                 <div>
                   <span className="font-medium text-slate-600">Expected Budget:</span>{" "}
-                  {lead.expected_budget || "—"}
+                  <span className="text-slate-800">{lead.expected_budget || "—"}</span>
                 </div>
                 <div>
                   <span className="font-medium text-slate-600">Amount:</span>{" "}
@@ -239,7 +247,7 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
             </div>
 
             {/* Pipeline Information */}
-            <div className="border rounded-lg p-4">
+            <div className="border border-slate-200/80 rounded-lg p-4 bg-white">
               <h3 className="font-semibold mb-3 text-slate-700">Pipeline Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                 <div>
@@ -260,15 +268,15 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
                 </div>
                 <div>
                   <span className="font-medium text-slate-600">Assigned Executive:</span>{" "}
-                  {lead.assigned_executive_details?.full_name || lead.assigned_executive || "—"}
+                  <span className="text-slate-800 font-medium">{lead.assigned_executive_details?.full_name || lead.assigned_executive || "—"}</span>
                 </div>
                 <div>
                   <span className="font-medium text-slate-600">Last Follow-up Date:</span>{" "}
-                  {lead.last_followup_date || "—"}
+                  <span className="text-slate-800">{lead.last_followup_date || "—"}</span>
                 </div>
                 <div>
                   <span className="font-medium text-slate-600">Next Follow-up Date:</span>{" "}
-                  {lead.followup_date || "—"}
+                  <span className="text-slate-800">{lead.followup_date || "—"}</span>
                 </div>
                 <div className="md:col-span-3">
                   <span className="font-medium text-slate-600">Tally User:</span>{" "}
@@ -284,7 +292,7 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
             </div>
 
             {/* Requirements & Remarks */}
-            <div className="border rounded-lg p-4">
+            <div className="border border-slate-200/80 rounded-lg p-4 bg-white">
               <h3 className="font-semibold mb-3 text-slate-700">Requirements & Notes</h3>
               <div className="space-y-3 text-sm">
                 <div>
@@ -314,7 +322,7 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
 
             {/* Follow-up History */}
             {lead.followups && lead.followups.length > 0 && (
-              <div className="border rounded-lg p-4">
+              <div className="border border-slate-200/80 rounded-lg p-4 bg-white">
                 <h3 className="font-semibold mb-3 text-slate-700">Follow-up History</h3>
                 <table className="w-full text-sm border border-slate-200 rounded-md overflow-hidden">
                   <thead className="bg-slate-50">
@@ -328,7 +336,7 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
                   </thead>
                   <tbody>
                     {lead.followups.map((fu, idx) => (
-                      <tr key={fu.id} className="border-t align-top">
+                      <tr key={fu.id || idx} className="border-t align-top">
                         <td className="p-2">{idx + 1}</td>
                         <td className="p-2">{fu.followup_date || "—"}</td>
                         <td className="p-2">{fu.next_followup_date || "—"}</td>

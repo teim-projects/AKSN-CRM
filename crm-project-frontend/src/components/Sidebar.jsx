@@ -100,6 +100,53 @@ export default function Sidebar({ children }) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Real-time unread notification counter sync
+  const updateNotifCount = useCallback(() => {
+    const readIds = new Set(JSON.parse(localStorage.getItem("crm_notif_read_ids") || "[]"));
+    const deletedIds = new Set(JSON.parse(localStorage.getItem("crm_notif_deleted_ids") || "[]"));
+    const customNotifs = JSON.parse(localStorage.getItem("crm_custom_notifs") || "[]");
+
+    const token = localStorage.getItem("access") || localStorage.getItem("access_token") || "";
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+    fetch(`${baseApi}/lead/lead/?limit=100`, { headers })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        const leads = Array.isArray(data) ? data : data.results || [];
+        const today = new Date().toISOString().split("T")[0];
+        let count = 0;
+
+        leads.forEach((l) => {
+          if (l.followup_date && l.followup_date <= today && !["close_win", "close_loss", "closed"].includes(l.status)) {
+            const id = l.followup_date < today ? `f_overdue_${l.id}_${l.followup_date}` : `f_today_${l.id}_${today}`;
+            if (!deletedIds.has(id) && !readIds.has(id)) count++;
+          }
+          const leadId = `lead_new_${l.id}`;
+          if (!deletedIds.has(leadId) && !readIds.has(leadId)) count++;
+        });
+
+        customNotifs.forEach((cn) => {
+          if (!deletedIds.has(cn.id) && !readIds.has(cn.id)) count++;
+        });
+
+        setUnreadNotifCount(count);
+      })
+      .catch(() => {
+        const unreadCustom = customNotifs.filter((cn) => !readIds.has(cn.id) && !deletedIds.has(cn.id)).length;
+        setUnreadNotifCount(unreadCustom);
+      });
+  }, [baseApi]);
+
+  useEffect(() => {
+    updateNotifCount();
+    window.addEventListener("crm_notification_updated", updateNotifCount);
+    window.addEventListener("storage", updateNotifCount);
+    return () => {
+      window.removeEventListener("crm_notification_updated", updateNotifCount);
+      window.removeEventListener("storage", updateNotifCount);
+    };
+  }, [updateNotifCount]);
+
   const toggleSection = (sectionName) => {
     setCollapsedSections((prev) => ({
       ...prev,

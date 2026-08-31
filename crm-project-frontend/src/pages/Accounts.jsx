@@ -13,7 +13,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 export default function Accounts() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const BASE_API = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
 
   const { hasPermission } = useUserRole(BASE_API);
@@ -144,7 +144,9 @@ export default function Accounts() {
     fetchData();
   }, [fetchData]);
 
-  // Automatically open staff edit form when navigating with userId or email from Notification
+  const [highlightedUserId, setHighlightedUserId] = useState(null);
+
+  // Highlight target staff account row and paginate when redirected from notification (without auto-opening form modal)
   useEffect(() => {
     const userId = searchParams.get("userId");
     const emailParam = searchParams.get("email");
@@ -155,11 +157,38 @@ export default function Accounts() {
           (emailParam && r.email && r.email.toLowerCase() === String(emailParam).toLowerCase())
       );
       if (match) {
-        setEditingStaff(match);
-        setShowStaffForm(true);
+        setHighlightedUserId(match.id);
+        const itemIdx = allRows.findIndex((r) => String(r.id) === String(match.id));
+        if (itemIdx !== -1) {
+          const pageNum = Math.floor(itemIdx / itemsPerPage) + 1;
+          setCurrentPage(pageNum);
+        }
       }
     }
-  }, [searchParams, allRows]);
+  }, [searchParams, allRows, itemsPerPage]);
+
+  // Clear highlight and remove query parameters when user clicks anywhere on screen
+  useEffect(() => {
+    if (!highlightedUserId) return;
+
+    const handleScreenClick = () => {
+      setHighlightedUserId(null);
+      if (searchParams.get("userId") || searchParams.get("email") || searchParams.get("id")) {
+        setSearchParams({}, { replace: true });
+      }
+    };
+
+    const timer = setTimeout(() => {
+      window.addEventListener("click", handleScreenClick, { capture: true });
+      window.addEventListener("pointerdown", handleScreenClick, { capture: true });
+    }, 150);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("click", handleScreenClick, { capture: true });
+      window.removeEventListener("pointerdown", handleScreenClick, { capture: true });
+    };
+  }, [highlightedUserId, searchParams, setSearchParams]);
 
   // Update pagination when filtered data changes
   useEffect(() => {
@@ -325,7 +354,7 @@ export default function Accounts() {
             pageSize={itemsPerPage}
             actions={actionsRenderer}
             emptyMessage="No accounts found"
-            rowClassName={() => "hover:bg-slate-50/80 transition-colors duration-150"}
+            rowClassName={(row) => highlightedUserId && String(row.id) === String(highlightedUserId) ? "!bg-blue-100/90 font-bold border-l-4 border-l-blue-600 ring-2 ring-blue-400/60 shadow-md animate-pulse" : "hover:bg-slate-50/80 transition-colors duration-150"}
           />
         </div>
       </div>

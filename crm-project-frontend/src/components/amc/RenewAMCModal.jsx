@@ -88,6 +88,25 @@ export default function RenewAMCModal({
         throw new Error(`Failed to renew AMC contract: ${errTxt}`);
       }
 
+      // Dispatch custom notification for real-time notification drawer update
+      const customNotif = {
+        id: `custom_amc_renew_${amcContract.id}_${Date.now()}`,
+        title: "AMC Contract Renewed",
+        description: `AMC contract ${amcContract.contract_id || `#${amcContract.id}`} renewed for period ${formData.new_start_date} to ${formData.new_end_date}.`,
+        type: "amc",
+        amcId: amcContract.id,
+        targetUrl: `/amc?amcId=${amcContract.id}`,
+        time: "Just now",
+        timestamp: Date.now(),
+        read: false,
+        priority: "high",
+        badge: "AMC Renewed",
+      };
+
+      const existingNotifs = JSON.parse(localStorage.getItem("crm_custom_notifs") || "[]");
+      localStorage.setItem("crm_custom_notifs", JSON.stringify([customNotif, ...existingNotifs]));
+      window.dispatchEvent(new Event("crm_notification_updated"));
+
       Swal.fire({
         icon: "success",
         title: "AMC Renewed Successfully!",

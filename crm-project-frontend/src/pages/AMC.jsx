@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import Base from "../components/Base";
 import TableView from "../components/TableView";
 import AddAMCContractForm from "../components/amc/AddAMCContractForm";
@@ -22,6 +23,7 @@ import { useUserRole } from "../hooks/useAuth";
 const BASE_API = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
 
 export default function AMC() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { hasPermission } = useUserRole(BASE_API);
   const canCreateAMC = hasPermission("amc", "create");
   const canEditAMC = hasPermission("amc", "edit");
@@ -56,6 +58,46 @@ export default function AMC() {
   const [viewingAMC, setViewingAMC] = useState(null);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [recordViewerOpen, setRecordViewerOpen] = useState(false);
+
+  const [highlightedAmcId, setHighlightedAmcId] = useState(null);
+
+  // Highlight target AMC row and paginate when redirected from notification (without auto-opening record viewer)
+  useEffect(() => {
+    const targetAmcId = searchParams.get("amcId") || searchParams.get("id");
+    if (targetAmcId) {
+      setHighlightedAmcId(targetAmcId);
+      if (allRows.length > 0) {
+        const itemIdx = allRows.findIndex((r) => String(r.id) === String(targetAmcId));
+        if (itemIdx !== -1) {
+          const pageNum = Math.floor(itemIdx / itemsPerPage) + 1;
+          setCurrentPage(pageNum);
+        }
+      }
+    }
+  }, [searchParams, allRows, itemsPerPage]);
+
+  // Clear highlight and remove query parameters when user clicks anywhere on screen
+  useEffect(() => {
+    if (!highlightedAmcId) return;
+
+    const handleScreenClick = () => {
+      setHighlightedAmcId(null);
+      if (searchParams.get("amcId") || searchParams.get("id")) {
+        setSearchParams({}, { replace: true });
+      }
+    };
+
+    const timer = setTimeout(() => {
+      window.addEventListener("click", handleScreenClick, { capture: true });
+      window.addEventListener("pointerdown", handleScreenClick, { capture: true });
+    }, 150);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("click", handleScreenClick, { capture: true });
+      window.removeEventListener("pointerdown", handleScreenClick, { capture: true });
+    };
+  }, [highlightedAmcId, searchParams, setSearchParams]);
 
   // Quick filter state
   const [filterType, setFilterType] = useState("all");
@@ -244,6 +286,9 @@ export default function AMC() {
   };
 
   const getRowClassName = (row) => {
+    if (highlightedAmcId && String(row.id) === String(highlightedAmcId)) {
+      return "!bg-blue-100/90 font-bold border-l-4 border-l-blue-600 ring-2 ring-blue-400/60 shadow-md animate-pulse";
+    }
     if (row.status === "expiring_soon") return "bg-yellow-100/60";
     if (row.status === "expired") return "bg-red-100/60";
     return "";

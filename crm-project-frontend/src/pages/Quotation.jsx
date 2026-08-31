@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import Base from "../components/Base";
 import TableView from "../components/TableView";
 import AddQuotation from "../components/quotations/AddQuotation";
@@ -24,6 +25,7 @@ api.interceptors.request.use((config) => {
 const normalize = (d) => (Array.isArray(d) ? d : d?.results || []);
 
 export default function Quotation() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { hasPermission } = useUserRole(BASE_API);
   const canCreateQuotation = hasPermission("quotations", "create");
   const canEditQuotation = hasPermission("quotations", "edit");
@@ -65,6 +67,46 @@ export default function Quotation() {
   // ✅ Version pagination state for each quotation
   const [versionPagination, setVersionPagination] = useState({});
   const VERSIONS_PER_PAGE = 5;
+
+  const [highlightedQuotationId, setHighlightedQuotationId] = useState(null);
+
+  // Highlight target quotation row and paginate when redirected from notification (without auto-opening form modal)
+  useEffect(() => {
+    const targetQuotationId = searchParams.get("quotationId") || searchParams.get("id");
+    if (targetQuotationId) {
+      setHighlightedQuotationId(targetQuotationId);
+      if (allRows.length > 0) {
+        const itemIdx = allRows.findIndex((r) => String(r.id) === String(targetQuotationId));
+        if (itemIdx !== -1) {
+          const pageNum = Math.floor(itemIdx / itemsPerPage) + 1;
+          setCurrentPage(pageNum);
+        }
+      }
+    }
+  }, [searchParams, allRows, itemsPerPage]);
+
+  // Clear highlight and remove query parameters when user clicks anywhere on screen
+  useEffect(() => {
+    if (!highlightedQuotationId) return;
+
+    const handleScreenClick = () => {
+      setHighlightedQuotationId(null);
+      if (searchParams.get("quotationId") || searchParams.get("id")) {
+        setSearchParams({}, { replace: true });
+      }
+    };
+
+    const timer = setTimeout(() => {
+      window.addEventListener("click", handleScreenClick, { capture: true });
+      window.addEventListener("pointerdown", handleScreenClick, { capture: true });
+    }, 150);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("click", handleScreenClick, { capture: true });
+      window.removeEventListener("pointerdown", handleScreenClick, { capture: true });
+    };
+  }, [highlightedQuotationId, searchParams, setSearchParams]);
 
   const token = useMemo(() => (
     localStorage.getItem("access") ||
@@ -513,8 +555,8 @@ export default function Quotation() {
           <button
             onClick={() => handleFinalizeVersion(row.id, activeVersion?.id, activeVersion?.is_finalized, activeVersion?.version_no)}
             className={`p-1 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer ${activeVersion?.is_finalized
-                ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                : "bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-700"
+              ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+              : "bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-700"
               }`}
             title={activeVersion?.is_finalized ? "Finalized (Click to un-finalize)" : "Make Final"}
           >
@@ -530,17 +572,16 @@ export default function Quotation() {
               setShowQuotationForm(true);
             }}
             disabled={!isEditable}
-            className={`p-1 rounded transition-all duration-150 text-sm shadow-xs ${
-              isEditable
-                ? "bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 cursor-pointer"
-                : "bg-slate-100 text-slate-400 opacity-50 cursor-not-allowed"
-            }`}
+            className={`p-1 rounded transition-all duration-150 text-sm shadow-xs ${isEditable
+              ? "bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 cursor-pointer"
+              : "bg-slate-100 text-slate-400 opacity-50 cursor-not-allowed"
+              }`}
             title={
               isEditable
                 ? "Edit Record"
                 : isDropped
-                ? "Cannot edit a dropped quotation"
-                : "Cannot edit a finalized quotation"
+                  ? "Cannot edit a dropped quotation"
+                  : "Cannot edit a finalized quotation"
             }
           >
             <MdEdit />
@@ -573,8 +614,8 @@ export default function Quotation() {
           <button
             onClick={() => handleToggleDrop(row.id, row.is_dropped)}
             className={`p-1 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer ${row.is_dropped
-                ? "bg-slate-700 text-slate-100 hover:bg-slate-800"
-                : "bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700"
+              ? "bg-slate-700 text-slate-100 hover:bg-slate-800"
+              : "bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700"
               }`}
             title={row.is_dropped ? "Dropped (Click to restore)" : "Mark as Dropped"}
           >
@@ -687,8 +728,8 @@ export default function Quotation() {
                             <button
                               onClick={() => handleFinalizeVersion(row.id, v.id, v.is_finalized, v.version_no)}
                               className={`p-1 rounded text-xs transition-colors cursor-pointer ${v.is_finalized
-                                  ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                                  : "bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-700"
+                                ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                : "bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-700"
                                 }`}
                               title={v.is_finalized ? "Finalized (Click to un-finalize)" : "Make Final"}
                             >
@@ -811,9 +852,8 @@ export default function Quotation() {
                         setShowFilterDropdown(false);
                         setCurrentPage(1);
                       }}
-                      className={`w-full text-left px-4 py-2 text-xs hover:bg-slate-50 transition-colors ${
-                        filterType === option.value ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-700'
-                      }`}
+                      className={`w-full text-left px-4 py-2 text-xs hover:bg-slate-50 transition-colors ${filterType === option.value ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-700'
+                        }`}
                     >
                       {option.label}
                       {filterType === option.value && (
@@ -888,7 +928,11 @@ export default function Quotation() {
             renderExpandedRow={renderExpandedRow}
             emptyMessage="No quotation records matched the criteria"
             rowClassName={(row) =>
-              row.is_dropped ? "bg-slate-300/80 text-slate-700 font-medium border-slate-400" : ""
+              highlightedQuotationId && String(row.id) === String(highlightedQuotationId)
+                ? "!bg-blue-100/90 font-bold border-l-4 border-l-blue-600 ring-2 ring-blue-400/60 shadow-md animate-pulse"
+                : row.is_dropped
+                  ? "bg-slate-300/80 text-slate-700 font-medium border-slate-400"
+                  : ""
             }
           />
         </div>

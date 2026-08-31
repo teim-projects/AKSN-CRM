@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import Base from "../components/Base";
 import TableView from "../components/TableView";
 import { MdEdit, MdDelete, MdOutlineRemoveRedEye, MdFilterList, MdAdd, MdZoomIn, MdHandshake } from "react-icons/md";
@@ -10,6 +11,7 @@ import AdvancedTableFilter from "../components/AdvancedTableFilter";
 import { useUserRole } from "../hooks/useAuth";
 
 export default function Project() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const BASE_API = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
   const API_URL = `${BASE_API.replace(/\/$/, "")}/lead/projects/`;
 
@@ -43,6 +45,46 @@ export default function Project() {
   // Filter
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filteredData, setFilteredData] = useState([]);
+
+  const [highlightedProjectId, setHighlightedProjectId] = useState(null);
+
+  // Highlight target project row and paginate when redirected from notification (without auto-opening record viewer)
+  useEffect(() => {
+    const targetProjectId = searchParams.get("projectId") || searchParams.get("id");
+    if (targetProjectId) {
+      setHighlightedProjectId(targetProjectId);
+      if (allRows.length > 0) {
+        const itemIdx = allRows.findIndex((r) => String(r.id) === String(targetProjectId));
+        if (itemIdx !== -1) {
+          const pageNum = Math.floor(itemIdx / itemsPerPage) + 1;
+          setCurrentPage(pageNum);
+        }
+      }
+    }
+  }, [searchParams, allRows, itemsPerPage]);
+
+  // Clear highlight and remove query parameters when user clicks anywhere on screen
+  useEffect(() => {
+    if (!highlightedProjectId) return;
+
+    const handleScreenClick = () => {
+      setHighlightedProjectId(null);
+      if (searchParams.get("projectId") || searchParams.get("id")) {
+        setSearchParams({}, { replace: true });
+      }
+    };
+
+    const timer = setTimeout(() => {
+      window.addEventListener("click", handleScreenClick, { capture: true });
+      window.addEventListener("pointerdown", handleScreenClick, { capture: true });
+    }, 150);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("click", handleScreenClick, { capture: true });
+      window.removeEventListener("pointerdown", handleScreenClick, { capture: true });
+    };
+  }, [highlightedProjectId, searchParams, setSearchParams]);
 
   const token = useMemo(
     () =>
@@ -459,7 +501,7 @@ export default function Project() {
             pageSize={itemsPerPage}
             actions={actionsRenderer}
             emptyMessage="No project records found."
-            rowClassName={() => "hover:bg-slate-50/80 transition-colors duration-150"}
+            rowClassName={(row) => highlightedProjectId && String(row.id) === String(highlightedProjectId) ? "!bg-blue-100/90 font-bold border-l-4 border-l-blue-600 ring-2 ring-blue-400/60 shadow-md animate-pulse" : "hover:bg-slate-50/80 transition-colors duration-150"}
           />
         </div>
 

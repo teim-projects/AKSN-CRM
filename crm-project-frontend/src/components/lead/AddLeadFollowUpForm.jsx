@@ -185,6 +185,7 @@ export default function AddLeadFollowUpForm({
   const [faqLoading, setFaqLoading] = useState(false);
   const [leadData, setLeadData] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [amountTouched, setAmountTouched] = useState(false);
 
   // Product related state - same as AddLeadForm
   const [productInterested, setProductInterested] = useState([]);
@@ -273,10 +274,14 @@ export default function AddLeadFollowUpForm({
     setIsEditMode(false);
     setShowHistory(false);
     setProductInterested([]);
+    setAmountTouched(false);
   };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    if (name === "amount") {
+      setAmountTouched(true);
+    }
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
@@ -407,7 +412,6 @@ export default function AddLeadFollowUpForm({
           setFormData((prev) => ({
             ...prev,
             current_stage: data.pipeline_stage || prev.current_stage,
-            amount: data.amount !== undefined && data.amount !== null ? String(data.amount) : prev.amount,
           }));
         }
       } catch (err) {
@@ -421,7 +425,7 @@ export default function AddLeadFollowUpForm({
 
   // Auto-populate follow-up amount if empty/0 and calculated total product price or lead amount exists
   useEffect(() => {
-    if (!open || followup) return;
+    if (!open || followup || amountTouched) return;
 
     let targetAmount = "";
     if (calculatedTotalPrice > 0) {
@@ -436,7 +440,7 @@ export default function AddLeadFollowUpForm({
         amount: targetAmount,
       }));
     }
-  }, [open, followup, leadData, calculatedTotalPrice, formData.amount]);
+  }, [open, followup, leadData, calculatedTotalPrice, amountTouched]);
 
   // Load followup data for editing
   useEffect(() => {

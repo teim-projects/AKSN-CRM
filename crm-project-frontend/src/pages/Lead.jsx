@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import Base from "../components/Base";
 import TableView from "../components/TableView";
 import LeadDetails from "../components/lead/LeadDetails";
@@ -12,6 +13,7 @@ import AdvancedTableFilter from "../components/AdvancedTableFilter";
 import RecordViewer from "../components/RecordViewer";
 
 export default function Lead() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const BASE_API = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
   const API_URL = `${BASE_API}/lead/lead/`;
 
@@ -49,6 +51,45 @@ export default function Lead() {
   // Filter state
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filteredData, setFilteredData] = useState([]);
+  const [highlightedLeadId, setHighlightedLeadId] = useState(null);
+
+  // Highlight target lead row and paginate when redirected from notification (without auto-opening popup modal)
+  useEffect(() => {
+    const targetLeadId = searchParams.get("leadId") || searchParams.get("id");
+    if (targetLeadId) {
+      setHighlightedLeadId(targetLeadId);
+      if (allRows.length > 0) {
+        const itemIdx = allRows.findIndex((r) => String(r.id) === String(targetLeadId));
+        if (itemIdx !== -1) {
+          const pageNum = Math.floor(itemIdx / itemsPerPage) + 1;
+          setCurrentPage(pageNum);
+        }
+      }
+    }
+  }, [searchParams, allRows, itemsPerPage]);
+
+  // Clear highlight and remove query parameters when user clicks anywhere on screen
+  useEffect(() => {
+    if (!highlightedLeadId) return;
+
+    const handleScreenClick = () => {
+      setHighlightedLeadId(null);
+      if (searchParams.get("leadId") || searchParams.get("id")) {
+        setSearchParams({}, { replace: true });
+      }
+    };
+
+    const timer = setTimeout(() => {
+      window.addEventListener("click", handleScreenClick, { capture: true });
+      window.addEventListener("pointerdown", handleScreenClick, { capture: true });
+    }, 150);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("click", handleScreenClick, { capture: true });
+      window.removeEventListener("pointerdown", handleScreenClick, { capture: true });
+    };
+  }, [highlightedLeadId, searchParams, setSearchParams]);
 
   const token = useMemo(() => (
     localStorage.getItem("access") ||
@@ -198,6 +239,9 @@ export default function Lead() {
   };
 
   const getRowClassName = (lead) => {
+    if (highlightedLeadId && String(lead.id) === String(highlightedLeadId)) {
+      return "!bg-blue-100/90 font-bold border-l-4 border-l-blue-600 ring-2 ring-blue-400/60 shadow-md animate-pulse";
+    }
     // If status is closed, won, or lost, return normal styling
     if (lead.status === "close_win" || lead.status === "close_loss" || lead.status === "closed") return "";
 
