@@ -121,7 +121,7 @@ export default function RecordViewer({
       .replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
-  const formatValue = (value) => {
+  const formatValue = (value, key) => {
     if (value === null || value === undefined || value === "") {
       return "—";
     }
@@ -313,7 +313,7 @@ export default function RecordViewer({
               const isUrl = isUrlField(key);
               const isEmail = isEmailField(key);
               const isPhone = isPhoneField(key);
-              const formattedValue = formatValue(value);
+              const formattedValue = formatValue(value, key);
 
               return (
                 <div
