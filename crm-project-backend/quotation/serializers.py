@@ -64,6 +64,7 @@ class QuotationItemSerializer(serializers.ModelSerializer):
 class QuotationVersionSerializer(serializers.ModelSerializer):
     items = QuotationItemSerializer(many=True)
     version_label = serializers.SerializerMethodField()
+    quotation_for = serializers.CharField(source="quotation.quotation_for", read_only=True)
 
     class Meta:
         model = QuotationVersion
@@ -94,6 +95,14 @@ class QuotationSerializer(serializers.ModelSerializer):
         source="lead.mobile_number", read_only=True
     )
     versions = QuotationVersionSerializer(many=True, read_only=True)
+    quotation_for = serializers.ChoiceField(
+        choices=Quotation.QUOTATION_FOR_CHOICES,
+        required=True,
+        error_messages={
+            "required": "Quotation For (Ahilyanagar or Pune) is mandatory.",
+            "invalid_choice": "Select a valid location: Ahilyanagar or Pune."
+        }
+    )
 
     class Meta:
         model = Quotation
@@ -211,9 +220,16 @@ class QuotationSerializer(serializers.ModelSerializer):
 
 
 # Serializer for creating with items
-# Serializer for creating with items
 class QuotationCreateSerializer(serializers.ModelSerializer):
     items = QuotationItemSerializer(many=True, write_only=True)
+    quotation_for = serializers.ChoiceField(
+        choices=Quotation.QUOTATION_FOR_CHOICES,
+        required=True,
+        error_messages={
+            "required": "Quotation For (Ahilyanagar or Pune) is mandatory.",
+            "invalid_choice": "Select a valid location: Ahilyanagar or Pune."
+        }
+    )
 
     class Meta:
         model = Quotation

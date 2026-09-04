@@ -362,7 +362,18 @@ export default function Lead() {
             <div>To</div>
           </div>
         ),
-        render: (r) => <span className="text-slate-700 font-medium text-xs whitespace-nowrap py-0.5 block">{r.assigned_executive_details?.full_name || "-"}</span>
+        render: (r) => (
+          <div className="py-0.5 text-center leading-tight">
+            <span className="text-slate-800 font-medium text-xs block whitespace-nowrap">
+              {r.assigned_executive_details?.full_name || r.assigned_executive_details?.first_name || "-"}
+            </span>
+            {r.assigned_executive_details?.email && (
+              <span className="text-slate-500 text-[10px] block whitespace-nowrap mt-0.5">
+                {r.assigned_executive_details.email}
+              </span>
+            )}
+          </div>
+        )
       }]
       : [])
   ];

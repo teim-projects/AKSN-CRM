@@ -88,11 +88,16 @@ class Customer(models.Model):
     email = models.EmailField(blank=True, null=True, verbose_name="Email")
     website = models.URLField(max_length=500, blank=True, null=True, verbose_name="Website")
     industry_category = models.CharField(
-        max_length=50, 
-        choices=IndustryType.choices, 
+        max_length=100, 
         blank=True, 
         null=True,
         verbose_name="Industry Category"
+    )
+    lead_source = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name="Lead Source"
     )
     gst_number = models.CharField(max_length=15, blank=True, null=True, verbose_name="GST Number")
     pan_number = models.CharField(max_length=10, blank=True, null=True, verbose_name="PAN Number")
@@ -179,11 +184,11 @@ class lead_management(models.Model):
     product_interested = models.JSONField(blank=True, null=True, default=list, verbose_name="Product Interested")
     amount = models.DecimalField(max_digits=15, decimal_places=2, default=0.00, blank=True, null=True, verbose_name="Amount")
     expected_closure_date = models.DateField(blank=True, null=True, verbose_name="Expected Closure Date")
-    lead_source = models.CharField(max_length=50, blank=True, null=True, verbose_name="Lead Source")
+    lead_source = models.CharField(max_length=100, blank=True, null=True, verbose_name="Lead Source")
     contact_person = models.CharField(max_length=200, blank=True, null=True, verbose_name="Contact Person")
     email_address = models.EmailField(blank=True, null=True, verbose_name="Email Address")
     city = models.CharField(max_length=100, blank=True, null=True, verbose_name="City")
-    industry_type = models.CharField(max_length=50, blank=True, null=True, verbose_name="Industry Type")
+    industry_type = models.CharField(max_length=100, blank=True, null=True, verbose_name="Industry Type")
     expected_budget = models.CharField(max_length=100, blank=True, null=True, verbose_name="Expected Budget")
     priority = models.CharField(max_length=50, choices=Priority.choices, blank=True, null=True, verbose_name="Priority")
     

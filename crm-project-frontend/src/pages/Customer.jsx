@@ -489,6 +489,10 @@ export default function Customer() {
                 <p className="text-sm text-slate-700">{customer.industry_category_display || customer.industry_category || "-"}</p>
               </div>
               <div>
+                <span className="text-xs font-medium text-slate-500">Lead Source</span>
+                <p className="text-sm text-slate-700">{customer.lead_source_display || customer.lead_source || "-"}</p>
+              </div>
+              <div>
                 <span className="text-xs font-medium text-slate-500">GST Number</span>
                 <p className="text-sm text-slate-700 font-mono">{customer.gst_number || "-"}</p>
               </div>

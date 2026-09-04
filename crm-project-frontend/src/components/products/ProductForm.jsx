@@ -151,7 +151,16 @@ const ProductForm = ({ open, onClose, productId, baseApi, token, onSuccess }) =>
             onSuccess();
         } catch (error) {
             console.error('Error saving product:', error);
-            Swal.fire({ icon: "error", title: "Save failed", text: "Please review form fields parameters." });
+            const errData = error.response?.data;
+            let errMsg = "Please review form fields parameters.";
+            if (errData && typeof errData === 'object') {
+                errMsg = Object.entries(errData)
+                    .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
+                    .join('\n');
+            } else if (typeof errData === 'string') {
+                errMsg = errData;
+            }
+            Swal.fire({ icon: "error", title: "Save failed", text: errMsg });
         } finally {
             setLoading(false);
         }
@@ -205,17 +214,17 @@ const ProductForm = ({ open, onClose, productId, baseApi, token, onSuccess }) =>
                             {/* Product Code */}
                             <div className="space-y-1">
                                 <label className="block text-xs font-semibold text-slate-600">
-                                    Product Code *
+                                    Product Code
                                 </label>
                                 <input
                                     type="text"
                                     name="product_code"
                                     value={formData.product_code}
                                     onChange={handleChange}
-                                    required
-                                    placeholder="e.g. ERP-ENT"
+                                    placeholder="Enter custom product code (e.g. PRD-001)"
                                     className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 text-slate-800 bg-white"
                                 />
+                                <p className="text-[10px] text-slate-400">Enter custom code manually, or leave blank to auto-generate.</p>
                             </div>
 
                             {/* Category */}

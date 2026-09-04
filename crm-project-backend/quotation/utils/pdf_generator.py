@@ -168,6 +168,7 @@ def _build_quotation_pdf_context(quotation, version):
         'grand_total': grand_total,
         'total_quantity': total_quantity,
         'logo_base64': logo_base64,
+        'quotation_for': getattr(quotation, 'quotation_for', 'Pune') or 'Pune',
         'company_address': "AKSN Infotech Office No:-10B, 2nd Floor, Prestige Point Behind Telephone Exchange, Bajirao Road, 283, Shukrawar Peth, PUNE 411002 India GSTIN: 27AAXFA5487A1Z4",
     }
 

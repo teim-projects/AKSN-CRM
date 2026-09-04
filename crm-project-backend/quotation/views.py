@@ -110,8 +110,9 @@ class QuotationViewSet(viewsets.ModelViewSet):
         "mobile_number",
         "email_address",
         "subject",
+        "quotation_for",
     ]
-    filterset_fields = ['gst_type']
+    filterset_fields = ['gst_type', 'quotation_for']
 
     def get_queryset(self):
         user = self.request.user

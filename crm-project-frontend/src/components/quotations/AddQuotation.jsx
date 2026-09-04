@@ -43,6 +43,7 @@ export default function AddQuotation({ id, leadData, onBack }) {
     pan_number: "",
     msme_number: "",
     subject: "",
+    quotation_for: "",
     gst_type: "CGST_SGST",
     thank_you_note: "",
   });
@@ -175,6 +176,7 @@ export default function AddQuotation({ id, leadData, onBack }) {
           pan_number: q.pan_number || "",
           msme_number: q.msme_number || "",
           subject: q.subject || "",
+          quotation_for: q.quotation_for || "",
           gst_type: q.gst_type || "CGST_SGST",
           thank_you_note: q.thank_you_note || "",
         });
@@ -526,6 +528,10 @@ export default function AddQuotation({ id, leadData, onBack }) {
       Swal.fire({ icon: "error", title: "Validation", text: "Subject is required" });
       return;
     }
+    if (!formData.quotation_for || !formData.quotation_for.trim()) {
+      Swal.fire({ icon: "error", title: "Validation", text: "Please select where this quotation is for (Ahilyanagar or Pune)" });
+      return;
+    }
     if (!formData.thank_you_note || !formData.thank_you_note.trim()) {
       Swal.fire({ icon: "error", title: "Validation", text: "Thank You Note is required" });
       return;
@@ -565,6 +571,7 @@ export default function AddQuotation({ id, leadData, onBack }) {
       address: formData.address || "",
       industry_type: formData.industry_type || "",
       subject: formData.subject,
+      quotation_for: formData.quotation_for,
       gst_type: formData.gst_type,
       thank_you_note: formData.thank_you_note,
       terms_and_conditions: selectedTerms,
@@ -966,6 +973,24 @@ export default function AddQuotation({ id, leadData, onBack }) {
                         >
                           <option value="CGST_SGST">CGST + SGST</option>
                           <option value="IGST">IGST</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="block text-xs font-semibold text-slate-600">
+                          Quotation For <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          value={formData.quotation_for}
+                          onChange={(e) =>
+                            setFormData((prev) => ({ ...prev, quotation_for: e.target.value }))
+                          }
+                          className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white h-[38px]"
+                          required
+                        >
+                          <option value="">Select Location</option>
+                          <option value="Ahilyanagar">Ahilyanagar</option>
+                          <option value="Pune">Pune</option>
                         </select>
                       </div>
 

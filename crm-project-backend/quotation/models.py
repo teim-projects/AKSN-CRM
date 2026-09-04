@@ -121,6 +121,18 @@ class Quotation(models.Model):
         verbose_name="GST Type"
     )
     
+    # Quotation For Location (Ahilyanagar or Pune) - Mandatory
+    QUOTATION_FOR_CHOICES = (
+        ("Ahilyanagar", "Ahilyanagar"),
+        ("Pune", "Pune"),
+    )
+    quotation_for = models.CharField(
+        max_length=50,
+        choices=QUOTATION_FOR_CHOICES,
+        default="Pune",
+        verbose_name="Quotation For"
+    )
+    
     # Thank You Note
     thank_you_note = models.TextField(max_length=400, verbose_name="Thank You Note", null=True, blank=True)
     

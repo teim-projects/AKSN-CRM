@@ -520,11 +520,15 @@
                 <div class="quotation-title">Quotation # {{ quotation_no }}</div>
                 <table class="meta-card-box">
                     <tr>
-                        <td style="width: 50%;">
+                        <td style="width: 33%;">
                             <div class="meta-label">Quotation Date</div>
                             <div class="meta-value">{{ quotation_date|date:"d/m/Y" }}</div>
                         </td>
-                        <td style="width: 50%;">
+                        <td style="width: 33%;">
+                            <div class="meta-label">Quotation For</div>
+                            <div class="meta-value">{{ quotation_for }}</div>
+                        </td>
+                        <td style="width: 34%;">
                             <div class="meta-label">Salesperson</div>
                             <div class="meta-value">{{ assigned_executive }}</div>
                         </td>

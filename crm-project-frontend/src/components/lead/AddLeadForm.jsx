@@ -363,7 +363,11 @@ export default function AddLeadForm({
     }
 
     try {
-      const res = await fetch(`${API_URL}?search=${encodeURIComponent(digits)}`, {
+      const queryParams = new URLSearchParams({
+        mobile: digits,
+        ...(lead?.id ? { lead_id: lead.id } : {})
+      });
+      const res = await fetch(`${API_URL}check-mobile/?${queryParams.toString()}`, {
         headers: {
           "Content-Type": "application/json",
           ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
@@ -371,19 +375,10 @@ export default function AddLeadForm({
       });
       if (res.ok) {
         const data = await res.json();
-        const results = Array.isArray(data.results) ? data.results : (Array.isArray(data) ? data : []);
-
-        const duplicate = results.find((l) => {
-          if (lead?.id && String(l.id) === String(lead.id)) return false;
-          const lDigits = (l.mobile_number || "").replace(/\D/g, '');
-          return lDigits && (lDigits === digits || (digits.length >= 10 && lDigits.length >= 10 && digits.slice(-10) === lDigits.slice(-10)));
-        });
-
-        if (duplicate) {
-          const compMsg = duplicate.company_name ? ` (Company: ${duplicate.company_name})` : '';
-          const msg = `A lead with this mobile number already exists${compMsg}.`;
+        if (data.exists) {
+          const msg = data.message || "A lead with this mobile number already exists.";
           setMobileError(msg);
-          return true;
+          return msg;
         }
       }
     } catch (err) {
@@ -475,6 +470,12 @@ export default function AddLeadForm({
 
   const handleSubmit = async (e) => {
     e && e.preventDefault();
+    const dupMsg = await checkDuplicateMobile();
+    if (dupMsg) {
+      const displayMsg = typeof dupMsg === "string" ? dupMsg : (mobileError || "A lead with this mobile number already exists.");
+      showError("mobile_number", displayMsg);
+      return;
+    }
     if (!validate()) return;
 
     setLoading(true);
@@ -558,6 +559,10 @@ export default function AddLeadForm({
 
       if (!res.ok) {
         if (data && typeof data === 'object') {
+          if (data.mobile_number) {
+            const mMsg = Array.isArray(data.mobile_number) ? data.mobile_number.join(', ') : String(data.mobile_number);
+            setMobileError(mMsg);
+          }
           const errorMessages = Object.entries(data)
             .map(([field, messages]) => {
               const msg = Array.isArray(messages) ? messages.join(', ') : messages;
@@ -768,16 +773,23 @@ export default function AddLeadForm({
                       onBlur={(e) => checkDuplicateMobile(e.target.value)}
                       onChange={(e) => {
                         clearError(e);
-                        setMobileError("");
+                        const val = e.target.value;
                         handleChange(e);
+                        const digits = val.replace(/\D/g, "");
+                        if (digits.length >= 10) {
+                          checkDuplicateMobile(val);
+                        } else {
+                          setMobileError("");
+                        }
                       }}
                       className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white ${mobileError ? "border-rose-500 bg-rose-50/50" : "border-slate-200"
                         }`}
                     />
                     {mobileError && (
-                      <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
-                        <span>⚠️</span> {mobileError}
-                      </p>
+                      <div className="text-[11px] font-semibold text-rose-700 mt-1.5 p-2.5 bg-rose-50 border border-rose-200 rounded-lg flex items-start gap-2 shadow-xs">
+                        <span className="text-sm leading-none mt-0.5">⚠️</span>
+                        <span className="flex-1 leading-snug">{mobileError}</span>
+                      </div>
                     )}
                   </div>
 

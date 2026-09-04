@@ -83,15 +83,20 @@ class Product(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     def save(self, *args, **kwargs):
-        if not self.product_code:
+        if not self.product_code or not str(self.product_code).strip():
             self.product_code = self.generate_product_code()
+        else:
+            self.product_code = str(self.product_code).strip()
         super().save(*args, **kwargs)
     
     def generate_product_code(self):
-        """Generate product code from name"""
-        base = self.name[:3].upper()
+        """Generate unique product code fallback from name"""
+        base = (self.name[:3] if self.name else "PRD").upper().strip() or "PRD"
         import uuid
-        return f"{base}-{uuid.uuid4().hex[:6].upper()}"
+        code = f"{base}-{uuid.uuid4().hex[:6].upper()}"
+        while Product.objects.filter(product_code=code).exists():
+            code = f"{base}-{uuid.uuid4().hex[:6].upper()}"
+        return code
     
     def get_price_with_gst(self):
         """Calculate price including GST"""

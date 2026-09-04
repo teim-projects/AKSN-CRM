@@ -268,7 +268,12 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
                 </div>
                 <div>
                   <span className="font-medium text-slate-600">Assigned Executive:</span>{" "}
-                  <span className="text-slate-800 font-medium">{lead.assigned_executive_details?.full_name || lead.assigned_executive || "—"}</span>
+                  <span className="text-slate-800 font-medium">
+                    {lead.assigned_executive_details?.full_name || lead.assigned_executive || "—"}
+                    {lead.assigned_executive_details?.email && (
+                      <span className="text-slate-500 font-normal ml-1">({lead.assigned_executive_details.email})</span>
+                    )}
+                  </span>
                 </div>
                 <div>
                   <span className="font-medium text-slate-600">Last Follow-up Date:</span>{" "}

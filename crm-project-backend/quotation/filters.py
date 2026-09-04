@@ -20,9 +20,15 @@ class QuotationFilter(django_filters.FilterSet):
         lookup_expr="date__lte"
     )
 
+    quotation_for = django_filters.CharFilter(
+        field_name="quotation_for",
+        lookup_expr="iexact"
+    )
+
     class Meta:
         model = Quotation
         fields = [
             "date_from",
             "date_to",
+            "quotation_for",
         ]

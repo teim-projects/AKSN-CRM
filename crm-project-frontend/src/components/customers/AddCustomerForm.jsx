@@ -31,6 +31,8 @@ export default function AddCustomerForm({
     email: "",
     website: "",
     industry_category: "",
+    industry_category_other: "",
+    lead_source: "",
     gst_number: "",
     pan_number: "",
     msme_number: "", // ✅ NEW
@@ -192,6 +194,7 @@ export default function AddCustomerForm({
   useEffect(() => {
     if (!customer || !open) return;
 
+    const isIndustryOther = customer.industry_category && !industryOptions.some(opt => opt.id === customer.industry_category);
     setFormData({
       customer_code: customer.customer_code || "",
       name: customer.name || "",
@@ -200,7 +203,9 @@ export default function AddCustomerForm({
       contact_number: customer.contact_number || "",
       email: customer.email || "",
       website: customer.website || "",
-      industry_category: customer.industry_category || "",
+      industry_category: isIndustryOther ? "other" : (customer.industry_category || ""),
+      industry_category_other: isIndustryOther ? customer.industry_category : "",
+      lead_source: customer.lead_source || "",
       gst_number: customer.gst_number || "",
       pan_number: customer.pan_number || customer.pan || "",
       msme_number: customer.msme_number || "", // ✅ NEW
@@ -263,6 +268,8 @@ export default function AddCustomerForm({
         email: "",
         website: "",
         industry_category: "",
+        industry_category_other: "",
+        lead_source: "",
         gst_number: "",
         pan_number: "",
         msme_number: "", // ✅ NEW
@@ -344,6 +351,8 @@ export default function AddCustomerForm({
       const lead = leads[0];
       setLeadFound(lead);
 
+      const isLeadIndustryOther = lead.industry_type && !industryOptions.some(opt => opt.id === lead.industry_type);
+
       setFormData(prev => ({
         ...prev,
         name: lead.company_name || prev.name,
@@ -352,7 +361,9 @@ export default function AddCustomerForm({
         email: lead.email_address || prev.email,
         city: lead.city || prev.city,
         state: lead.state || prev.state,
-        industry_category: lead.industry_type || prev.industry_category,
+        industry_category: isLeadIndustryOther ? "other" : (lead.industry_type || prev.industry_category),
+        industry_category_other: isLeadIndustryOther ? lead.industry_type : (prev.industry_category_other || ""),
+        lead_source: lead.lead_source || prev.lead_source,
         product_purchased: lead.product_interested || prev.product_purchased,
         lead: lead.id,
         // ✅ Auto-map new fields
@@ -427,6 +438,11 @@ export default function AddCustomerForm({
 
     setLoading(true);
     try {
+      let finalIndustry = formData.industry_category;
+      if (finalIndustry === "other") {
+        finalIndustry = formData.industry_category_other?.trim() || "other";
+      }
+
       const payload = {
         name: formData.name.trim(),
         contact_person: formData.contact_person?.trim() || "",
@@ -434,7 +450,8 @@ export default function AddCustomerForm({
         contact_number: formData.contact_number?.toString() || "",
         email: formData.email ? String(formData.email).trim() : "",
         website: formData.website?.trim() || "",
-        industry_category: formData.industry_category || "",
+        industry_category: finalIndustry || "",
+        lead_source: formData.lead_source?.trim() || "",
         gst_number: formData.gst_number?.trim().toUpperCase() || "",
         pan_number: formData.pan_number?.trim().toUpperCase() || "",
         msme_number: formData.msme_number?.trim() || "", // ✅ NEW
@@ -765,7 +782,14 @@ export default function AddCustomerForm({
                     <select
                       name="industry_category"
                       value={formData.industry_category}
-                      onChange={handleChange}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData(prev => ({
+                          ...prev,
+                          industry_category: val,
+                          industry_category_other: val !== "other" ? "" : prev.industry_category_other
+                        }));
+                      }}
                       className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
                     >
                       <option value="">Select Industry</option>
@@ -775,6 +799,16 @@ export default function AddCustomerForm({
                         </option>
                       ))}
                     </select>
+                    {formData.industry_category === "other" && (
+                      <input
+                        name="industry_category_other"
+                        type="text"
+                        className="w-full px-3 py-2 mt-1.5 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                        value={formData.industry_category_other}
+                        onChange={(e) => setFormData(prev => ({ ...prev, industry_category_other: e.target.value }))}
+                        placeholder="Specify other industry..."
+                      />
+                    )}
                   </div>
 
                   <div className="space-y-1">

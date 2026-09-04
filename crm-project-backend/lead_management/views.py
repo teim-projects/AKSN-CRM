@@ -304,6 +304,79 @@ class LeadViewSet(viewsets.ModelViewSet):
             "company_name": lead.company_name,
             "contact_person": lead.contact_person,
         }, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], url_path='check-mobile')
+    def check_mobile(self, request):
+        mobile = request.query_params.get("mobile", "").strip()
+        lead_id = request.query_params.get("lead_id")
+
+        if not mobile:
+            return Response(
+                {"error": "Mobile number is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        digits = "".join(filter(str.isdigit, str(mobile)))
+        if len(digits) < 10:
+            return Response({
+                "exists": False,
+                "message": "Enter at least 10 digits to verify mobile number."
+            }, status=status.HTTP_200_OK)
+
+        target_digits = digits[-10:]
+
+        qs = (
+            lead_management.objects
+            .exclude(mobile_number__isnull=True)
+            .exclude(mobile_number="")
+            .select_related('created_by', 'assigned_executive')
+        )
+        if lead_id:
+            try:
+                qs = qs.exclude(pk=int(lead_id))
+            except (ValueError, TypeError):
+                pass
+
+        matching_lead = None
+        for l in qs:
+            l_digits = "".join(filter(str.isdigit, str(l.mobile_number or "")))
+            if l_digits:
+                if l_digits == digits or (len(l_digits) >= 10 and l_digits[-10:] == target_digits):
+                    matching_lead = l
+                    break
+
+        if matching_lead:
+            assigned_user = matching_lead.assigned_executive
+            creator = matching_lead.created_by
+            target_user = assigned_user or creator
+
+            first_last = f"{getattr(target_user, 'first_name', '')} {getattr(target_user, 'last_name', '')}".strip() if target_user else ""
+            person_name = first_last if first_last else (getattr(target_user, 'email', '') if target_user and getattr(target_user, 'email', '') else "Staff")
+            person_email = getattr(target_user, 'email', '') if target_user and getattr(target_user, 'email', '') else "No email"
+            comp_name = matching_lead.company_name or ""
+
+            if assigned_user:
+                message = f"This lead is already assigned to {person_name} ({person_email})."
+            else:
+                message = f"This lead has already been added by {person_name} ({person_email})."
+
+            return Response({
+                "exists": True,
+                "lead_id": matching_lead.id,
+                "company_name": comp_name,
+                "contact_person": matching_lead.contact_person or "",
+                "assigned_to_name": person_name,
+                "assigned_to_email": person_email,
+                "added_by_name": person_name,
+                "added_by_email": person_email,
+                "message": message
+            }, status=status.HTTP_200_OK)
+
+        return Response({
+            "exists": False,
+            "message": "Mobile number is available."
+        }, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=['post'], url_path='convert-to-customer')
     @transaction.atomic
     def convert_to_customer(self, request, pk=None):
@@ -334,6 +407,12 @@ class LeadViewSet(viewsets.ModelViewSet):
             if not existing_customer.billing_address and lead.address:
                 existing_customer.billing_address = lead.address
                 updated_fields.append("billing_address")
+            if not existing_customer.industry_category and lead.industry_type:
+                existing_customer.industry_category = lead.industry_type
+                updated_fields.append("industry_category")
+            if not getattr(existing_customer, "lead_source", None) and lead.lead_source:
+                existing_customer.lead_source = lead.lead_source
+                updated_fields.append("lead_source")
             existing_customer.save(update_fields=updated_fields)
             
             lead.converted_to_customer = existing_customer
@@ -352,13 +431,14 @@ class LeadViewSet(viewsets.ModelViewSet):
         customer_data = {
             "lead": lead.id,
             "name": lead.company_name or lead.contact_person or "Unknown",
-            "contact_person": lead.contact_person,
-            "contact_number": lead.mobile_number,
-            "email": lead.email_address,
-            "city": lead.city,
-            "state": lead.state,
-            "industry_category": lead.industry_type,
-            "product_purchased": lead.product_interested,
+            "contact_person": lead.contact_person or "",
+            "contact_number": lead.mobile_number or "",
+            "email": lead.email_address or None,
+            "city": lead.city or "",
+            "state": lead.state or "",
+            "industry_category": lead.industry_type or "",
+            "lead_source": lead.lead_source or "",
+            "product_purchased": lead.product_interested or [],
             # ✅ Auto-map new fields
             "gst_number": lead.gst_number or "",
             "pan_number": lead.pan_number or "",
@@ -366,7 +446,7 @@ class LeadViewSet(viewsets.ModelViewSet):
             "project_value": float(lead.amount) if lead.amount else None,
             "sales_executive": lead.assigned_executive_id,
             "designation": "",
-            "website": "",
+            "website": lead.linkedin_profile_url or "",
             "service_package": [],
             "payment_terms": "",
             "amc_start_date": None,
@@ -393,8 +473,17 @@ class LeadViewSet(viewsets.ModelViewSet):
                 "customer_name": customer.name
             }, status=status.HTTP_201_CREATED)
         else:
+            error_details = customer_serializer.errors
+            first_err = ""
+            for field, errs in error_details.items():
+                err_text = ", ".join([str(e) for e in errs]) if isinstance(errs, list) else str(errs)
+                first_err = f"{field}: {err_text}"
+                break
             return Response(
-                {"error": "Failed to create customer", "details": customer_serializer.errors},
+                {
+                    "error": f"Failed to create customer ({first_err})" if first_err else "Failed to create customer",
+                    "details": error_details
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
 

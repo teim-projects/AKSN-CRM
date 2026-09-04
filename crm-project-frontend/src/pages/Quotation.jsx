@@ -210,6 +210,12 @@ export default function Quotation() {
     let filtered = allRows;
 
     switch (filterType) {
+      case "ahilyanagar":
+        filtered = allRows.filter((q) => q.quotation_for === "Ahilyanagar");
+        break;
+      case "pune":
+        filtered = allRows.filter((q) => q.quotation_for === "Pune" || !q.quotation_for);
+        break;
       case "finalized":
         filtered = allRows.filter((q) => {
           const activeVersion = q.versions?.find((v) => v.is_active);
@@ -238,6 +244,8 @@ export default function Quotation() {
 
   const filterOptions = [
     { value: "all", label: "All Records" },
+    { value: "ahilyanagar", label: "Ahilyanagar" },
+    { value: "pune", label: "Pune" },
     { value: "finalized", label: "Finalized Quotations" },
     { value: "dropped", label: "Dropped Quotations" },
     { value: "active", label: "Active / Pending" },
@@ -477,6 +485,21 @@ export default function Quotation() {
             </span>
           )}
         </div>
+      )
+    },
+    {
+      key: "quotation_for",
+      label: "Quotation For",
+      render: (r) => (
+        <span
+          className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${
+            r.quotation_for === "Ahilyanagar"
+              ? "bg-amber-50 text-amber-700 border-amber-200"
+              : "bg-blue-50 text-blue-700 border-blue-200"
+          }`}
+        >
+          {r.quotation_for || "Pune"}
+        </span>
       )
     },
     {

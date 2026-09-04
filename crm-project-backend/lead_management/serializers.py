@@ -22,10 +22,33 @@ class CustomerSerializer(serializers.ModelSerializer):
         source="get_payment_terms_display",
         read_only=True
     )
-    industry_category_display = serializers.CharField(
-        source="get_industry_category_display",
-        read_only=True
+    industry_category = serializers.CharField(
+        max_length=100,
+        required=False,
+        allow_blank=True,
+        allow_null=True
     )
+    lead_source = serializers.CharField(
+        max_length=100,
+        required=False,
+        allow_blank=True,
+        allow_null=True
+    )
+    city = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
+    state = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
+    contact_person = serializers.CharField(max_length=200, required=False, allow_blank=True, allow_null=True)
+    billing_address = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    industry_category_display = serializers.SerializerMethodField()
+    lead_source_display = serializers.SerializerMethodField()
+
+    def get_industry_category_display(self, obj):
+        val = getattr(obj, "industry_category", "") or ""
+        return dict(IndustryType.choices).get(val, val)
+
+    def get_lead_source_display(self, obj):
+        val = getattr(obj, "lead_source", "") or ""
+        return dict(LeadSource.choices).get(val, val)
+
     has_project = serializers.SerializerMethodField()
 
     def get_has_project(self, obj):
@@ -309,7 +332,9 @@ class LeadSerializer(serializers.ModelSerializer):
         if not digits:
             return value
 
-        qs = lead_management.objects.exclude(mobile_number__isnull=True).exclude(mobile_number="")
+        target_digits = digits[-10:] if len(digits) >= 10 else digits
+
+        qs = lead_management.objects.exclude(mobile_number__isnull=True).exclude(mobile_number="").select_related('created_by', 'assigned_executive')
         if self.instance:
             qs = qs.exclude(pk=self.instance.pk)
 
@@ -317,12 +342,19 @@ class LeadSerializer(serializers.ModelSerializer):
             existing_digits = "".join(filter(str.isdigit, str(existing_lead.mobile_number)))
             if existing_digits:
                 if existing_digits == digits or (
-                    len(digits) >= 10 and len(existing_digits) >= 10 and digits[-10:] == existing_digits[-10:]
+                    len(existing_digits) >= 10 and len(digits) >= 10 and existing_digits[-10:] == target_digits
                 ):
-                    comp_info = f" (Company: {existing_lead.company_name})" if existing_lead.company_name else ""
-                    raise serializers.ValidationError(
-                        f"A lead with mobile number '{value}' already exists{comp_info}."
-                    )
+                    assigned_user = existing_lead.assigned_executive
+                    creator = existing_lead.created_by
+                    target_user = assigned_user or creator
+                    first_last = f"{getattr(target_user, 'first_name', '')} {getattr(target_user, 'last_name', '')}".strip() if target_user else ""
+                    person_name = first_last if first_last else (getattr(target_user, 'email', '') if target_user and getattr(target_user, 'email', '') else "Staff")
+                    person_email = getattr(target_user, 'email', '') if target_user and getattr(target_user, 'email', '') else "No email"
+                    if assigned_user:
+                        msg = f"This lead is already assigned to {person_name} ({person_email})."
+                    else:
+                        msg = f"This lead has already been added by {person_name} ({person_email})."
+                    raise serializers.ValidationError(msg)
 
         return value
 
