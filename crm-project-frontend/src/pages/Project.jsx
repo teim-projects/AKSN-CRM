@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 import Base from "../components/Base";
 import TableView from "../components/TableView";
@@ -120,11 +121,28 @@ export default function Project() {
       const data = await res.json();
       const results = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : [];
 
-      setAllRows(results);
-      setFilteredData(results);
-      setRows(results);
-      setTotalCount(results.length);
-      setTotalPages(Math.max(1, Math.ceil(results.length / itemsPerPage)));
+      const normalized = results.map((r) => ({
+        ...r,
+        customer_name:
+          r.customer_details?.company_name ||
+          r.customer_details?.name ||
+          (typeof r.customer === "string" ? r.customer : ""),
+        project_executive_name:
+          r.project_executive_details?.full_name ||
+          r.project_executive_details?.name ||
+          r.project_executive_details?.username ||
+          "",
+        amc_dates:
+          r.amc_start_date && r.amc_end_date
+            ? `${r.amc_start_date} to ${r.amc_end_date}`
+            : r.amc_start_date || r.amc_end_date || "",
+      }));
+
+      setAllRows(normalized);
+      setFilteredData(normalized);
+      setRows(normalized);
+      setTotalCount(normalized.length);
+      setTotalPages(Math.max(1, Math.ceil(normalized.length / itemsPerPage)));
     } catch (err) {
       setError(err.message || String(err));
       setRows([]);
@@ -508,34 +526,45 @@ export default function Project() {
             rowClassName={(row) => highlightedProjectId && String(row.id) === String(highlightedProjectId) ? "!bg-blue-100/90 font-bold border-l-4 border-l-blue-600 ring-2 ring-blue-400/60 shadow-md animate-pulse" : "hover:bg-slate-50/80 transition-colors duration-150"}
           />
         </div>
+      </div>
 
-        {/* FILTER DRAWER - DARK OVERLAY WITHOUT BLUR */}
-        {isFilterOpen && (
-          <div
-            className="fixed inset-0 w-screen h-screen bg-black/40 z-[999]"
-            onClick={() => setIsFilterOpen(false)}
-          />
-        )}
+      {/* FILTER DRAWER - PORTAL TO BODY PREVENTS LAYOUT PUSH AND WHITE BOTTOM STRIP */}
+      {typeof document !== "undefined" &&
+        createPortal(
+          <>
+            {isFilterOpen && (
+              <div
+                className="fixed inset-0 w-screen h-screen bg-black/40 z-[9999]"
+                onClick={() => setIsFilterOpen(false)}
+              />
+            )}
 
-        <div className={`fixed top-0 right-0 h-full w-full max-w-[380px] sm:w-[380px] bg-white shadow-2xl z-[1000] transition-transform duration-300 ease-in-out ${isFilterOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-          <div className="flex items-center justify-between p-5 border-b border-slate-200">
-            <h3 className="text-lg font-bold text-slate-900">Filters</h3>
-            <button
-              onClick={() => setIsFilterOpen(false)}
-              className="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1 cursor-pointer"
+            <div
+              className={`fixed top-0 right-0 h-screen w-full max-w-[380px] sm:w-[380px] bg-white shadow-2xl z-[10000] flex flex-col transition-transform duration-300 ease-in-out ${
+                isFilterOpen ? "translate-x-0" : "translate-x-full"
+              }`}
             >
-              ×
-            </button>
-          </div>
-          <div className="p-5 overflow-y-auto h-[calc(100vh-80px)]">
-            <AdvancedTableFilter
-              data={allRows}
-              onFilter={setFilteredData}
-              setItemsPerPage={setItemsPerPage}
-              columns={columns}
-            />
-          </div>
-        </div>
+              <div className="flex items-center justify-between p-5 border-b border-slate-200 flex-shrink-0">
+                <h3 className="text-lg font-bold text-slate-900">Filters</h3>
+                <button
+                  onClick={() => setIsFilterOpen(false)}
+                  className="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1 cursor-pointer"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="p-5 overflow-y-auto flex-1">
+                <AdvancedTableFilter
+                  data={allRows}
+                  onFilter={setFilteredData}
+                  setItemsPerPage={setItemsPerPage}
+                  columns={columns}
+                />
+              </div>
+            </div>
+          </>,
+          document.body
+        )}
 
         {/* ADD / EDIT PROJECT FORM MODAL */}
         <AddProjectForm
@@ -677,7 +706,6 @@ export default function Project() {
             </div>
           </div>
         )}
-      </div>
     </Base>
   );
 }

@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import { useSearchParams } from "react-router-dom";
 import Base from "../../components/Base";
 import TableView from "../../components/TableView";
 import { MdAdd, MdFilterList } from "react-icons/md";
@@ -7,6 +9,7 @@ import AdvancedTableFilter from "../AdvancedTableFilter";
 import { useUserRole } from "../../hooks/useAuth";
 
 export default function FollowUp() {
+  const [searchParams] = useSearchParams();
   const BASE_API = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
   const API_URL = `${BASE_API}/lead/lead/`;
   const FOLLOWUP_API_URL = `${BASE_API}/lead/lead-followups/`;
@@ -25,8 +28,15 @@ export default function FollowUp() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Quick Filter state
-  const [filterType, setFilterType] = useState("all");
+  const [filterType, setFilterType] = useState(searchParams.get("filter") || "all");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+
+  useEffect(() => {
+    const f = searchParams.get("filter");
+    if (f) {
+      setFilterType(f);
+    }
+  }, [searchParams]);
 
   // Advanced Filter state
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -539,34 +549,45 @@ export default function FollowUp() {
             rowClassName={getRowClassName}
           />
         </div>
+      </div>
 
-        {/* ADVANCED FILTER DRAWER - DARK OVERLAY WITHOUT BLUR */}
-        {isFilterOpen && (
-          <div 
-            className="fixed inset-0 bg-black/40 z-[999]" 
-            onClick={() => setIsFilterOpen(false)} 
-          />
-        )}
-        
-        <div className={`fixed top-0 right-0 h-full w-full max-w-[380px] sm:w-[380px] bg-white shadow-2xl z-[1000] transition-transform duration-300 ease-in-out ${isFilterOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-          <div className="flex items-center justify-between p-5 border-b border-slate-200">
-            <h3 className="text-lg font-bold text-slate-900">Advanced Filters</h3>
-            <button 
-              onClick={() => setIsFilterOpen(false)}
-              className="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1"
+      {/* ADVANCED FILTER DRAWER - PORTAL TO BODY PREVENTS LAYOUT PUSH AND WHITE BOTTOM STRIP */}
+      {typeof document !== "undefined" &&
+        createPortal(
+          <>
+            {isFilterOpen && (
+              <div
+                className="fixed inset-0 w-screen h-screen bg-black/40 z-[9999]"
+                onClick={() => setIsFilterOpen(false)}
+              />
+            )}
+
+            <div
+              className={`fixed top-0 right-0 h-screen w-full max-w-[380px] sm:w-[380px] bg-white shadow-2xl z-[10000] flex flex-col transition-transform duration-300 ease-in-out ${
+                isFilterOpen ? "translate-x-0" : "translate-x-full"
+              }`}
             >
-              ×
-            </button>
-          </div>
-          <div className="p-5 overflow-y-auto h-[calc(100%-80px)]">
-            <AdvancedTableFilter
-              data={allRows}
-              onFilter={setFilteredData}
-              setItemsPerPage={setItemsPerPage}
-              columns={columns}
-            />
-          </div>
-        </div>
+              <div className="flex items-center justify-between p-5 border-b border-slate-200 flex-shrink-0">
+                <h3 className="text-lg font-bold text-slate-900">Advanced Filters</h3>
+                <button
+                  onClick={() => setIsFilterOpen(false)}
+                  className="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1 cursor-pointer"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="p-5 overflow-y-auto flex-1">
+                <AdvancedTableFilter
+                  data={allRows}
+                  onFilter={setFilteredData}
+                  setItemsPerPage={setItemsPerPage}
+                  columns={columns}
+                />
+              </div>
+            </div>
+          </>,
+          document.body
+        )}
 
         {/* Add/Edit Follow-up Form */}
         <AddLeadFollowUpForm
@@ -602,7 +623,6 @@ export default function FollowUp() {
             setShowFollowUpForm(true);
           }}
         />
-      </div>
     </Base>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Base from '../Base';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom'; 
@@ -451,33 +452,43 @@ const ProductList = () => {
                 )}
             </div>
 
-            {/* FILTER DRAWER - DARK OVERLAY WITHOUT BLUR */}
-            {isFilterOpen && (
-                <div 
-                    className="fixed inset-0 bg-black/40 z-[999]" 
-                    onClick={() => setIsFilterOpen(false)} 
-                />
-            )}
-            
-            <div className={`fixed top-0 right-0 h-full w-full max-w-[380px] sm:w-[380px] bg-white shadow-2xl z-[1000] transition-transform duration-300 ease-in-out ${isFilterOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-                <div className="flex items-center justify-between p-5 border-b border-slate-200">
-                    <h3 className="text-lg font-bold text-slate-900">Filters</h3>
-                    <button 
-                        onClick={() => setIsFilterOpen(false)}
-                        className="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1"
-                    >
-                        ×
-                    </button>
-                </div>
-                <div className="p-5 overflow-y-auto h-[calc(100%-80px)]">
-                    <AdvancedTableFilter
-                        data={allProducts}
-                        onFilter={setFilteredData}
-                        setItemsPerPage={setItemsPerPage}
-                        columns={filterColumns}
-                    />
-                </div>
-            </div>
+            {/* FILTER DRAWER - PORTAL TO BODY PREVENTS LAYOUT PUSH AND WHITE BOTTOM STRIP */}
+            {typeof document !== "undefined" &&
+                createPortal(
+                    <>
+                        {isFilterOpen && (
+                            <div
+                                className="fixed inset-0 w-screen h-screen bg-black/40 z-[9999]"
+                                onClick={() => setIsFilterOpen(false)}
+                            />
+                        )}
+
+                        <div
+                            className={`fixed top-0 right-0 h-screen w-full max-w-[380px] sm:w-[380px] bg-white shadow-2xl z-[10000] flex flex-col transition-transform duration-300 ease-in-out ${
+                                isFilterOpen ? "translate-x-0" : "translate-x-full"
+                            }`}
+                        >
+                            <div className="flex items-center justify-between p-5 border-b border-slate-200 flex-shrink-0">
+                                <h3 className="text-lg font-bold text-slate-900">Filters</h3>
+                                <button
+                                    onClick={() => setIsFilterOpen(false)}
+                                    className="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1 cursor-pointer"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                            <div className="p-5 overflow-y-auto flex-1">
+                                <AdvancedTableFilter
+                                    data={allProducts}
+                                    onFilter={setFilteredData}
+                                    setItemsPerPage={setItemsPerPage}
+                                    columns={filterColumns}
+                                />
+                            </div>
+                        </div>
+                    </>,
+                    document.body
+                )}
 
             {/* RECORD VIEWER - Slides in from right */}
             <RecordViewer

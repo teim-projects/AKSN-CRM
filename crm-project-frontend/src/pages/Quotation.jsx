@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 import Base from "../components/Base";
 import TableView from "../components/TableView";
@@ -46,8 +47,15 @@ export default function Quotation() {
   const [editingQuotation, setEditingQuotation] = useState(null);
 
   // Quick Filter state
-  const [filterType, setFilterType] = useState("all");
+  const [filterType, setFilterType] = useState(searchParams.get("filter") || "all");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+
+  useEffect(() => {
+    const f = searchParams.get("filter");
+    if (f) {
+      setFilterType(f);
+    }
+  }, [searchParams]);
 
   // Stats state
   const [stats, setStats] = useState({
@@ -492,11 +500,10 @@ export default function Quotation() {
       label: "Quotation For",
       render: (r) => (
         <span
-          className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${
-            r.quotation_for === "Ahilyanagar"
+          className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${r.quotation_for === "Ahilyanagar"
               ? "bg-amber-50 text-amber-700 border-amber-200"
               : "bg-blue-50 text-blue-700 border-blue-200"
-          }`}
+            }`}
         >
           {r.quotation_for || "Pune"}
         </span>
@@ -987,33 +994,43 @@ export default function Quotation() {
         </div>
       </div>
 
-      {/* FILTER DRAWER */}
-      {isFilterOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-[999]"
-          onClick={() => setIsFilterOpen(false)}
-        />
-      )}
+      {/* FILTER DRAWER - PORTAL TO BODY PREVENTS LAYOUT PUSH AND WHITE BOTTOM STRIP */}
+      {typeof document !== "undefined" &&
+        createPortal(
+          <>
+            {isFilterOpen && (
+              <div
+                className="fixed inset-0 w-screen h-screen bg-black/40 z-[9999]"
+                onClick={() => setIsFilterOpen(false)}
+              />
+            )}
 
-      <div className={`fixed top-0 right-0 h-full w-full max-w-[380px] sm:w-[380px] bg-white shadow-2xl z-[1000] transition-transform duration-300 ease-in-out ${isFilterOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-        <div className="flex items-center justify-between p-5 border-b border-slate-200">
-          <h3 className="text-lg font-bold text-slate-900">Filters</h3>
-          <button
-            onClick={() => setIsFilterOpen(false)}
-            className="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1"
-          >
-            ×
-          </button>
-        </div>
-        <div className="p-5 overflow-y-auto h-[calc(100%-80px)]">
-          <AdvancedTableFilter
-            data={allRows}
-            onFilter={setFilteredData}
-            setItemsPerPage={setItemsPerPage}
-            columns={columns}
-          />
-        </div>
-      </div>
+            <div
+              className={`fixed top-0 right-0 h-screen w-full max-w-[380px] sm:w-[380px] bg-white shadow-2xl z-[10000] flex flex-col transition-transform duration-300 ease-in-out ${
+                isFilterOpen ? "translate-x-0" : "translate-x-full"
+              }`}
+            >
+              <div className="flex items-center justify-between p-5 border-b border-slate-200 flex-shrink-0">
+                <h3 className="text-lg font-bold text-slate-900">Filters</h3>
+                <button
+                  onClick={() => setIsFilterOpen(false)}
+                  className="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1 cursor-pointer"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="p-5 overflow-y-auto flex-1">
+                <AdvancedTableFilter
+                  data={allRows}
+                  onFilter={setFilteredData}
+                  setItemsPerPage={setItemsPerPage}
+                  columns={columns}
+                />
+              </div>
+            </div>
+          </>,
+          document.body
+        )}
 
       {/* QUOTATION FORM MODAL */}
       {showQuotationForm && (

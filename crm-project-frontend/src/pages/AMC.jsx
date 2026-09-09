@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 import Base from "../components/Base";
 import TableView from "../components/TableView";
@@ -103,8 +104,15 @@ export default function AMC() {
   }, [highlightedAmcId]);
 
   // Quick filter state
-  const [filterType, setFilterType] = useState("all");
+  const [filterType, setFilterType] = useState(searchParams.get("filter") || "all");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+
+  useEffect(() => {
+    const f = searchParams.get("filter");
+    if (f) {
+      setFilterType(f);
+    }
+  }, [searchParams]);
 
   // Filter drawer state
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -160,11 +168,28 @@ export default function AMC() {
       const data = await res.json();
       const list = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : [];
 
-      setAllRows(list);
-      setFilteredData(list);
-      setRows(list);
-      setTotalCount(list.length);
-      setTotalPages(Math.max(1, Math.ceil(list.length / itemsPerPage)));
+      const normalized = list.map((r) => ({
+        ...r,
+        customer_name:
+          r.customer_details?.company_name ||
+          r.customer_details?.name ||
+          (typeof r.customer === "string" ? r.customer : ""),
+        support_coordinator_name:
+          r.support_coordinator_details?.full_name ||
+          r.support_coordinator_details?.name ||
+          r.support_coordinator_details?.username ||
+          "",
+        period:
+          r.start_date && r.end_date
+            ? `${r.start_date} to ${r.end_date}`
+            : r.start_date || r.end_date || "",
+      }));
+
+      setAllRows(normalized);
+      setFilteredData(normalized);
+      setRows(normalized);
+      setTotalCount(normalized.length);
+      setTotalPages(Math.max(1, Math.ceil(normalized.length / itemsPerPage)));
     } catch (err) {
       console.error("Fetch AMC error:", err);
       setError(err.message || String(err));
@@ -729,35 +754,45 @@ export default function AMC() {
             emptyMessage="No AMC contracts matched the active criteria"
           />
         </div>
+      </div>
 
-        {isFilterOpen && (
-          <div
-            className="fixed inset-0 bg-black/40 z-[999]"
-            onClick={() => setIsFilterOpen(false)}
-          />
-        )}
-        <div
-          className={`fixed top-0 right-0 h-full w-full max-w-[380px] sm:w-[380px] bg-white shadow-2xl z-[1000] transition-transform duration-300 ease-in-out ${isFilterOpen ? "translate-x-0" : "translate-x-full"
-            }`}
-        >
-          <div className="flex items-center justify-between p-5 border-b border-slate-200">
-            <h3 className="text-lg font-bold text-slate-900">Filters</h3>
-            <button
-              onClick={() => setIsFilterOpen(false)}
-              className="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1"
+      {/* FILTER DRAWER - PORTAL TO BODY PREVENTS LAYOUT PUSH AND WHITE BOTTOM STRIP */}
+      {typeof document !== "undefined" &&
+        createPortal(
+          <>
+            {isFilterOpen && (
+              <div
+                className="fixed inset-0 w-screen h-screen bg-black/40 z-[9999]"
+                onClick={() => setIsFilterOpen(false)}
+              />
+            )}
+
+            <div
+              className={`fixed top-0 right-0 h-screen w-full max-w-[380px] sm:w-[380px] bg-white shadow-2xl z-[10000] flex flex-col transition-transform duration-300 ease-in-out ${
+                isFilterOpen ? "translate-x-0" : "translate-x-full"
+              }`}
             >
-              ×
-            </button>
-          </div>
-          <div className="p-5 overflow-y-auto h-[calc(100vh-80px)]">
-            <AdvancedTableFilter
-              data={allRows}
-              onFilter={setFilteredData}
-              setItemsPerPage={setItemsPerPage}
-              columns={columns}
-            />
-          </div>
-        </div>
+              <div className="flex items-center justify-between p-5 border-b border-slate-200 flex-shrink-0">
+                <h3 className="text-lg font-bold text-slate-900">Filters</h3>
+                <button
+                  onClick={() => setIsFilterOpen(false)}
+                  className="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1 cursor-pointer"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="p-5 overflow-y-auto flex-1">
+                <AdvancedTableFilter
+                  data={allRows}
+                  onFilter={setFilteredData}
+                  setItemsPerPage={setItemsPerPage}
+                  columns={columns}
+                />
+              </div>
+            </div>
+          </>,
+          document.body
+        )}
 
         <AddAMCContractForm
           open={showForm}
@@ -928,7 +963,6 @@ export default function AMC() {
           token={token}
           baseUrl={BASE_API}
         />
-      </div>
     </Base>
   );
 }
