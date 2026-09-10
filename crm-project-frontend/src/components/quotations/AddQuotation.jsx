@@ -248,8 +248,31 @@ export default function AddQuotation({ id, leadData, onBack }) {
     const prods = leadData.product_interested || leadData.product_interested_list || [];
     if (Array.isArray(prods) && prods.length > 0) {
       const mappedItems = prods.map((p, idx) => {
-        const prodName = typeof p === "string" ? p : (p?.product || p?.name || p?.product_name || `Item ${idx + 1}`);
-        const prodVal = typeof p === "object" && p !== null ? (p?.value || p?.price || p?.amount || 0) : (leadData.amount || 0);
+        let prodName = "";
+        let prodVal = typeof p === "object" && p !== null ? (p?.value || p?.price || p?.amount || 0) : (leadData.amount || 0);
+
+        if (typeof p === "object" && p !== null) {
+          prodName = p?.product || p?.name || p?.product_name || "";
+        } else {
+          prodName = String(p || "").trim();
+        }
+
+        // If prodName is numeric ID or matches product, resolve from availableProducts
+        if (availableProducts && availableProducts.length > 0) {
+          const match = availableProducts.find(
+            (pr) => String(pr.id) === String(prodName) || String(pr.id) === String(p) || pr.name === prodName
+          );
+          if (match) {
+            prodName = match.name || match.product_name || prodName;
+            if (!prodVal && match.unit_price) prodVal = match.unit_price;
+          }
+        }
+
+        // If prodName is still numeric or empty, fallback
+        if (!prodName || /^\d+$/.test(prodName)) {
+          prodName = `Item ${idx + 1}`;
+        }
+
         return {
           id: Date.now() + idx,
           product_name: prodName,
@@ -261,7 +284,7 @@ export default function AddQuotation({ id, leadData, onBack }) {
       });
       setItems(mappedItems);
     }
-  }, [isEdit, leadData]);
+  }, [isEdit, leadData, availableProducts]);
 
   // Load products
   useEffect(() => {

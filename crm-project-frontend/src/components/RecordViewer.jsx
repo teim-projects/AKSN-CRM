@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 
 export default function RecordViewer({
   isOpen,
@@ -6,6 +6,26 @@ export default function RecordViewer({
   record,
   title = "Record Details",
 }) {
+  const [productList, setProductList] = useState([]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const baseApi = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
+    const token = localStorage.getItem("access") || localStorage.getItem("token") || "";
+    fetch(`${baseApi}/product/products/?limit=1000`, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        const list = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : [];
+        setProductList(list);
+      })
+      .catch(() => setProductList([]));
+  }, [isOpen]);
+
   if (!isOpen || !record) return null;
 
   // Fields to hide - these are internal/system fields
@@ -135,14 +155,30 @@ export default function RecordViewer({
       try {
         if (Array.isArray(value)) {
           if (value.length === 0) return "—";
-          // Check if array contains objects with name property
+          // Check if array contains objects with name or product property
           if (typeof value[0] === "object" && value[0] !== null) {
-            if (value[0].name) {
-              return value.map(item => item.name).join(", ");
-            }
+            const names = value.map((item) => {
+              let p = item.name || item.product || item.product_name || "";
+              p = String(p).trim();
+              if (/^\d+$/.test(p) && productList.length > 0) {
+                const found = productList.find((pr) => String(pr.id) === p);
+                if (found) p = found.name;
+              }
+              return p;
+            }).filter(Boolean);
+            if (names.length > 0) return names.join(", ");
             return JSON.stringify(value, null, 2);
           }
-          return value.join(", ");
+          // Array of primitives
+          const mapped = value.map((item) => {
+            let str = String(item).trim();
+            if (/^\d+$/.test(str) && productList.length > 0) {
+              const found = productList.find((pr) => String(pr.id) === str);
+              if (found) str = found.name;
+            }
+            return str;
+          });
+          return mapped.join(", ");
         }
         // Check if object has name property
         if (value !== null && value.name) {
@@ -152,6 +188,11 @@ export default function RecordViewer({
       } catch {
         return "[Complex Data Object]";
       }
+    }
+
+    if ((key === "product" || key === "product_purchased" || key === "product_interested") && /^\d+$/.test(String(value).trim()) && productList.length > 0) {
+      const found = productList.find((pr) => String(pr.id) === String(value).trim());
+      if (found) return found.name;
     }
 
     // Format date strings

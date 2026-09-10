@@ -6,12 +6,13 @@ import TableView from "../components/TableView";
 import LeadDetails from "../components/lead/LeadDetails";
 import AddLeadFollowUpForm from "../components/lead/AddLeadFollowUpForm";
 import AddLeadForm from "../components/lead/AddLeadForm";
-import { MdEdit, MdDelete, MdOutlineRemoveRedEye, MdEditDocument, MdAdd, MdFilterList, MdZoomIn } from "react-icons/md";
+import { MdEdit, MdDelete, MdOutlineRemoveRedEye, MdEditDocument, MdAdd, MdFilterList, MdZoomIn, MdUpload } from "react-icons/md";
 import Swal from "sweetalert2";
 import { useUserRole } from '../hooks/useAuth';
 import AddQuotation from "../components/quotations/AddQuotation";
 import AdvancedTableFilter from "../components/AdvancedTableFilter";
 import RecordViewer from "../components/RecordViewer";
+import ImportLeadModal from "../components/lead/ImportLeadModal";
 
 export default function Lead() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -38,6 +39,7 @@ export default function Lead() {
 
   const [showLeadForm, setShowLeadForm] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // Record Viewer state
   const [viewOpen, setViewOpen] = useState(false);
@@ -494,14 +496,24 @@ export default function Lead() {
               </p>
             </div>
           </div>
-          <div className="mt-3 md:mt-0 flex items-center gap-3">
+          <div className="mt-3 md:mt-0 flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => setIsFilterOpen(true)}
-              className="px-4 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-1.5"
+              className="px-4 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
             >
               <MdFilterList className="text-slate-400" />
               Filter
             </button>
+            {canCreateLead && (
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="px-3.5 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 hover:text-blue-600 hover:border-blue-200 transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
+                title="Import Leads from Excel or CSV"
+              >
+                <MdUpload className="text-blue-600 text-sm" />
+                Import
+              </button>
+            )}
             {canCreateLead && (
               <button
                 onClick={() => { setEditingLead(null); setShowLeadForm(true); }}
@@ -624,6 +636,14 @@ export default function Lead() {
           }}
         />
       )}
+
+      <ImportLeadModal
+        open={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onSuccess={fetchData}
+        baseApi={BASE_API}
+        token={token}
+      />
     </Base>
   );
 }

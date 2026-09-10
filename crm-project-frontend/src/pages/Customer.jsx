@@ -42,6 +42,7 @@ export default function Customer() {
   // Filter state
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filteredData, setFilteredData] = useState([]);
+  const [productList, setProductList] = useState([]);
 
   const [highlightedCustomerId, setHighlightedCustomerId] = useState(null);
 
@@ -201,9 +202,35 @@ export default function Customer() {
     }
   };
 
-  const getProductNames = (productIds) => {
-    if (!productIds || productIds.length === 0) return "-";
-    return `${productIds.length} product(s)`;
+  useEffect(() => {
+    const headers = {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+    fetch(`${BASE_API}/product/products/?limit=1000`, { headers })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        const list = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : [];
+        setProductList(list);
+      })
+      .catch(() => setProductList([]));
+  }, [BASE_API, token]);
+
+  const getProductNames = (productItems) => {
+    if (!productItems || productItems.length === 0) return "-";
+    const rawList = Array.isArray(productItems) ? productItems : [productItems];
+    const names = rawList
+      .map((item) => {
+        let val = typeof item === "object" && item !== null ? (item.product || item.name || "") : String(item || "");
+        val = val.trim();
+        if (/^\d+$/.test(val) && productList.length > 0) {
+          const found = productList.find((p) => String(p.id) === val);
+          if (found) val = found.name;
+        }
+        return val;
+      })
+      .filter(Boolean);
+    return names.length > 0 ? names.join(", ") : "-";
   };
 
   const getServiceNames = (serviceIds) => {

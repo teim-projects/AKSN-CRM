@@ -225,9 +225,11 @@ export default function AddLeadForm({
         company_name: lead.company_name || "",
         mobile_number: lead.mobile_number || "",
         linkedin_profile_url: lead.linkedin_profile_url || "",
-        state: lead.state || "",
         product_interested: Array.isArray(lead.product_interested)
-          ? lead.product_interested
+          ? lead.product_interested.map(p => {
+              const matched = products.find(pr => pr.id === p || String(pr.id) === String(p) || pr.name === p);
+              return matched ? matched.name : (typeof p === 'object' && p !== null ? (p.name || p.product || '') : String(p));
+            }).filter(Boolean)
           : lead.product_interested
             ? [lead.product_interested]
             : [],
@@ -302,7 +304,7 @@ export default function AddLeadForm({
       setShowOtherLeadSource(false);
       setShowOtherIndustry(false);
     }
-  }, [open, lead, isAdmin, userInfo]);
+  }, [open, lead, isAdmin, userInfo, products]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -321,7 +323,7 @@ export default function AddLeadForm({
         let total = 0;
         values.forEach((val) => {
           const prod = products.find(
-            (p) => p.id === val || p.id === Number(val) || p.name === val
+            (p) => p.name === val || p.id === val || String(p.id) === String(val) || String(p.name).toLowerCase() === String(val).toLowerCase()
           );
           if (prod && prod.unit_price) {
             total += parseFloat(prod.unit_price) || 0;
@@ -688,8 +690,9 @@ export default function AddLeadForm({
   };
 
   const productSelectOptions = products.map((p) => ({
-    value: p.id,
-    label: p.name,
+    value: p.name || p.product_name || String(p.id),
+    id: p.id,
+    label: p.name || p.product_name,
   }));
 
   if (!open) return null;
@@ -838,7 +841,11 @@ export default function AddLeadForm({
                       isMulti
                       options={productSelectOptions}
                       value={productSelectOptions.filter(option =>
-                        (formData.product_interested || []).includes(option.value)
+                        (formData.product_interested || []).some(item =>
+                          String(item) === String(option.value) ||
+                          String(item) === String(option.id) ||
+                          String(item).toLowerCase() === String(option.label).toLowerCase()
+                        )
                       )}
                       onChange={(selected) => handleMultiSelectChange('product_interested', selected)}
                       placeholder="Select products..."

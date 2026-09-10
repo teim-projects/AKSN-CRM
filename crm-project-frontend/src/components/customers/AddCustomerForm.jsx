@@ -582,15 +582,26 @@ export default function AddCustomerForm({
     if (!Array.isArray(raw)) return [];
     return raw.map((item) => {
       if (typeof item === "object" && item !== null) {
+        let pName = item.product || item.name || item.product_name || "";
+        pName = String(pName).trim();
+        if (/^\d+$/.test(pName) && products.length > 0) {
+          const match = products.find((p) => String(p.id) === pName);
+          if (match) pName = match.name;
+        }
         return {
-          product: item.product || item.name || item.product_name || "",
+          product: pName,
           value: item.value !== undefined && item.value !== null ? item.value : (item.price !== undefined ? item.price : (item.project_value !== undefined ? item.project_value : "")),
           amc_start_date: item.amc_start_date || formData.amc_start_date || "",
           amc_end_date: item.amc_end_date || formData.amc_end_date || "",
         };
       }
+      let str = String(item).trim();
+      if (/^\d+$/.test(str) && products.length > 0) {
+        const match = products.find((p) => String(p.id) === str);
+        if (match) str = match.name;
+      }
       return {
-        product: String(item),
+        product: str,
         value: "",
         amc_start_date: formData.amc_start_date || "",
         amc_end_date: formData.amc_end_date || "",

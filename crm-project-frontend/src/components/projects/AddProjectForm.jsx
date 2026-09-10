@@ -151,7 +151,12 @@ export default function AddProjectForm({
       });
       const custProds = initialCustomer.product_purchased || initialCustomer.product_purchased_list || [];
       const firstItem = Array.isArray(custProds) ? custProds[0] : custProds;
-      const firstProd = typeof firstItem === "object" && firstItem !== null ? (firstItem.product || firstItem.name || "") : String(firstItem || "");
+      let firstProd = typeof firstItem === "object" && firstItem !== null ? (firstItem.product || firstItem.name || "") : String(firstItem || "");
+      firstProd = firstProd.trim();
+      if (/^\d+$/.test(firstProd) && products.length > 0) {
+        const matchP = products.find(p => String(p.id) === firstProd);
+        if (matchP) firstProd = matchP.name;
+      }
       setSelectedProduct(firstProd);
     } else {
       setFormData({
@@ -233,11 +238,12 @@ export default function AddProjectForm({
     setLoading(true);
 
     try {
+      const finalProd = selectedProductSelectOption?.productObj?.name || (selectedProduct && !/^\d+$/.test(String(selectedProduct).trim()) ? selectedProduct : (selectedProductSelectOption?.label || selectedProduct));
       const payload = {
         ...formData,
         customer: parseInt(formData.customer, 10),
         project_executive: formData.project_executive ? parseInt(formData.project_executive, 10) : null,
-        product: selectedProduct ? [selectedProduct] : [],
+        product: finalProd ? [finalProd] : [],
         team_members: formData.team_members || "",
         project_value: formData.project_value ? parseFloat(formData.project_value) : 0.0,
         start_date: formData.start_date || null,

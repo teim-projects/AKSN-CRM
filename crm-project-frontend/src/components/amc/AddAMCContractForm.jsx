@@ -113,11 +113,16 @@ export default function AddAMCContractForm({
         scope_of_support: amcContract.scope_of_support || "",
       });
     } else if (initialProject) {
-      const prodName = Array.isArray(initialProject.product)
+      let prodName = Array.isArray(initialProject.product)
         ? initialProject.product[0] || ""
         : typeof initialProject.product === "string"
         ? initialProject.product
         : "";
+      prodName = String(prodName || "").trim();
+      if (/^\d+$/.test(prodName) && products.length > 0) {
+        const foundP = products.find(p => String(p.id) === prodName);
+        if (foundP) prodName = foundP.name || foundP.product_name || prodName;
+      }
 
       setFormData({
         contract_id: "Auto Generated",
@@ -132,11 +137,16 @@ export default function AddAMCContractForm({
         scope_of_support: initialProject.project_scope_requirements || "",
       });
     } else if (initialCustomer) {
-      const firstProd = Array.isArray(initialCustomer.product_purchased)
+      let firstProd = Array.isArray(initialCustomer.product_purchased)
         ? typeof initialCustomer.product_purchased[0] === "object"
           ? initialCustomer.product_purchased[0]?.product
           : initialCustomer.product_purchased[0]
         : "";
+      firstProd = String(firstProd || "").trim();
+      if (/^\d+$/.test(firstProd) && products.length > 0) {
+        const foundP = products.find(p => String(p.id) === firstProd);
+        if (foundP) firstProd = foundP.name || foundP.product_name || firstProd;
+      }
 
       setFormData({
         contract_id: "Auto Generated",
@@ -164,7 +174,7 @@ export default function AddAMCContractForm({
         scope_of_support: "",
       });
     }
-  }, [open, amcContract, initialProject, initialCustomer, isAdmin, userInfo]);
+  }, [open, amcContract, initialProject, initialCustomer, isAdmin, userInfo, products]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -191,6 +201,7 @@ export default function AddAMCContractForm({
     () =>
       products.map((p) => ({
         value: p.name || p.product_name || String(p.id),
+        id: p.id,
         label: p.name || p.product_name || "Product",
       })),
     [products]
@@ -357,11 +368,22 @@ export default function AddAMCContractForm({
               </label>
               <CreatableSelect
                 options={productSelectOptions}
-                value={
-                  formData.product
-                    ? { value: formData.product, label: formData.product }
-                    : null
-                }
+                value={(() => {
+                  if (!formData.product) return null;
+                  const strVal = String(formData.product).trim();
+                  const match = productSelectOptions.find(
+                    (opt) =>
+                      opt.value === strVal ||
+                      String(opt.id) === strVal ||
+                      opt.label.toLowerCase() === strVal.toLowerCase()
+                  );
+                  if (match) return match;
+                  if (/^\d+$/.test(strVal) && products.length > 0) {
+                    const pr = products.find(p => String(p.id) === strVal);
+                    if (pr) return { value: pr.name || pr.product_name, label: pr.name || pr.product_name };
+                  }
+                  return { value: formData.product, label: formData.product };
+                })()}
                 onChange={(opt) =>
                   setFormData((prev) => ({
                     ...prev,

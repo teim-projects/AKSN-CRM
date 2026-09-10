@@ -44,7 +44,24 @@ class AMCContractViewSet(viewsets.ModelViewSet):
         kwargs = {'created_by': user}
         if not is_admin_or_subadmin(user) and not serializer.validated_data.get('support_coordinator'):
             kwargs['support_coordinator'] = user
+
+        prod_val = serializer.validated_data.get('product')
+        if prod_val and str(prod_val).strip().isdigit():
+            from product_management.models import Product
+            p_obj = Product.objects.filter(id=int(str(prod_val).strip())).first()
+            if p_obj:
+                serializer.validated_data['product'] = p_obj.name
+
         serializer.save(**kwargs)
+
+    def perform_update(self, serializer):
+        prod_val = serializer.validated_data.get('product')
+        if prod_val and str(prod_val).strip().isdigit():
+            from product_management.models import Product
+            p_obj = Product.objects.filter(id=int(str(prod_val).strip())).first()
+            if p_obj:
+                serializer.validated_data['product'] = p_obj.name
+        serializer.save()
 
     @action(detail=True, methods=['post'], url_path='toggle-status')
     def toggle_status(self, request, pk=None):
