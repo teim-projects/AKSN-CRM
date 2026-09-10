@@ -31,6 +31,7 @@ import TermsForm from "./components/terms_conditions/TermsForm";
 
 import RolesPage from "./pages/RolesPage";
 import NotificationsPage from "./pages/NotificationsPage";
+import TemplatesPage from "./pages/TemplatesPage";
 import { useUserRole } from "./hooks/useAuth";
 
 function ProtectedRoute({ children }) {
@@ -279,6 +280,16 @@ function AppRoutes() {
         element={
           <ModuleProtectedRoute module="terms" action="edit">
             <TermsForm />
+          </ModuleProtectedRoute>
+        }
+      />
+
+      {/* Message Templates Routes */}
+      <Route
+        path="/templates"
+        element={
+          <ModuleProtectedRoute module="templates">
+            <TemplatesPage />
           </ModuleProtectedRoute>
         }
       />

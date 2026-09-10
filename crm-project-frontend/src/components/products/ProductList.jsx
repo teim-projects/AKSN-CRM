@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import Base from '../Base';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom'; 
-import { MdEdit, MdDelete, MdFilterList, MdZoomIn } from 'react-icons/md';
+import { MdEdit, MdDelete, MdFilterList, MdZoomIn, MdOutlineNavigateNext, MdOutlineNavigateBefore } from 'react-icons/md';
 import { Package } from 'lucide-react'; 
 import Swal from 'sweetalert2';
 import ProductForm from './ProductForm'; 
@@ -426,26 +426,30 @@ const ProductList = () => {
                     </div>
                 )}
 
-                {/* PAGINATION PANEL */}
-                {!loading && totalPages > 1 && (
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                        <div className="text-xs text-slate-500">
+                {/* PAGINATION PANEL (Consistent with Lead Management TableView) */}
+                {!loading && !error && displayData.length > 0 && (
+                    <div className="bg-white p-3 sm:p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between text-xs sm:text-sm">
+                        <div className="text-slate-600">
                             Page {currentPage} of {totalPages}
                         </div>
-                        <div className="flex items-center gap-1">
+
+                        <div className="flex items-center gap-2">
                             <button
-                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                 disabled={currentPage === 1}
-                                className="px-2.5 py-1 border border-slate-200 rounded text-xs font-semibold bg-white text-slate-700 disabled:opacity-50 transition-colors shadow-xs"
+                                className="px-3 py-1 rounded border border-slate-200 bg-white text-sm disabled:opacity-50 hover:bg-slate-50 transition-colors cursor-pointer flex items-center justify-center"
+                                aria-label="Previous page"
                             >
-                                &lt;
+                                <MdOutlineNavigateBefore />
                             </button>
+
                             <button
-                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                                 disabled={currentPage === totalPages}
-                                className="px-2.5 py-1 border border-slate-200 rounded text-xs font-semibold bg-white text-slate-700 disabled:opacity-50 transition-colors shadow-xs"
+                                className="px-3 py-1 rounded border border-slate-200 bg-white text-sm disabled:opacity-50 hover:bg-slate-50 transition-colors cursor-pointer flex items-center justify-center"
+                                aria-label="Next page"
                             >
-                                &gt;
+                                <MdOutlineNavigateNext />
                             </button>
                         </div>
                     </div>

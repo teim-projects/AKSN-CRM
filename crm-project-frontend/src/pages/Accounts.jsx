@@ -242,13 +242,66 @@ export default function Accounts() {
     {
       key: "sr",
       label: "Sr.No",
-      render: (_, idx) => (currentPage - 1) * itemsPerPage + (idx + 1)
+      render: (_, idx) => (
+        <span className="text-slate-600 font-medium text-xs whitespace-nowrap block">
+          {(currentPage - 1) * itemsPerPage + (idx + 1)}
+        </span>
+      ),
+      className: "w-14 whitespace-nowrap"
     },
-    { key: "email", label: "Email", render: r => r.email || "-" },
-    { key: "mobile_no", label: "Mobile", render: r => r.mobile_no || "-" },
-    { key: "first_name", label: "First Name", render: r => r.first_name || "-" },
-    { key: "last_name", label: "Last Name", render: r => r.last_name || "-" },
-    { key: "role", label: "Role", render: r => r.role?.name ?? "-" },
+    {
+      key: "email",
+      label: "Email",
+      render: r => (
+        <span className="text-slate-700 text-xs block max-w-[170px] truncate mx-auto cursor-default" title={r.email || ""}>
+          {r.email || "-"}
+        </span>
+      ),
+      className: "min-w-[130px] max-w-[180px]"
+    },
+    {
+      key: "mobile_no",
+      label: "Mobile",
+      render: r => (
+        <span className="text-slate-700 text-xs font-medium whitespace-nowrap block" title={r.mobile_no || ""}>
+          {r.mobile_no || "-"}
+        </span>
+      ),
+      className: "whitespace-nowrap"
+    },
+    {
+      key: "first_name",
+      label: "First Name",
+      render: r => (
+        <span className="text-slate-800 text-xs block max-w-[130px] truncate mx-auto cursor-default" title={r.first_name || ""}>
+          {r.first_name || "-"}
+        </span>
+      ),
+      className: "min-w-[100px] max-w-[140px]"
+    },
+    {
+      key: "last_name",
+      label: "Last Name",
+      render: r => (
+        <span className="text-slate-800 text-xs block max-w-[130px] truncate mx-auto cursor-default" title={r.last_name || ""}>
+          {r.last_name || "-"}
+        </span>
+      ),
+      className: "min-w-[100px] max-w-[140px]"
+    },
+    {
+      key: "role",
+      label: "Role",
+      render: r => {
+        const roleName = r.role?.name ?? "-";
+        return (
+          <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap inline-block" title={roleName}>
+            {roleName}
+          </span>
+        );
+      },
+      className: "whitespace-nowrap"
+    },
   ]), [currentPage, itemsPerPage]);
 
   // Columns for the filter
@@ -261,7 +314,7 @@ export default function Accounts() {
   ];
 
   const actionsRenderer = useCallback((row) => (
-    <div className="flex items-center justify-center gap-2 text-slate-500">
+    <div className="flex items-center justify-center gap-2 text-slate-500 whitespace-nowrap">
       <button
         onClick={() => {
           setSelectedStaff(row);

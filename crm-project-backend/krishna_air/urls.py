@@ -51,6 +51,7 @@ urlpatterns = [
     path('quotation/', include('quotation.urls')),
     path('amc/', include('amc.urls')),
     path('lead/amc/', include('amc.urls')),
+    path('templates/', include('api.urls_templates')),
 ]
 
 if settings.DEBUG:

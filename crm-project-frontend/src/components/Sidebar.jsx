@@ -49,6 +49,15 @@ function AmcIcon(props) {
   );
 }
 
+// ✅ NEW: Message Templates Icon
+function TemplateIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none">
+      <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 const allSidebarItems = [
   { key: "home", label: "Dashboard", icon: HomeIcon, path: "/dashboard", section: "OVERVIEW" },
 
@@ -65,6 +74,7 @@ const allSidebarItems = [
   // MASTER DATA (Catalog & Master Configurations)
   { key: "products", label: "Product Master", icon: BoxIcon, path: "/products", section: "MASTER DATA" },
   { key: "terms", label: "Terms & Conditions", icon: TermsIcon, path: "/terms", section: "MASTER DATA" },
+  { key: "templates", label: "Message Templates", icon: TemplateIcon, path: "/templates", section: "MASTER DATA" },
 
   // ADMINISTRATION (System & Role Management)
   { key: "accounts", label: "Accounts", icon: BuildingIcon, path: "/accounts", section: "ADMINISTRATION" },
@@ -167,6 +177,7 @@ export default function Sidebar({ children }) {
       projects: "projects",
       amc: "amc",
       terms: "terms",
+      templates: "templates",
       accounts: "accounts",
       roles: "roles",
     };

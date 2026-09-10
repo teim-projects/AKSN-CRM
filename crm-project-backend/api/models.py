@@ -179,3 +179,39 @@ class SiteManagement(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.site_shortcut})"
+
+
+# --------------------------------------------------------------------------------
+# Message Template Model (Email & WhatsApp)
+# --------------------------------------------------------------------------------
+
+class MessageTemplate(models.Model):
+    CHANNEL_CHOICES = [
+        ('email', 'Email'),
+        ('whatsapp', 'WhatsApp'),
+    ]
+
+    CATEGORY_CHOICES = [
+        ('lead', 'Leads / Enquiries'),
+        ('customer', 'Customers'),
+        ('followup', 'Follow-up Management'),
+        ('quotation', 'Quotations'),
+        ('project', 'Projects'),
+        ('amc', 'AMC Contracts'),
+    ]
+
+    name = models.CharField(max_length=255)
+    channel = models.CharField(max_length=20, choices=CHANNEL_CHOICES, default='email')
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='lead')
+    subject = models.CharField(max_length=255, blank=True, null=True, help_text="Email Subject line with optional placeholders")
+    body = models.TextField(help_text="Message body with optional placeholders like {customer_name}")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey('CustomUser', on_delete=models.SET_NULL, null=True, blank=True, related_name='created_templates')
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.get_channel_display()} - {self.get_category_display()}] {self.name}"

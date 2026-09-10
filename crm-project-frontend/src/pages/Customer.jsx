@@ -3,11 +3,12 @@ import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 import Base from "../components/Base";
 import TableView from "../components/TableView";
-import { MdEdit, MdDelete, MdOutlineRemoveRedEye, MdFilterList, MdZoomIn } from "react-icons/md";
+import { MdEdit, MdDelete, MdOutlineRemoveRedEye, MdFilterList, MdZoomIn, MdMail } from "react-icons/md";
 import Swal from "sweetalert2";
 import AddCustomerForm from "../components/customers/AddCustomerForm";
 import AdvancedTableFilter from "../components/AdvancedTableFilter";
 import RecordViewer from "../components/RecordViewer";
+import SendMessageModal from "../components/templates/SendMessageModal";
 import { useUserRole } from '../hooks/useAuth';
 
 export default function Customer() {
@@ -38,6 +39,10 @@ export default function Customer() {
   // Record Viewer state
   const [viewOpen, setViewOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+
+  // Send Message Modal state
+  const [sendMessageModalOpen, setSendMessageModalOpen] = useState(false);
+  const [selectedMessageRecord, setSelectedMessageRecord] = useState(null);
 
   // Filter state
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -308,43 +313,64 @@ export default function Customer() {
       key: "customer_code",
       label: "Code",
       render: (r) => (
-        <div className="py-0">
-          <span className="font-mono text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded tracking-wider">
+        <div className="py-0" title={r.customer_code || ""}>
+          <span className="font-mono text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded tracking-wider whitespace-nowrap">
             {r.customer_code || "-"}
           </span>
         </div>
       ),
-      className: "w-16"
+      className: "w-16 whitespace-nowrap"
     },
     {
       key: "name",
       label: "Company Name",
-      render: (r) => <span className="text-slate-800 font-medium text-xs tracking-tight py-0 block">{r.name || "-"}</span>,
-      className: "min-w-[120px]"
+      render: (r) => (
+        <span
+          className="text-slate-800 font-medium text-xs tracking-tight py-0 block max-w-[150px] truncate mx-auto cursor-default"
+          title={r.name || ""}
+        >
+          {r.name || "-"}
+        </span>
+      ),
+      className: "min-w-[120px] max-w-[160px]"
     },
     {
       key: "contact_person",
       label: "Contact Person",
-      render: (r) => <span className="text-slate-600 text-xs py-0 block">{r.contact_person || "-"}</span>,
-      className: "w-32"
+      render: (r) => (
+        <span
+          className="text-slate-600 text-xs py-0 block max-w-[130px] truncate mx-auto cursor-default"
+          title={r.contact_person || ""}
+        >
+          {r.contact_person || "-"}
+        </span>
+      ),
+      className: "w-32 max-w-[140px]"
     },
     {
       key: "sales_executive",
       label: "Sales Executive",
-      render: (r) => <span className="text-slate-600 text-xs py-0 block">{r.sales_executive_details?.full_name || "-"}</span>,
-      className: "w-28"
+      render: (r) => (
+        <span
+          className="text-slate-600 text-xs py-0 block max-w-[120px] truncate mx-auto cursor-default"
+          title={r.sales_executive_details?.full_name || ""}
+        >
+          {r.sales_executive_details?.full_name || "-"}
+        </span>
+      ),
+      className: "w-28 max-w-[130px]"
     },
     {
       key: "contact_number",
       label: "Mobile",
       render: (r) => <span className="text-slate-700 text-xs font-medium whitespace-nowrap py-0 block">{r.contact_number || "-"}</span>,
-      className: "w-28"
+      className: "w-28 whitespace-nowrap"
     },
     {
       key: "email",
       label: "Email",
       render: (r) => r.email ? (
-        <a href={`mailto:${r.email}`} className="text-blue-600 hover:underline text-xs py-0 inline-block truncate max-w-[120px]">
+        <a href={`mailto:${r.email}`} className="text-blue-600 hover:underline text-xs py-0 inline-block truncate max-w-[120px]" title={r.email}>
           {r.email}
         </a>
       ) : <span className="text-slate-400 text-xs py-0 block">-</span>,
@@ -353,37 +379,54 @@ export default function Customer() {
     {
       key: "city",
       label: "City",
-      render: (r) => <span className="text-slate-600 text-xs py-0 block">{r.city || "-"}</span>,
-      className: "w-24"
+      render: (r) => (
+        <span
+          className="text-slate-600 text-xs py-0 block max-w-[100px] truncate mx-auto cursor-default"
+          title={r.city || ""}
+        >
+          {r.city || "-"}
+        </span>
+      ),
+      className: "w-24 max-w-[110px]"
     },
     {
       key: "state",
       label: "State",
-      render: (r) => <span className="text-slate-600 text-xs py-0 block">{r.state || "-"}</span>,
-      className: "w-24"
+      render: (r) => (
+        <span
+          className="text-slate-600 text-xs py-0 block max-w-[100px] truncate mx-auto cursor-default"
+          title={r.state || ""}
+        >
+          {r.state || "-"}
+        </span>
+      ),
+      className: "w-24 max-w-[110px]"
     },
     {
       key: "customer_status",
       label: "Status",
       render: (r) => (
         <div className="py-0">
-          <span className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full uppercase tracking-wider ${getStatusColor(r.customer_status)}`}>
+          <span
+            className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full uppercase tracking-wider whitespace-nowrap inline-block ${getStatusColor(r.customer_status)}`}
+            title={r.customer_status || "Prospect"}
+          >
             {r.customer_status || "Prospect"}
           </span>
         </div>
       ),
-      className: "w-24"
+      className: "w-24 whitespace-nowrap"
     },
     {
       key: "created_at",
       label: "Created",
-      render: (r) => <span className="text-slate-400 text-[10px] whitespace-nowrap py-0 block">{formatDate(r.created_at)}</span>,
-      className: "w-24"
+      render: (r) => <span className="text-slate-400 text-[10px] whitespace-nowrap py-0 block" title={formatDate(r.created_at)}>{formatDate(r.created_at)}</span>,
+      className: "w-24 whitespace-nowrap"
     },
   ];
 
   const actionsRenderer = useCallback((row) => (
-    <div className="flex items-center justify-center gap-1 py-0">
+    <div className="flex items-center justify-center gap-1.5 py-0 whitespace-nowrap">
       {/* Convert to Project / Already Added Status */}
       {row.has_project ? (
         <span
@@ -426,6 +469,17 @@ export default function Customer() {
         title="View Details"
       >
         <MdOutlineRemoveRedEye />
+      </button>
+
+      <button
+        onClick={() => {
+          setSelectedMessageRecord(row);
+          setSendMessageModalOpen(true);
+        }}
+        className="p-1 bg-slate-100 hover:bg-sky-100 text-slate-600 hover:text-sky-700 rounded transition-all duration-150 text-sm shadow-sm cursor-pointer"
+        title="Send Email / WhatsApp"
+      >
+        <MdMail />
       </button>
 
       {canEditCustomer && (
@@ -779,6 +833,18 @@ export default function Customer() {
           setShowCustomerDetails(false);
           setViewingCustomer(null);
         }}
+      />
+
+      {/* Send Message Modal */}
+      <SendMessageModal
+        isOpen={sendMessageModalOpen}
+        onClose={() => {
+          setSendMessageModalOpen(false);
+          setSelectedMessageRecord(null);
+        }}
+        category="customer"
+        recordData={selectedMessageRecord}
+        onSuccess={() => {}}
       />
     </Base>
   );

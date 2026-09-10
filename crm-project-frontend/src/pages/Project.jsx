@@ -3,12 +3,13 @@ import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 import Base from "../components/Base";
 import TableView from "../components/TableView";
-import { MdEdit, MdDelete, MdOutlineRemoveRedEye, MdFilterList, MdAdd, MdZoomIn, MdHandshake } from "react-icons/md";
+import { MdEdit, MdDelete, MdOutlineRemoveRedEye, MdFilterList, MdAdd, MdZoomIn, MdHandshake, MdMail } from "react-icons/md";
 import Swal from "sweetalert2";
 import AddProjectForm from "../components/projects/AddProjectForm";
 import AddAMCContractForm from "../components/amc/AddAMCContractForm";
 import RecordViewer from "../components/RecordViewer";
 import AdvancedTableFilter from "../components/AdvancedTableFilter";
+import SendMessageModal from "../components/templates/SendMessageModal";
 import { useUserRole } from "../hooks/useAuth";
 
 export default function Project() {
@@ -42,6 +43,10 @@ export default function Project() {
   // Record Viewer
   const [viewOpen, setViewOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
+
+  // Send Message Modal state
+  const [sendMessageModalOpen, setSendMessageModalOpen] = useState(false);
+  const [selectedMessageRecord, setSelectedMessageRecord] = useState(null);
 
   // Filter
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -276,129 +281,155 @@ export default function Project() {
       key: "sr",
       label: "Sr.No",
       render: (_, idx) => (
-        <span className="text-slate-600 font-medium text-xs py-0.5 block">
+        <span className="text-slate-600 font-medium text-xs whitespace-nowrap block">
           {(currentPage - 1) * itemsPerPage + (idx + 1)}
         </span>
       ),
-      className: "w-14",
+      className: "w-14 whitespace-nowrap",
     },
     {
       key: "project_code",
       label: "Project Code",
-      render: (r) => (
-        <span className="font-bold text-blue-600 text-xs py-0.5 block">
-          {r.project_code || `#${r.id}`}
-        </span>
-      ),
-      className: "w-28",
+      render: (r) => {
+        const code = r.project_code || `#${r.id}`;
+        return (
+          <span className="font-bold text-blue-600 text-xs whitespace-nowrap block" title={code}>
+            {code}
+          </span>
+        );
+      },
+      className: "w-28 whitespace-nowrap",
     },
     {
       key: "customer",
       label: "Customer",
-      render: (r) => (
-        <span className="text-slate-900 font-semibold text-xs tracking-tight py-0.5 block">
-          {r.customer_details?.company_name || r.customer_details?.name || r.customer || "-"}
-        </span>
-      ),
-      className: "w-44",
+      render: (r) => {
+        const name = r.customer_details?.company_name || r.customer_details?.name || r.customer || "-";
+        return (
+          <span
+            className="text-slate-900 font-semibold text-xs tracking-tight block max-w-[150px] truncate mx-auto cursor-default"
+            title={name}
+          >
+            {name}
+          </span>
+        );
+      },
+      className: "w-44 min-w-[130px] max-w-[160px]",
     },
     {
       key: "product",
       label: "Product(s)",
       render: (r) => {
         const rawProds = Array.isArray(r.product) ? r.product : r.product ? [r.product] : [];
-        if (rawProds.length === 0) return <span className="text-slate-400 text-xs py-0.5 block">-</span>;
+        if (rawProds.length === 0) return <span className="text-slate-400 text-xs whitespace-nowrap block">-</span>;
         const resolvedNames = rawProds.map(resolveProductName).filter(Boolean).join(", ");
         return (
-          <span className="text-slate-700 text-xs py-0.5 block truncate max-w-[140px]" title={resolvedNames}>
+          <span className="text-slate-700 text-xs block truncate max-w-[140px] mx-auto cursor-default" title={resolvedNames}>
             {resolvedNames || "-"}
           </span>
         );
       },
-      className: "w-36",
+      className: "w-36 max-w-[150px]",
     },
     {
       key: "project_executive",
       label: "Executive",
-      render: (r) => (
-        <span className="text-slate-600 text-xs py-0.5 block">
-          {r.project_executive_details?.full_name || r.project_executive_details?.name || r.project_executive_details?.username || "-"}
-        </span>
-      ),
-      className: "w-32",
+      render: (r) => {
+        const execName = r.project_executive_details?.full_name || r.project_executive_details?.name || r.project_executive_details?.username || "-";
+        return (
+          <span className="text-slate-600 text-xs block max-w-[130px] truncate mx-auto cursor-default" title={execName}>
+            {execName}
+          </span>
+        );
+      },
+      className: "w-32 max-w-[140px]",
     },
     {
       key: "project_stage",
       label: "Stage",
-      render: (r) => (
-        <span
-          className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full capitalize ${getStageBadgeColor(
-            r.project_stage
-          )}`}
-        >
-          {r.project_stage_display || r.project_stage || "Requirement Analysis"}
-        </span>
-      ),
-      className: "w-36",
+      render: (r) => {
+        const stage = r.project_stage_display || r.project_stage || "Requirement Analysis";
+        return (
+          <span
+            className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full capitalize whitespace-nowrap inline-block ${getStageBadgeColor(
+              r.project_stage
+            )}`}
+            title={stage}
+          >
+            {stage}
+          </span>
+        );
+      },
+      className: "w-36 whitespace-nowrap",
     },
     {
       key: "priority",
       label: "Priority",
-      render: (r) => (
-        <span
-          className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full capitalize ${getPriorityBadgeColor(
-            r.priority
-          )}`}
-        >
-          {r.priority_display || r.priority || "Medium"}
-        </span>
-      ),
-      className: "w-24",
+      render: (r) => {
+        const priority = r.priority_display || r.priority || "Medium";
+        return (
+          <span
+            className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full capitalize whitespace-nowrap inline-block ${getPriorityBadgeColor(
+              r.priority
+            )}`}
+            title={priority}
+          >
+            {priority}
+          </span>
+        );
+      },
+      className: "w-24 whitespace-nowrap",
     },
     {
       key: "expected_to_go_live",
       label: "Go Live Date",
-      render: (r) => (
-        <span className="text-slate-600 text-xs py-0.5 block">
-          {formatDate(r.expected_to_go_live)}
-        </span>
-      ),
-      className: "w-28",
+      render: (r) => {
+        const d = formatDate(r.expected_to_go_live);
+        return (
+          <span className="text-slate-600 text-xs whitespace-nowrap block" title={d}>
+            {d}
+          </span>
+        );
+      },
+      className: "w-28 whitespace-nowrap",
     },
     {
       key: "project_value",
       label: "Value (₹)",
-      render: (r) => (
-        <span className="text-slate-900 font-semibold text-xs py-0.5 block">
-          {r.project_value
-            ? `₹${parseFloat(r.project_value).toLocaleString("en-IN", {
-              minimumFractionDigits: 2,
-            })}`
-            : "—"}
-        </span>
-      ),
-      className: "w-28",
+      render: (r) => {
+        const valText = r.project_value
+          ? `₹${parseFloat(r.project_value).toLocaleString("en-IN", {
+            minimumFractionDigits: 2,
+          })}`
+          : "—";
+        return (
+          <span className="text-slate-900 font-semibold text-xs whitespace-nowrap block" title={valText}>
+            {valText}
+          </span>
+        );
+      },
+      className: "w-28 whitespace-nowrap",
     },
     {
       key: "amc_dates",
       label: "AMC Period",
       render: (r) => {
         if (!r.amc_start_date && !r.amc_end_date) {
-          return <span className="text-slate-400 text-xs py-0.5 block italic">No AMC</span>;
+          return <span className="text-slate-400 text-xs whitespace-nowrap block italic">No AMC</span>;
         }
+        const amcText = `${formatDate(r.amc_start_date)} - ${formatDate(r.amc_end_date)}`;
         return (
-          <div className="flex flex-col text-[11px] leading-tight py-0.5">
-            <span className="text-emerald-700 font-medium">Start: {formatDate(r.amc_start_date)}</span>
-            <span className="text-rose-700 font-medium">End: {formatDate(r.amc_end_date)}</span>
-          </div>
+          <span className="text-slate-700 text-xs whitespace-nowrap block" title={`AMC Period: ${amcText}`}>
+            {amcText}
+          </span>
         );
       },
-      className: "w-36",
+      className: "w-36 whitespace-nowrap",
     },
   ];
 
   const actionsRenderer = (row) => (
-    <div className="flex items-center justify-center gap-1 py-0.5">
+    <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
       {/* Record Viewer */}
       <button
         onClick={() => {
@@ -433,6 +464,18 @@ export default function Project() {
           <MdHandshake />
         </button>
       )}
+
+      {/* Send Message */}
+      <button
+        onClick={() => {
+          setSelectedMessageRecord(row);
+          setSendMessageModalOpen(true);
+        }}
+        className="p-1 bg-slate-100 hover:bg-sky-100 text-slate-600 hover:text-sky-700 rounded transition-all duration-150 text-sm shadow-sm cursor-pointer"
+        title="Send Email / WhatsApp"
+      >
+        <MdMail />
+      </button>
 
       {/* Edit */}
       {canEditProject && (
@@ -706,6 +749,18 @@ export default function Project() {
             </div>
           </div>
         )}
+
+      {/* Send Message Modal */}
+      <SendMessageModal
+        isOpen={sendMessageModalOpen}
+        onClose={() => {
+          setSendMessageModalOpen(false);
+          setSelectedMessageRecord(null);
+        }}
+        category="project"
+        recordData={selectedMessageRecord}
+        onSuccess={() => {}}
+      />
     </Base>
   );
 }

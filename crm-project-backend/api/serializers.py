@@ -9,7 +9,7 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from rest_framework import serializers
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
-from .models import CustomUser, Role, BranchManagement , SiteManagement
+from .models import CustomUser, Role, BranchManagement, SiteManagement, MessageTemplate
 from rest_framework.exceptions import ValidationError
 from django.core.validators import RegexValidator
 import re
@@ -385,5 +385,36 @@ class SiteSerializers(serializers.ModelSerializer):
         model = SiteManagement
         fields = "__all__"
         read_only_fields = ("site_shortcut",)
+
+
+class MessageTemplateSerializer(serializers.ModelSerializer):
+    channel_display = serializers.CharField(source='get_channel_display', read_only=True)
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    created_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MessageTemplate
+        fields = [
+            'id',
+            'name',
+            'channel',
+            'channel_display',
+            'category',
+            'category_display',
+            'subject',
+            'body',
+            'is_active',
+            'created_at',
+            'updated_at',
+            'created_by',
+            'created_by_name',
+        ]
+        read_only_fields = ('id', 'created_at', 'updated_at', 'created_by')
+
+    def get_created_by_name(self, obj):
+        if not obj.created_by:
+            return None
+        return obj.created_by.first_name or obj.created_by.email or str(obj.created_by)
+
 
     

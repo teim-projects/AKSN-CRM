@@ -3,9 +3,10 @@ import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 import Base from "../../components/Base";
 import TableView from "../../components/TableView";
-import { MdAdd, MdFilterList } from "react-icons/md";
+import { MdAdd, MdFilterList, MdMail } from "react-icons/md";
 import AddLeadFollowUpForm from "./AddLeadFollowUpForm";
 import AdvancedTableFilter from "../AdvancedTableFilter";
+import SendMessageModal from "../templates/SendMessageModal";
 import { useUserRole } from "../../hooks/useAuth";
 
 export default function FollowUp() {
@@ -58,6 +59,10 @@ export default function FollowUp() {
   const [leadSearchTerm, setLeadSearchTerm] = useState("");
   const [leadSearchResults, setLeadSearchResults] = useState([]);
   const [searchingLeads, setSearchingLeads] = useState(false);
+
+  // Send Message Modal state
+  const [sendMessageModalOpen, setSendMessageModalOpen] = useState(false);
+  const [selectedMessageRecord, setSelectedMessageRecord] = useState(null);
 
   const token = useMemo(() => (
     localStorage.getItem("access") ||
@@ -280,30 +285,48 @@ export default function FollowUp() {
     { 
       key: "company_name", 
       label: "Company Name", 
-      render: (r) => <span className="text-slate-800 font-medium text-xs">{r.company_name || "-"}</span>,
-      className: "min-w-[120px]"
+      render: (r) => (
+        <span
+          className="text-slate-800 font-medium text-xs block max-w-[150px] truncate mx-auto cursor-default"
+          title={r.company_name || ""}
+        >
+          {r.company_name || "-"}
+        </span>
+      ),
+      className: "min-w-[120px] max-w-[160px]"
     },
     { 
       key: "contact_person", 
       label: "Contact Person", 
-      render: (r) => <span className="text-slate-600 text-xs">{r.contact_person || "-"}</span>,
-      className: "w-32"
+      render: (r) => (
+        <span
+          className="text-slate-600 text-xs block max-w-[130px] truncate mx-auto cursor-default"
+          title={r.contact_person || ""}
+        >
+          {r.contact_person || "-"}
+        </span>
+      ),
+      className: "w-32 max-w-[140px]"
     },
     { 
       key: "mobile_number", 
       label: "Mobile", 
-      render: (r) => <span className="text-slate-700 text-xs font-medium">{r.mobile_number || "-"}</span>,
-      className: "w-28"
+      render: (r) => (
+        <span className="text-slate-700 text-xs font-medium whitespace-nowrap block" title={r.mobile_number || ""}>
+          {r.mobile_number || "-"}
+        </span>
+      ),
+      className: "w-28 whitespace-nowrap"
     },
     { 
       key: "last_followup_date", 
       label: "Follow-up Date", 
       render: (r) => (
-        <span className="text-xs font-semibold text-slate-700">
+        <span className="text-xs font-semibold text-slate-700 whitespace-nowrap block" title={formatDate(r.last_followup_date)}>
           {formatDate(r.last_followup_date)}
         </span>
       ),
-      className: "w-28"
+      className: "w-28 whitespace-nowrap"
     },
     { 
       key: "followup_date", 
@@ -312,23 +335,27 @@ export default function FollowUp() {
         const today = getTodayString();
         const isOverdue = r.effective_followup_date && r.effective_followup_date < today && r.status !== 'close_win' && r.status !== 'close_loss' && r.status !== 'closed';
         const isToday = r.effective_followup_date === today && r.status !== 'close_win' && r.status !== 'close_loss' && r.status !== 'closed';
+        const dateFormatted = formatDate(r.effective_followup_date);
         return (
-          <span className={`text-xs font-medium ${isOverdue ? 'text-red-600 font-bold' : isToday ? 'text-amber-600 font-bold' : 'text-slate-700'}`}>
-            {formatDate(r.effective_followup_date)}
+          <span
+            className={`text-xs font-medium whitespace-nowrap block ${isOverdue ? 'text-red-600 font-bold' : isToday ? 'text-amber-600 font-bold' : 'text-slate-700'}`}
+            title={dateFormatted}
+          >
+            {dateFormatted}
           </span>
         );
       },
-      className: "w-28"
+      className: "w-28 whitespace-nowrap"
     },
     { 
       key: "followup_count", 
       label: "Total Follow-ups", 
       render: (r) => (
-        <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600">
+        <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 whitespace-nowrap" title={`Total: ${r.followup_count || 0}`}>
           {r.followup_count || 0}
         </span>
       ),
-      className: "w-28"
+      className: "w-28 whitespace-nowrap"
     },
     { 
       key: "status", 
@@ -338,17 +365,17 @@ export default function FollowUp() {
         const label = s === 'close_win' ? 'Close Win' : s === 'close_loss' ? 'Close Loss' : s === 'closed' ? 'Closed' : s === 'in_process' ? 'In Process' : 'Open';
         const colorClass = s === 'close_win' || s === 'closed' ? 'bg-emerald-100 text-emerald-700' : s === 'close_loss' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700';
         return (
-          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${colorClass}`}>
+          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider whitespace-nowrap inline-block ${colorClass}`} title={label}>
             {label}
           </span>
         );
       },
-      className: "w-24"
+      className: "w-24 whitespace-nowrap"
     },
   ];
 
   const actionsRenderer = useCallback((row) => (
-    <div className="flex items-center justify-center gap-1 py-0.5">
+    <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
       {canCreateFollowup && (
         <button
           onClick={() => {
@@ -362,6 +389,17 @@ export default function FollowUp() {
           <MdAdd />
         </button>
       )}
+
+      <button
+        onClick={() => {
+          setSelectedMessageRecord(row);
+          setSendMessageModalOpen(true);
+        }}
+        className="p-1 bg-slate-100 hover:bg-sky-100 text-slate-600 hover:text-sky-700 rounded transition-all duration-150 text-sm shadow-sm cursor-pointer"
+        title="Send Email / WhatsApp"
+      >
+        <MdMail />
+      </button>
     </div>
   ), [canCreateFollowup]);
 
@@ -622,6 +660,18 @@ export default function FollowUp() {
             setEditingFollowUp(null);
             setShowFollowUpForm(true);
           }}
+        />
+
+        {/* Send Message Modal */}
+        <SendMessageModal
+          isOpen={sendMessageModalOpen}
+          onClose={() => {
+            setSendMessageModalOpen(false);
+            setSelectedMessageRecord(null);
+          }}
+          category="followup"
+          recordData={selectedMessageRecord}
+          onSuccess={() => {}}
         />
     </Base>
   );

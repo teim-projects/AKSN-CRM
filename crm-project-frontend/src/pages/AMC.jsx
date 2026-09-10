@@ -17,8 +17,10 @@ import {
   MdToggleOff,
   MdHistory,
   MdAutorenew,
+  MdMail,
 } from "react-icons/md";
 import Swal from "sweetalert2";
+import SendMessageModal from "../components/templates/SendMessageModal";
 import { useUserRole } from "../hooks/useAuth";
 
 const BASE_API = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
@@ -59,6 +61,10 @@ export default function AMC() {
   const [viewingAMC, setViewingAMC] = useState(null);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [recordViewerOpen, setRecordViewerOpen] = useState(false);
+
+  // Send Message Modal state
+  const [sendMessageModalOpen, setSendMessageModalOpen] = useState(false);
+  const [selectedMessageRecord, setSelectedMessageRecord] = useState(null);
 
   const [highlightedAmcId, setHighlightedAmcId] = useState(null);
 
@@ -346,102 +352,132 @@ export default function AMC() {
       key: "sr",
       label: "Sr.No",
       render: (_, idx) => (
-        <span className="text-slate-600 font-medium text-xs py-0 block">
+        <span className="text-slate-600 font-medium text-xs py-0 whitespace-nowrap block">
           {(currentPage - 1) * itemsPerPage + (idx + 1)}
         </span>
       ),
-      className: "w-14",
+      className: "w-14 whitespace-nowrap",
     },
     {
       key: "contract_id",
       label: "Contract ID",
-      render: (r) => (
-        <span className="font-mono font-bold text-blue-600 text-xs py-0 block whitespace-nowrap">
-          {r.contract_id || `#${r.id}`}
-        </span>
-      ),
-      className: "w-28",
+      render: (r) => {
+        const cid = r.contract_id || `#${r.id}`;
+        return (
+          <span className="font-mono font-bold text-blue-600 text-xs py-0 block whitespace-nowrap" title={cid}>
+            {cid}
+          </span>
+        );
+      },
+      className: "w-28 whitespace-nowrap",
     },
     {
       key: "project_code",
       label: "Project No.",
-      render: (r) => (
-        <span className="font-mono text-slate-700 text-xs py-0 block whitespace-nowrap">
-          {r.project_details?.project_code || r.project_code || "-"}
-        </span>
-      ),
-      className: "w-28",
+      render: (r) => {
+        const pcode = r.project_details?.project_code || r.project_code || "-";
+        return (
+          <span className="font-mono text-slate-700 text-xs py-0 block whitespace-nowrap" title={pcode}>
+            {pcode}
+          </span>
+        );
+      },
+      className: "w-28 whitespace-nowrap",
     },
     {
       key: "customer",
       label: "Customer",
-      render: (r) => (
-        <span className="text-slate-900 font-semibold text-xs py-0 block whitespace-nowrap">
-          {r.customer_details?.company_name || r.customer_details?.name || r.customer || "-"}
-        </span>
-      ),
-      className: "min-w-[140px]",
+      render: (r) => {
+        const cname = r.customer_details?.company_name || r.customer_details?.name || r.customer || "-";
+        return (
+          <span
+            className="text-slate-900 font-semibold text-xs py-0 block max-w-[150px] truncate mx-auto cursor-default"
+            title={cname}
+          >
+            {cname}
+          </span>
+        );
+      },
+      className: "min-w-[140px] max-w-[170px]",
     },
     {
       key: "product",
       label: "Product",
       render: (r) => (
-        <span className="text-slate-700 text-xs py-0 block whitespace-nowrap">
+        <span
+          className="text-slate-700 text-xs py-0 block max-w-[130px] truncate mx-auto cursor-default"
+          title={r.product || "-"}
+        >
           {r.product || "-"}
         </span>
       ),
-      className: "w-36",
+      className: "w-36 max-w-[140px]",
     },
     {
       key: "amc_type",
       label: "Type",
-      render: (r) => (
-        <span className="text-slate-600 text-xs py-0 block capitalize whitespace-nowrap">
-          {r.amc_type_display || r.amc_type || "Comprehensive"}
-        </span>
-      ),
-      className: "w-32",
+      render: (r) => {
+        const typeText = r.amc_type_display || r.amc_type || "Comprehensive";
+        return (
+          <span className="text-slate-600 text-xs py-0 block capitalize whitespace-nowrap" title={typeText}>
+            {typeText}
+          </span>
+        );
+      },
+      className: "w-32 whitespace-nowrap",
     },
     {
       key: "period",
       label: "Period (Start - End)",
-      render: (r) => (
-        <span className="text-slate-600 text-xs py-0 block whitespace-nowrap">
-          {formatDate(r.start_date)} to {formatDate(r.end_date)}
-        </span>
-      ),
-      className: "w-44",
+      render: (r) => {
+        const periodText = `${formatDate(r.start_date)} to ${formatDate(r.end_date)}`;
+        return (
+          <span className="text-slate-600 text-xs py-0 block whitespace-nowrap" title={periodText}>
+            {periodText}
+          </span>
+        );
+      },
+      className: "w-44 whitespace-nowrap",
     },
     {
       key: "annual_value",
       label: "Annual Value",
-      render: (r) => (
-        <span className="text-slate-900 font-bold text-xs py-0 block whitespace-nowrap">
-          {r.annual_value ? `₹${parseFloat(r.annual_value).toLocaleString("en-IN")}` : "₹0"}
-        </span>
-      ),
-      className: "w-28",
+      render: (r) => {
+        const valText = r.annual_value ? `₹${parseFloat(r.annual_value).toLocaleString("en-IN")}` : "₹0";
+        return (
+          <span className="text-slate-900 font-bold text-xs py-0 block whitespace-nowrap" title={valText}>
+            {valText}
+          </span>
+        );
+      },
+      className: "w-28 whitespace-nowrap",
     },
     {
       key: "support_coordinator",
       label: "Coordinator",
-      render: (r) => (
-        <span className="text-slate-700 text-xs py-0 block whitespace-nowrap">
-          {r.support_coordinator_details?.full_name || r.support_coordinator_details?.name || r.support_coordinator_details?.username || "-"}
-        </span>
-      ),
-      className: "w-32",
+      render: (r) => {
+        const scName = r.support_coordinator_details?.full_name || r.support_coordinator_details?.name || r.support_coordinator_details?.username || "-";
+        return (
+          <span
+            className="text-slate-700 text-xs py-0 block max-w-[120px] truncate mx-auto cursor-default"
+            title={scName}
+          >
+            {scName}
+          </span>
+        );
+      },
+      className: "w-32 max-w-[130px]",
     },
     {
       key: "status",
       label: "Status",
       render: (r) => getStatusBadge(r.status),
-      className: "w-28 text-center",
+      className: "w-28 text-center whitespace-nowrap",
     },
   ];
 
   const actionsRenderer = (row) => (
-    <div className="flex items-center justify-center gap-1 py-0">
+    <div className="flex items-center justify-center gap-1.5 py-0 whitespace-nowrap">
       {/* Version / Renewal History Symbol Button */}
       <button
         onClick={(e) => {
@@ -490,6 +526,18 @@ export default function AMC() {
         title="View Details"
       >
         <MdOutlineRemoveRedEye />
+      </button>
+
+      {/* Send Message */}
+      <button
+        onClick={() => {
+          setSelectedMessageRecord(row);
+          setSendMessageModalOpen(true);
+        }}
+        className="p-1 bg-slate-100 hover:bg-sky-100 text-slate-600 hover:text-sky-700 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer"
+        title="Send Email / WhatsApp"
+      >
+        <MdMail />
       </button>
 
       {/* Status Toggle (Active / Inactive) */}
@@ -962,6 +1010,18 @@ export default function AMC() {
           amcContract={renewingAMC}
           token={token}
           baseUrl={BASE_API}
+        />
+
+        {/* Send Message Modal */}
+        <SendMessageModal
+          isOpen={sendMessageModalOpen}
+          onClose={() => {
+            setSendMessageModalOpen(false);
+            setSelectedMessageRecord(null);
+          }}
+          category="amc"
+          recordData={selectedMessageRecord}
+          onSuccess={() => {}}
         />
     </Base>
   );

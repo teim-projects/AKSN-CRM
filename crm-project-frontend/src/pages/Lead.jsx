@@ -6,13 +6,14 @@ import TableView from "../components/TableView";
 import LeadDetails from "../components/lead/LeadDetails";
 import AddLeadFollowUpForm from "../components/lead/AddLeadFollowUpForm";
 import AddLeadForm from "../components/lead/AddLeadForm";
-import { MdEdit, MdDelete, MdOutlineRemoveRedEye, MdEditDocument, MdAdd, MdFilterList, MdZoomIn, MdUpload } from "react-icons/md";
+import { MdEdit, MdDelete, MdOutlineRemoveRedEye, MdEditDocument, MdAdd, MdFilterList, MdZoomIn, MdUpload, MdMail } from "react-icons/md";
 import Swal from "sweetalert2";
 import { useUserRole } from '../hooks/useAuth';
 import AddQuotation from "../components/quotations/AddQuotation";
 import AdvancedTableFilter from "../components/AdvancedTableFilter";
 import RecordViewer from "../components/RecordViewer";
 import ImportLeadModal from "../components/lead/ImportLeadModal";
+import SendMessageModal from "../components/templates/SendMessageModal";
 
 export default function Lead() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -44,6 +45,10 @@ export default function Lead() {
   // Record Viewer state
   const [viewOpen, setViewOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
+
+  // Send Message Modal state
+  const [sendMessageModalOpen, setSendMessageModalOpen] = useState(false);
+  const [selectedMessageRecord, setSelectedMessageRecord] = useState(null);
 
   const [showLeadDetails, setShowLeadDetails] = useState(false);
   const [leadDetailsId, setLeadDetailsId] = useState(null);
@@ -307,7 +312,7 @@ export default function Lead() {
         const isReady = Boolean(r.ready_to_send_quotation);
         const srNum = (currentPage - 1) * itemsPerPage + (idx + 1);
         return (
-          <div className="flex items-center gap-1.5 py-0.5" title={isReady ? "Ready to Send Quotation" : ""}>
+          <div className="flex items-center gap-1.5" title={isReady ? "Ready to Send Quotation" : ""}>
             <span className="text-slate-600 font-medium text-xs">{srNum}</span>
             {isReady && (
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-200 animate-pulse inline-block shrink-0" />
@@ -316,7 +321,7 @@ export default function Lead() {
         );
       },
     },
-    { key: "date", label: "Date", render: (r) => <span className="text-slate-600 text-xs whitespace-nowrap py-0.5 block">{formatDate(r.enquiry_date || r.created_at)}</span> },
+    { key: "date", label: "Date", render: (r) => <span className="text-slate-600 text-xs whitespace-nowrap block">{formatDate(r.enquiry_date || r.created_at)}</span> },
     {
       key: "followup_date",
       label: (
@@ -325,7 +330,7 @@ export default function Lead() {
           <div>Date</div>
         </div>
       ),
-      render: (r) => <span className="font-semibold text-slate-700 text-xs whitespace-nowrap py-0.5 block">{formatDate(r.followup_date)}</span>
+      render: (r) => <span className="font-semibold text-slate-700 text-xs whitespace-nowrap block">{formatDate(r.followup_date)}</span>
     },
     {
       key: "company_name",
@@ -335,7 +340,15 @@ export default function Lead() {
           <div>Name</div>
         </div>
       ),
-      render: (r) => <span className="text-slate-900 font-semibold text-xs tracking-tight py-0.5 block">{r.company_name || "-"}</span>
+      render: (r) => (
+        <span
+          className="text-slate-900 font-semibold text-xs tracking-tight block max-w-[150px] truncate mx-auto cursor-default"
+          title={r.company_name || ""}
+        >
+          {r.company_name || "-"}
+        </span>
+      ),
+      className: "min-w-[130px] max-w-[170px]"
     },
     {
       key: "contact_person",
@@ -345,25 +358,59 @@ export default function Lead() {
           <div>Person</div>
         </div>
       ),
-      render: (r) => <span className="text-slate-700 text-xs py-0.5 block">{r.contact_person || "-"}</span>
+      render: (r) => (
+        <span
+          className="text-slate-700 text-xs block max-w-[130px] truncate mx-auto cursor-default"
+          title={r.contact_person || ""}
+        >
+          {r.contact_person || "-"}
+        </span>
+      ),
+      className: "min-w-[120px] max-w-[150px]"
     },
-    { key: "mobile_number", label: "Mobile", render: (r) => <span className="text-slate-700 text-xs font-medium whitespace-nowrap py-0.5 block">{r.mobile_number || "-"}</span> },
+    {
+      key: "mobile_number",
+      label: "Mobile",
+      render: (r) => <span className="text-slate-700 text-xs font-medium whitespace-nowrap block">{r.mobile_number || "-"}</span>,
+      className: "whitespace-nowrap"
+    },
     {
       key: "lead_source",
       label: "Source",
-      render: (r) => <div className="py-0.5"><span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-medium uppercase tracking-wider">{r.lead_source || "-"}</span></div>
+      render: (r) => (
+        <div>
+          <span
+            className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-medium uppercase tracking-wider whitespace-nowrap inline-block max-w-[110px] truncate"
+            title={r.lead_source || ""}
+          >
+            {r.lead_source || "-"}
+          </span>
+        </div>
+      ),
+      className: "whitespace-nowrap"
     },
     {
       key: "status",
       label: "Status",
-      render: (r) => <div className="py-0.5"><span className="px-2 py-0.5 rounded bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-wider">{r.status || "-"}</span></div>
+      render: (r) => (
+        <div>
+          <span
+            className="px-2 py-0.5 rounded bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap inline-block"
+            title={r.status || ""}
+          >
+            {r.status || "-"}
+          </span>
+        </div>
+      ),
+      className: "whitespace-nowrap"
     },
     {
       key: "is_converted",
       label: "Converted",
       render: (r) => r.is_converted ?
-        <span className="text-emerald-600 font-bold text-sm py-0.5 block">✓</span> :
-        <span className="text-slate-300 text-xs py-0.5 block">-</span>
+        <span className="text-emerald-600 font-bold text-xs block">✓</span> :
+        <span className="text-slate-300 text-xs block">-</span>,
+      className: "whitespace-nowrap"
     },
     ...(userRole?.name !== "sales"
       ? [{
@@ -374,24 +421,26 @@ export default function Lead() {
             <div>To</div>
           </div>
         ),
-        render: (r) => (
-          <div className="py-0.5 text-center leading-tight">
-            <span className="text-slate-800 font-medium text-xs block whitespace-nowrap">
-              {r.assigned_executive_details?.full_name || r.assigned_executive_details?.first_name || "-"}
+        render: (r) => {
+          const name = r.assigned_executive_details?.full_name || r.assigned_executive_details?.first_name || (r.assigned_executive ? String(r.assigned_executive) : "");
+          const email = r.assigned_executive_details?.email || "";
+          const tooltip = name && email ? `${name} (${email})` : name || email || "-";
+          return (
+            <span
+              className="text-slate-800 font-medium text-xs block max-w-[130px] truncate mx-auto cursor-default"
+              title={tooltip}
+            >
+              {name || email || "-"}
             </span>
-            {r.assigned_executive_details?.email && (
-              <span className="text-slate-500 text-[10px] block whitespace-nowrap mt-0.5">
-                {r.assigned_executive_details.email}
-              </span>
-            )}
-          </div>
-        )
+          );
+        },
+        className: "min-w-[110px] max-w-[140px]"
       }]
       : [])
   ];
 
   const actionsRenderer = useCallback((row) => (
-    <div className="flex items-center justify-center gap-1 py-0.5">
+    <div className="flex items-center justify-center gap-1 whitespace-nowrap">
       {/* Record Viewer Button */}
       <button
         onClick={() => {
@@ -455,6 +504,17 @@ export default function Lead() {
         title="Create New Quotation"
       >
         <MdAdd />
+      </button>
+
+      <button
+        onClick={() => {
+          setSelectedMessageRecord(row);
+          setSendMessageModalOpen(true);
+        }}
+        className="p-1 bg-slate-100 hover:bg-sky-100 text-slate-600 hover:text-sky-700 rounded transition-all duration-150 text-sm shadow-sm cursor-pointer"
+        title="Send Email / WhatsApp"
+      >
+        <MdMail />
       </button>
 
       {canEditLead && (
@@ -643,6 +703,17 @@ export default function Lead() {
         onSuccess={fetchData}
         baseApi={BASE_API}
         token={token}
+      />
+
+      <SendMessageModal
+        isOpen={sendMessageModalOpen}
+        onClose={() => {
+          setSendMessageModalOpen(false);
+          setSelectedMessageRecord(null);
+        }}
+        category="lead"
+        recordData={selectedMessageRecord}
+        onSuccess={() => {}}
       />
     </Base>
   );

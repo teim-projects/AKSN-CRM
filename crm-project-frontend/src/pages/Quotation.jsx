@@ -10,6 +10,7 @@ import Swal from "sweetalert2";
 import AdvancedTableFilter from "../components/AdvancedTableFilter";
 import axios from "axios";
 import { useUserRole } from '../hooks/useAuth';
+import SendMessageModal from "../components/templates/SendMessageModal";
 
 const BASE_API = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
 
@@ -45,6 +46,11 @@ export default function Quotation() {
   // Form modal state
   const [showQuotationForm, setShowQuotationForm] = useState(false);
   const [editingQuotation, setEditingQuotation] = useState(null);
+
+  // Send Message Modal state
+  const [sendMessageModalOpen, setSendMessageModalOpen] = useState(false);
+  const [selectedMessageRecord, setSelectedMessageRecord] = useState(null);
+  const [messageChannel, setMessageChannel] = useState("email");
 
   // Quick Filter state
   const [filterType, setFilterType] = useState(searchParams.get("filter") || "all");
@@ -477,13 +483,14 @@ export default function Quotation() {
     {
       key: "sr",
       label: "Sr.No",
-      render: (_, idx) => <span className="text-slate-600 font-medium text-xs py-0.5 block">{(currentPage - 1) * itemsPerPage + (idx + 1)}</span>
+      render: (_, idx) => <span className="text-slate-600 font-medium text-xs whitespace-nowrap block">{(currentPage - 1) * itemsPerPage + (idx + 1)}</span>,
+      className: "w-12 whitespace-nowrap"
     },
     {
       key: "quotation_no",
       label: "Quotation No",
       render: (r) => (
-        <div className="flex items-center justify-center gap-1.5 whitespace-nowrap py-0.5">
+        <div className="flex items-center justify-center gap-1.5 whitespace-nowrap" title={r.quotation_no || ""}>
           <span className={r.is_dropped ? "text-slate-700 font-bold text-xs line-through" : "text-blue-600 font-bold text-xs"}>
             {r.quotation_no || "-"}
           </span>
@@ -493,40 +500,60 @@ export default function Quotation() {
             </span>
           )}
         </div>
-      )
+      ),
+      className: "whitespace-nowrap"
     },
     {
       key: "quotation_for",
       label: "Quotation For",
       render: (r) => (
         <span
-          className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${r.quotation_for === "Ahilyanagar"
+          className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border whitespace-nowrap ${r.quotation_for === "Ahilyanagar"
               ? "bg-amber-50 text-amber-700 border-amber-200"
               : "bg-blue-50 text-blue-700 border-blue-200"
             }`}
+          title={r.quotation_for || "Pune"}
         >
           {r.quotation_for || "Pune"}
         </span>
-      )
+      ),
+      className: "whitespace-nowrap"
     },
     {
       key: "company_name",
       label: "Company Name",
       render: (r) => (
-        <span className="text-slate-900 font-semibold text-xs tracking-tight py-0.5 block whitespace-nowrap">
+        <span
+          className="text-slate-900 font-semibold text-xs tracking-tight block max-w-[160px] truncate mx-auto cursor-default"
+          title={r.company_name || ""}
+        >
           {r.company_name || "-"}
         </span>
-      )
+      ),
+      className: "min-w-[130px] max-w-[170px]"
     },
     {
       key: "contact",
       label: "Contact",
-      render: (r) => <span className="text-slate-700 text-xs py-0.5 block whitespace-nowrap">{r.contact_person || "-"}</span>
+      render: (r) => (
+        <span
+          className="text-slate-700 text-xs block max-w-[130px] truncate mx-auto cursor-default"
+          title={r.contact_person || ""}
+        >
+          {r.contact_person || "-"}
+        </span>
+      ),
+      className: "min-w-[110px] max-w-[140px]"
     },
     {
       key: "mobile",
       label: "Mobile",
-      render: (r) => <span className="text-slate-700 font-medium text-xs whitespace-nowrap py-0.5 block">{r.mobile_number || "-"}</span>
+      render: (r) => (
+        <span className="text-slate-700 font-medium text-xs whitespace-nowrap block" title={r.mobile_number || ""}>
+          {r.mobile_number || "-"}
+        </span>
+      ),
+      className: "whitespace-nowrap"
     },
     {
       key: "version",
@@ -534,9 +561,10 @@ export default function Quotation() {
       render: (r) => {
         const activeVersion = getActiveVersion(r);
         const isFinalized = r.is_finalized || activeVersion?.is_finalized;
+        const vText = activeVersion?.version_no || "v1";
         return (
-          <div className="flex items-center gap-1.5 whitespace-nowrap py-0.5">
-            <span className="text-slate-700 text-xs font-medium">{activeVersion?.version_no || "v1"}</span>
+          <div className="flex items-center justify-center gap-1.5 whitespace-nowrap" title={`Version: ${vText}${isFinalized ? " (Final)" : ""}`}>
+            <span className="text-slate-700 text-xs font-medium">{vText}</span>
             {isFinalized && (
               <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 border border-emerald-300 rounded text-[9px] font-bold uppercase tracking-wider">
                 Final
@@ -544,28 +572,34 @@ export default function Quotation() {
             )}
           </div>
         );
-      }
+      },
+      className: "whitespace-nowrap"
     },
     {
       key: "products",
       label: "Products",
       render: (r) => {
         const activeVersion = getActiveVersion(r);
-        return <span className="text-slate-700 text-xs py-0.5 block whitespace-nowrap">{getProductCount(activeVersion)} item(s)</span>;
-      }
+        const countText = `${getProductCount(activeVersion)} item(s)`;
+        return <span className="text-slate-700 text-xs whitespace-nowrap block" title={countText}>{countText}</span>;
+      },
+      className: "whitespace-nowrap"
     },
     {
       key: "total_amount",
       label: "Total Amount",
       render: (r) => {
         const activeVersion = getActiveVersion(r);
-        return <span className="text-slate-900 font-bold text-xs py-0.5 block whitespace-nowrap">₹{formatAmount(activeVersion?.grand_total || activeVersion?.total_amount)}</span>;
-      }
+        const amtText = `₹${formatAmount(activeVersion?.grand_total || activeVersion?.total_amount)}`;
+        return <span className="text-slate-900 font-bold text-xs whitespace-nowrap block" title={amtText}>{amtText}</span>;
+      },
+      className: "whitespace-nowrap"
     },
     {
       key: "date",
       label: "Date",
-      render: (r) => <span className="text-slate-600 text-xs whitespace-nowrap py-0.5 block">{formatDate(r.created_at)}</span>
+      render: (r) => <span className="text-slate-600 text-xs whitespace-nowrap block" title={formatDate(r.created_at)}>{formatDate(r.created_at)}</span>,
+      className: "whitespace-nowrap"
     },
   ];
 
@@ -577,7 +611,7 @@ export default function Quotation() {
     const isEditable = !isFinalized && !isDropped;
 
     return (
-      <div className="flex items-center justify-center gap-1 py-0.5">
+      <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -653,15 +687,25 @@ export default function Quotation() {
         </button>
 
         <button
-          className="p-1 bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-700 rounded transition-all duration-150 text-sm shadow-xs"
-          title="WhatsApp"
+          onClick={() => {
+            setSelectedMessageRecord(row);
+            setMessageChannel("whatsapp");
+            setSendMessageModalOpen(true);
+          }}
+          className="p-1 bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-700 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer"
+          title="Send via WhatsApp"
         >
           <FaWhatsapp />
         </button>
 
         <button
-          className="p-1 bg-slate-100 hover:bg-sky-100 text-slate-600 hover:text-sky-700 rounded transition-all duration-150 text-sm shadow-xs"
-          title="Email"
+          onClick={() => {
+            setSelectedMessageRecord(row);
+            setMessageChannel("email");
+            setSendMessageModalOpen(true);
+          }}
+          className="p-1 bg-slate-100 hover:bg-sky-100 text-slate-600 hover:text-sky-700 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer"
+          title="Send via Email"
         >
           <MdEmail />
         </button>
@@ -1043,6 +1087,19 @@ export default function Quotation() {
           }}
         />
       )}
+
+      {/* SEND MESSAGE MODAL */}
+      <SendMessageModal
+        isOpen={sendMessageModalOpen}
+        onClose={() => {
+          setSendMessageModalOpen(false);
+          setSelectedMessageRecord(null);
+        }}
+        category="quotation"
+        recordData={selectedMessageRecord}
+        initialChannel={messageChannel}
+        onSuccess={() => {}}
+      />
     </Base>
   );
 }

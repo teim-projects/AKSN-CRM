@@ -12,6 +12,7 @@ const SYSTEM_MODULE_KEYS = [
   "terms",
   "accounts",
   "roles",
+  "templates",
 ];
 
 function getDefaultPermissionsForRole(roleName) {

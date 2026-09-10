@@ -247,15 +247,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # password reset frontend url
 FRONTEND_URL = os.getenv('FRONTEND_URL')
 
-# ✅ Use Gmail to send real emails
+# ✅ Use Gmail / Google Workspace to send real emails
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'girsawaleritesh5@gmail.com')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'iwsw qipv xzzf ppuk')
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or 'girsawaleritesh5@gmail.com'
-ADMIN_EMAIL = 'girsawaleritesh5@gmail.com'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'info.aksninfotech@gmail.com')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'zxpxyynjukfoluji')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'AKSN Infotech <info.aksninfotech@gmail.com>')
+ADMIN_EMAIL = 'info.aksninfotech@gmail.com'
 
 
 # JWT settings 

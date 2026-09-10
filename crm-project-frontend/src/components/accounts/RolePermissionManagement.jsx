@@ -55,6 +55,11 @@ export const SYSTEM_MODULES = [
     name: "Accounts & Staff",
     description: "Manage staff accounts, credentials, and operational roles",
   },
+  {
+    key: "templates",
+    name: "Message Templates",
+    description: "Manage dynamic Email and WhatsApp message templates",
+  },
 ];
 
 // Helper to get default permissions for a role name

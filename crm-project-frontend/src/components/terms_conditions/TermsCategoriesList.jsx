@@ -160,53 +160,70 @@ export default function TermsCategoriesList() {
       key: "sr",
       label: "Sr.No",
       render: (_, idx) => (
-        <span className="text-slate-400 font-medium text-[10px] py-0 block">
+        <span className="text-slate-400 font-medium text-[10px] py-0 whitespace-nowrap block">
           {(currentPage - 1) * itemsPerPage + (idx + 1)}
         </span>
       ),
+      className: "w-14 whitespace-nowrap",
     },
     {
       key: "name",
       label: "Category Name",
       render: (r) => (
-        <span className="text-slate-800 font-semibold text-xs tracking-tight py-0 block">
+        <span
+          className="text-slate-800 font-semibold text-xs tracking-tight py-0 block max-w-[160px] truncate mx-auto cursor-default"
+          title={r.name || ""}
+        >
           {r.name || "-"}
         </span>
       ),
+      className: "min-w-[130px] max-w-[170px]",
     },
     {
       key: "description",
       label: "Description",
       render: (r) => (
-        <span className="text-slate-600 text-xs py-0 block truncate max-w-[200px]">
+        <span
+          className="text-slate-600 text-xs py-0 block truncate max-w-[220px] mx-auto cursor-default"
+          title={r.description || ""}
+        >
           {r.description || "-"}
         </span>
       ),
+      className: "min-w-[150px] max-w-[240px]",
     },
     {
       key: "terms_count",
       label: "Total Terms",
       render: (r) => (
-        <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600">
+        <span
+          className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 whitespace-nowrap"
+          title={`Total: ${r.terms_count || 0}`}
+        >
           {r.terms_count || 0}
         </span>
       ),
+      className: "w-28 whitespace-nowrap",
     },
     {
       key: "is_active",
       label: "Status",
       render: (r) => (
-        <span className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-          r.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-        }`}>
+        <span
+          className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full uppercase tracking-wider whitespace-nowrap inline-block ${
+            r.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+          }`}
+          title={r.is_active ? 'Active' : 'Inactive'}
+        >
           {r.is_active ? 'Active' : 'Inactive'}
         </span>
       ),
+      className: "w-24 whitespace-nowrap",
     },
   ];
 
   const actionsRenderer = useCallback((row) => (
-    <div className="flex items-center justify-center gap-1 py-0">
+    <div className="flex items-center justify-center gap-1.5 py-0 whitespace-nowrap">
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -296,27 +313,36 @@ export default function TermsCategoriesList() {
                 {paginatedTerms.map((term, idx) => {
                   const globalIndex = ((termPage - 1) * TERMS_PER_PAGE) + idx + 1;
                   return (
-                    <tr key={term.id} className="hover:bg-slate-50/50">
-                      <td className="px-3 py-1.5 text-slate-400">{globalIndex}</td>
-                      <td className="px-3 py-1.5 font-medium text-slate-800">{term.name}</td>
-                      <td className="px-3 py-1.5 text-slate-600 truncate max-w-[200px]">
-                        {term.description || "-"}
+                    <tr key={term.id} className="hover:bg-slate-50/50 h-9">
+                      <td className="px-3 py-1 text-slate-400 whitespace-nowrap">{globalIndex}</td>
+                      <td className="px-3 py-1 font-medium text-slate-800">
+                        <span className="block truncate max-w-[160px] cursor-default" title={term.name}>
+                          {term.name}
+                        </span>
                       </td>
-                      <td className="px-3 py-1.5 text-center">
+                      <td className="px-3 py-1 text-slate-600">
+                        <span className="block truncate max-w-[240px] cursor-default" title={term.description || ""}>
+                          {term.description || "-"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-1 text-center whitespace-nowrap">
                         {term.is_default ? (
-                          <span className="text-emerald-600 font-bold">✓</span>
+                          <span className="text-emerald-600 font-bold" title="Default">✓</span>
                         ) : (
                           <span className="text-slate-300">-</span>
                         )}
                       </td>
-                      <td className="px-3 py-1.5 text-center">
-                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                          term.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-                        }`}>
+                      <td className="px-3 py-1 text-center whitespace-nowrap">
+                        <span
+                          className={`text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap inline-block ${
+                            term.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                          }`}
+                          title={term.is_active ? 'Active' : 'Inactive'}
+                        >
                           {term.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </td>
-                      <td className="px-3 py-1.5 text-center">
+                      <td className="px-3 py-1 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1">
                           <button
                             onClick={() => navigate(`/terms/edit-term/${term.id}`)}

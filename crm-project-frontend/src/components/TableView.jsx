@@ -44,9 +44,9 @@ export default function TableView({
               <thead>
                 <tr className="text-left border-b">
                   {columns.map(col => (
-                    <th key={col.key} className="py-2 px-3 text-center">{col.label}</th>
+                    <th key={col.key} className={`py-1.5 px-3 text-center align-middle text-xs font-semibold text-slate-600 ${col.headerClassName || col.className || ""}`}>{col.label}</th>
                   ))}
-                  {actions && <th className="py-2 px-3 text-center">Actions</th>}
+                  {actions && <th className="py-1.5 px-3 text-center align-middle text-xs font-semibold text-slate-600 whitespace-nowrap">Actions</th>}
                 </tr>
               </thead>
 
@@ -59,16 +59,16 @@ export default function TableView({
                   </tr>
                 ) : rows.map((row, idx) => (
                   <React.Fragment key={row.id ?? idx}>
-                    <tr className={`border-b hover:bg-gray-50 ${rowClassName ? rowClassName(row) : ''}`}>
+                    <tr className={`border-b hover:bg-gray-50/80 transition-colors h-9 sm:h-10 ${rowClassName ? rowClassName(row) : ''}`}>
                       {columns.map(col => (
-                        <td key={col.key} className="py-1.5 px-3 text-center">
+                        <td key={col.key} className={`py-1 px-3 text-center align-middle ${col.className || ""}`}>
                           {col.render ? col.render(row, idx) : (row[col.key] ?? "")}
                         </td>
                       ))}
 
                       {actions && (
-                        <td className="py-1.5 px-3">
-                          <div className="flex items-center justify-center text-center gap-2">
+                        <td className="py-1 px-3 align-middle whitespace-nowrap">
+                          <div className="flex items-center justify-center text-center gap-1.5">
                             {actions(row)}
                           </div>
                         </td>

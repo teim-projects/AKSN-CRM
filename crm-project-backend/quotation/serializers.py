@@ -94,6 +94,9 @@ class QuotationSerializer(serializers.ModelSerializer):
     lead_contact = serializers.CharField(
         source="lead.mobile_number", read_only=True
     )
+    lead_email = serializers.CharField(
+        source="lead.email_address", read_only=True
+    )
     versions = QuotationVersionSerializer(many=True, read_only=True)
     quotation_for = serializers.ChoiceField(
         choices=Quotation.QUOTATION_FOR_CHOICES,
@@ -243,8 +246,15 @@ class QuotationCreateSerializer(serializers.ModelSerializer):
         if not items_data:
             raise serializers.ValidationError({"items": "At least one item is required"})
 
-        # ✅ Remove created_by from validated_data if it exists
-        validated_data.pop('created_by', None)
+        # ✅ Auto-fallback contact info from lead if missing
+        lead_obj = validated_data.get('lead')
+        if lead_obj:
+            if not validated_data.get('email_address') and getattr(lead_obj, 'email_address', None):
+                validated_data['email_address'] = lead_obj.email_address
+            if not validated_data.get('mobile_number') and getattr(lead_obj, 'mobile_number', None):
+                validated_data['mobile_number'] = lead_obj.mobile_number
+            if not validated_data.get('contact_person') and getattr(lead_obj, 'contact_person', None):
+                validated_data['contact_person'] = lead_obj.contact_person
 
         quotation = Quotation.objects.create(
             **validated_data,

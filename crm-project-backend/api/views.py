@@ -15,8 +15,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication 
 from rest_framework import filters
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import CustomUser, Role, BranchManagement, SiteManagement
-from .serializers import AddStaffSerializer, RoleSerializer, BranchSerializers, SiteSerializers
+from .models import CustomUser, Role, BranchManagement, SiteManagement, MessageTemplate
+from .serializers import AddStaffSerializer, RoleSerializer, BranchSerializers, SiteSerializers, MessageTemplateSerializer
+from django.core.mail import EmailMultiAlternatives
+from django.conf import settings
 from .permissions import IsAdminOrSubAdmin ,StaffObjectPermission
 from .pagination import StaffPagination
 from rest_framework.decorators import action
@@ -226,4 +228,94 @@ class SiteManagementViewSet(viewsets.ModelViewSet):
         'name',"pincode","owner_contact","owner_name",
         'city', 'state',
     ]
+
+
+# --------------------------------------------------------------------------------
+# Message Template ViewSet & Send Email View
+# --------------------------------------------------------------------------------
+
+class MessageTemplateViewSet(viewsets.ModelViewSet):
+    queryset = MessageTemplate.objects.all()
+    serializer_class = MessageTemplateSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['channel', 'category', 'is_active']
+    search_fields = ['name', 'subject', 'body']
+    ordering_fields = ['created_at', 'name', 'category']
+    ordering = ['-created_at']
+
+    def perform_create(self, serializer):
+        user = self.request.user if self.request.user.is_authenticated else None
+        serializer.save(created_by=user)
+
+
+class SendEmailView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        to_email = request.data.get('to_email')
+        subject = (request.data.get('subject') or '').strip()
+        # Accept both 'body' and 'message' parameter
+        message = (request.data.get('body') or request.data.get('message') or '').strip()
+        html_message = request.data.get('html_message', None)
+        category = request.data.get('category')
+        record_id = request.data.get('record_id') or request.data.get('quotation_id')
+        attach_quotation_pdf = request.data.get('attach_quotation_pdf', False)
+
+        if not to_email:
+            return Response({"error": "Recipient email ('to_email') is required."}, status=status.HTTP_400_BAD_REQUEST)
+        if not subject:
+            return Response({"error": "Subject is required."}, status=status.HTTP_400_BAD_REQUEST)
+        if not message and not html_message:
+            return Response({"error": "Message body is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Parse recipient list
+        recipients = [e.strip() for e in str(to_email).split(',') if e.strip()]
+        if not recipients:
+            return Response({"error": "Invalid recipient email address."}, status=status.HTTP_400_BAD_REQUEST)
+
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'info@aksninfotech.com')
+
+        try:
+            email_msg = EmailMultiAlternatives(
+                subject=subject,
+                body=message,
+                from_email=from_email,
+                to=recipients
+            )
+            if html_message:
+                email_msg.attach_alternative(html_message, "text/html")
+
+            # Handle optional Quotation PDF attachment
+            if attach_quotation_pdf and record_id:
+                try:
+                    from quotation.models import Quotation
+                    from quotation.utils.pdf_generator import generate_quotation_pdf
+                    quotation = Quotation.objects.filter(id=record_id).first()
+                    if quotation:
+                        active_version = quotation.versions.filter(is_active=True).first() or quotation.versions.first()
+                        if active_version:
+                            pdf_bytes = generate_quotation_pdf(quotation, active_version)
+                            filename = f"Quotation_{quotation.quotation_no or quotation.id}.pdf"
+                            email_msg.attach(filename, pdf_bytes, 'application/pdf')
+                except Exception as pdf_err:
+                    import logging
+                    logging.getLogger(__name__).warning(f"Could not attach quotation PDF: {pdf_err}")
+
+            email_msg.send(fail_silently=False)
+            return Response({
+                "status": "success",
+                "success": True,
+                "message": f"Email successfully sent to {', '.join(recipients)}",
+                "to": recipients,
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                "status": "error",
+                "success": False,
+                "error": f"Failed to send email: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     
