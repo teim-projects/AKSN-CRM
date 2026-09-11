@@ -195,16 +195,17 @@ export const getFilterableValue = (item, field) => {
   }
 
   // 5. Specific handler for Products
-  if (field === "product" || field === "products" || field === "product_name") {
-    if (Array.isArray(item.product)) {
-      return item.product
-        .map((p) => (typeof p === "object" ? p.name || p.product_name : String(p)))
+  if (field === "product" || field === "products" || field === "product_name" || field === "product_interested") {
+    const pVal = item.product ?? item.product_name ?? item.product_interested ?? item.products;
+    if (Array.isArray(pVal)) {
+      return pVal
+        .map((p) => (typeof p === "object" ? p.name || p.product_name || p.product : String(p)))
         .join(" ");
     }
-    if (item.product && typeof item.product === "object") {
-      return item.product.name || item.product.product_name || "";
+    if (pVal && typeof pVal === "object") {
+      return pVal.name || pVal.product_name || pVal.product || "";
     }
-    return item.product_name || item.product || "";
+    return item.product_name || item.product || (typeof pVal === "string" ? pVal : "");
   }
 
   // 6. Specific handler for Date

@@ -435,11 +435,17 @@ class LeadViewSet(viewsets.ModelViewSet):
         ws.title = "Lead Import Template"
         ws.views.sheetView[0].showGridLines = True
 
+        from product_management.models import Product
+
+        all_products = list(Product.objects.all())
+        sample_prod = all_products[0].name if all_products and all_products[0].name else "ERP"
+
         headers = [
             ("Company Name *", 26, "Acme Corporation"),
             ("Contact Person", 22, "John Doe"),
             ("Mobile Number *", 20, "9876543210"),
             ("Email Address", 26, "john@acme.com"),
+            ("Product *", 24, sample_prod),
             ("City", 18, "Mumbai"),
             ("State", 18, "Maharashtra"),
             ("Address", 32, "123 Business Park, Andheri East"),
@@ -501,7 +507,7 @@ class LeadViewSet(viewsets.ModelViewSet):
         ws_info = wb.create_sheet(title="Instructions & Options")
         ws_info.views.sheetView[0].showGridLines = True
         ws_info.column_dimensions['A'].width = 24
-        ws_info.column_dimensions['B'].width = 60
+        ws_info.column_dimensions['B'].width = 65
 
         info_headers = ["Field Name", "Accepted Values / Format Details"]
         for c_idx, h in enumerate(info_headers, 1):
@@ -512,23 +518,31 @@ class LeadViewSet(viewsets.ModelViewSet):
             c.border = thin_border
         ws_info.row_dimensions[1].height = 26
 
+        product_desc = (
+            "MANDATORY. Exact product name as registered in the CRM system. "
+            "Multiple products can be separated by commas (e.g. 'Product A, Product B'). "
+            "If any product name in the row does not match our system, the entire row will fail. "
+            "Please check the 'Available Products' tab in this workbook for all valid product names."
+        )
+
         instructions = [
             ("Company Name *", "Required if Contact Person is not provided. Name of the client company/organization."),
             ("Contact Person", "Required if Company Name is not provided. Primary person to contact."),
             ("Mobile Number *", "MANDATORY. 10-digit mobile number (e.g. 9876543210). Must be unique."),
+            ("Product *", product_desc),
             ("Email Address", "Optional. Valid email address (e.g. name@domain.com)."),
             ("Lead Source", "Accepted: Website, Referral, Cold Call, Social Media, Email Campaign, Exhibition, Other"),
             ("Industry Type", "Accepted: IT Services, Manufacturing, Banking, Automotive, Healthcare, Education, Real Estate, Other"),
             ("Priority", "Accepted: Critical, High, Medium, Low (default: Medium)"),
             ("Pipeline Stage", "Accepted: New Lead, Contacted, Requirement Gathering, Demo Scheduled, Demo Completed, Proposal Sent, Negotiation (default: New Lead)"),
             ("Dates", "Format: YYYY-MM-DD (e.g. 2026-09-10) or DD-MM-YYYY (e.g. 10-09-2026)"),
-            ("Amount", "Numeric value without currency symbols (e.g. 75000 or 150000.50)"),
+            ("Amount", "Numeric value without currency symbols (e.g. 75000 or 150000.50). If omitted, automatically calculated from product unit price."),
             ("Is Tally User", "Yes or No"),
-            ("Notes on Importing", "Rows with duplicate mobile numbers already in the CRM will be skipped and reported in the summary."),
+            ("Notes on Importing", "Rows with duplicate mobile numbers or product names not matching our system will fail and be reported in the error summary."),
         ]
 
         for r_idx, (field, desc) in enumerate(instructions, 2):
-            ws_info.row_dimensions[r_idx].height = 22
+            ws_info.row_dimensions[r_idx].height = 24
             c1 = ws_info.cell(row=r_idx, column=1, value=field)
             c1.font = Font(name="Calibri", size=10, bold=True, color="1E293B")
             c1.border = thin_border
@@ -537,7 +551,48 @@ class LeadViewSet(viewsets.ModelViewSet):
             c2 = ws_info.cell(row=r_idx, column=2, value=desc)
             c2.font = sample_font
             c2.border = thin_border
-            c2.alignment = Alignment(vertical="center")
+            c2.alignment = Alignment(vertical="center", wrap_text=True)
+
+        # 3. Available Products Sheet (for reference)
+        ws_prods = wb.create_sheet(title="Available Products")
+        ws_prods.views.sheetView[0].showGridLines = True
+        ws_prods.column_dimensions['A'].width = 8
+        ws_prods.column_dimensions['B'].width = 38
+        ws_prods.column_dimensions['C'].width = 22
+        ws_prods.column_dimensions['D'].width = 18
+
+        prod_headers = ["Sr.No", "Product / Service Name", "Product Code", "Unit Price (₹)"]
+        for c_idx, h in enumerate(prod_headers, 1):
+            c = ws_prods.cell(row=1, column=c_idx, value=h)
+            c.font = header_font
+            c.fill = header_fill
+            c.alignment = header_align
+            c.border = thin_border
+        ws_prods.row_dimensions[1].height = 26
+
+        for p_idx, prod_obj in enumerate(all_products, 1):
+            r_num = p_idx + 1
+            ws_prods.row_dimensions[r_num].height = 20
+            
+            c_sr = ws_prods.cell(row=r_num, column=1, value=p_idx)
+            c_sr.alignment = Alignment(horizontal="center", vertical="center")
+            c_sr.font = sample_font
+            c_sr.border = thin_border
+
+            c_name = ws_prods.cell(row=r_num, column=2, value=prod_obj.name)
+            c_name.alignment = Alignment(horizontal="left", vertical="center")
+            c_name.font = Font(name="Calibri", size=10, bold=True, color="1E293B")
+            c_name.border = thin_border
+
+            c_code = ws_prods.cell(row=r_num, column=3, value=prod_obj.product_code or "-")
+            c_code.alignment = Alignment(horizontal="left", vertical="center")
+            c_code.font = sample_font
+            c_code.border = thin_border
+
+            c_price = ws_prods.cell(row=r_num, column=4, value=float(prod_obj.unit_price) if prod_obj.unit_price else 0.0)
+            c_price.alignment = Alignment(horizontal="right", vertical="center")
+            c_price.font = sample_font
+            c_price.border = thin_border
 
         buffer = io.BytesIO()
         wb.save(buffer)
@@ -676,6 +731,17 @@ class LeadViewSet(viewsets.ModelViewSet):
             'remarks': 'remarks',
             'remark': 'remarks',
             'notes': 'remarks',
+            'product': 'product',
+            'products': 'product',
+            'product name': 'product',
+            'product_name': 'product',
+            'products name': 'product',
+            'product interested': 'product',
+            'products interested': 'product',
+            'product_interested': 'product',
+            'products_interested': 'product',
+            'item': 'product',
+            'items': 'product',
         }
 
         # Date parser helper
@@ -703,6 +769,20 @@ class LeadViewSet(viewsets.ModelViewSet):
                 if val_norm == k.lower() or val_norm == label.lower().replace('-', '_').replace(' ', '_'):
                     return k
             return default
+
+        # Pre-fetch existing products for fast exact / case-insensitive matching
+        from product_management.models import Product
+        system_products = list(Product.objects.all())
+        prod_lookup = {}
+        for p in system_products:
+            if p.name:
+                p_name_clean = p.name.strip()
+                prod_lookup[p_name_clean] = p
+                prod_lookup[p_name_clean.lower()] = p
+            if p.product_code:
+                p_code_clean = p.product_code.strip()
+                prod_lookup[p_code_clean] = p
+                prod_lookup[p_code_clean.lower()] = p
 
         # Pre-fetch existing mobile numbers in database for fast duplicate lookup
         existing_leads = (
@@ -799,6 +879,41 @@ class LeadViewSet(viewsets.ModelViewSet):
 
             batch_mobile_set.add(target_10)
 
+            # Validate Product (Mandatory - must match an existing product in our system)
+            raw_prod_val = norm_data.get('product')
+            matched_product_names = []
+
+            if raw_prod_val is not None and str(raw_prod_val).strip():
+                prod_str = str(raw_prod_val).strip()
+                tokens = [t.strip().strip("'\"").strip() for t in prod_str.split(',') if t.strip()]
+
+                product_error = None
+                for token in tokens:
+                    matched_prod = prod_lookup.get(token) or prod_lookup.get(token.lower())
+                    if not matched_prod:
+                        product_error = f"Product '{token}' does not exist in our system. Product name must match our CRM products exactly."
+                        break
+                    else:
+                        if matched_prod.name not in matched_product_names:
+                            matched_product_names.append(matched_prod.name)
+
+                if product_error:
+                    errors.append({
+                        "row": row_num,
+                        "company_name": comp_name or contact_p,
+                        "mobile_number": mobile_raw or "-",
+                        "error": product_error
+                    })
+                    continue
+            else:
+                errors.append({
+                    "row": row_num,
+                    "company_name": comp_name or contact_p,
+                    "mobile_number": mobile_raw or "-",
+                    "error": "Product is required. Please specify a product name that matches our CRM system exactly."
+                })
+                continue
+
             # Amount parsing
             amount_val = 0.00
             if norm_data.get('amount'):
@@ -807,6 +922,16 @@ class LeadViewSet(viewsets.ModelViewSet):
                     amount_val = float(clean_amt) if clean_amt else 0.00
                 except (ValueError, TypeError):
                     amount_val = 0.00
+
+            # Amount fallback to sum of matched products if amount was omitted or 0
+            if amount_val == 0.00 and matched_product_names:
+                calc_amt = sum(
+                    float(prod_lookup[p_name].unit_price)
+                    for p_name in matched_product_names
+                    if p_name in prod_lookup and getattr(prod_lookup[p_name], 'unit_price', None)
+                )
+                if calc_amt > 0:
+                    amount_val = calc_amt
 
             # Dates
             enquiry_d = parse_date(norm_data.get('enquiry_date')) or timezone.localdate()
@@ -827,6 +952,7 @@ class LeadViewSet(viewsets.ModelViewSet):
                 city=str(norm_data.get('city') or "").strip() or None,
                 state=str(norm_data.get('state') or "").strip() or None,
                 address=str(norm_data.get('address') or "").strip() or None,
+                product_interested=matched_product_names,
                 lead_source=src_val,
                 industry_type=ind_val,
                 priority=prio_val,

@@ -379,9 +379,10 @@ export default function ImportLeadModal({
               <span>Important Tips:</span>
             </div>
             <ul className="list-disc list-inside space-y-0.5 text-slate-500 pl-1">
-              <li><strong>Mobile Number</strong> must be 10 digits and unique across the CRM pipeline.</li>
+              <li><strong>Product</strong> name must match an existing product in our system exactly (refer to the <em>Available Products</em> sheet in the downloaded template).</li>
               <li>Provide at least <strong>Company Name</strong> or <strong>Contact Person</strong>.</li>
-              <li>Rows with duplicate mobile numbers will be skipped without stopping valid rows.</li>
+              <li><strong>Mobile Number</strong> must be 10 digits and unique across the CRM pipeline.</li>
+              <li>Rows with unmatched products or duplicate mobile numbers will fail and be reported in the error summary.</li>
             </ul>
           </div>
         </div>

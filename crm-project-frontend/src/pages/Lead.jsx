@@ -32,6 +32,7 @@ export default function Lead() {
   const [allRows, setAllRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [products, setProducts] = useState([]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -137,6 +138,87 @@ export default function Lead() {
     ""
   ), []);
 
+  const PRODUCT_API_URL = `${BASE_API}/product/products/?limit=1000`;
+
+  // Fetch product definitions to resolve IDs to product names
+  useEffect(() => {
+    let isMounted = true;
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch(PRODUCT_API_URL, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          const items = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : [];
+          setProducts(items);
+        }
+      } catch (err) {
+        console.error("Failed to fetch products in Lead:", err);
+      }
+    };
+    fetchProducts();
+    return () => {
+      isMounted = false;
+    };
+  }, [PRODUCT_API_URL, token]);
+
+  const productMap = useMemo(() => {
+    const map = new Map();
+    products.forEach((p) => {
+      if (p && p.id !== undefined && p.id !== null) {
+        map.set(String(p.id).trim(), p.name || String(p.id));
+      }
+    });
+    return map;
+  }, [products]);
+
+  const getProductDisplayNames = useCallback(
+    (r) => {
+      if (!r) return [];
+      const raw = r.product_interested ?? r.product ?? r.products ?? [];
+      let items = [];
+      if (Array.isArray(raw)) {
+        items = raw;
+      } else if (typeof raw === "string" && raw.trim()) {
+        const trimmed = raw.trim();
+        if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+          try {
+            const parsed = JSON.parse(trimmed);
+            items = Array.isArray(parsed) ? parsed : [parsed];
+          } catch {
+            items = trimmed.split(",").map((s) => s.trim()).filter(Boolean);
+          }
+        } else {
+          items = trimmed.split(",").map((s) => s.trim()).filter(Boolean);
+        }
+      } else if (raw !== null && raw !== undefined && raw !== "") {
+        items = [raw];
+      }
+
+      const resolved = items
+        .map((item) => {
+          if (!item) return "";
+          if (typeof item === "object") {
+            const val = item.name || item.product || item.product_name || item.title || "";
+            const valStr = String(val).trim();
+            if (productMap.has(valStr)) return productMap.get(valStr);
+            return typeof val === "string" ? val : String(val);
+          }
+          const str = String(item).trim();
+          if (productMap.has(str)) return productMap.get(str);
+          return str;
+        })
+        .filter(Boolean);
+
+      return Array.from(new Set(resolved));
+    },
+    [productMap]
+  );
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -159,14 +241,18 @@ export default function Lead() {
       const data = await res.json();
       const results = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : [];
 
-      const normalized = results.map((r) => ({
-        ...r,
-        date: r.enquiry_date || r.created_at || "",
-        assign_to:
-          r.assigned_executive_details?.full_name ||
-          r.assigned_executive_details?.first_name ||
-          (r.assigned_executive ? String(r.assigned_executive) : ""),
-      }));
+      const normalized = results.map((r) => {
+        const prodNames = getProductDisplayNames(r);
+        return {
+          ...r,
+          product: prodNames.join(", "),
+          date: r.enquiry_date || r.created_at || "",
+          assign_to:
+            r.assigned_executive_details?.full_name ||
+            r.assigned_executive_details?.first_name ||
+            (r.assigned_executive ? String(r.assigned_executive) : ""),
+        };
+      });
 
       setAllRows(normalized);
       setFilteredData(normalized);
@@ -183,7 +269,24 @@ export default function Lead() {
     } finally {
       setLoading(false);
     }
-  }, [token, API_URL, itemsPerPage]);
+  }, [token, API_URL, itemsPerPage, getProductDisplayNames]);
+
+  // Update rows when products list is retrieved to ensure all names are resolved
+  useEffect(() => {
+    if (products.length === 0) return;
+    const enrichRows = (list) =>
+      list.map((r) => {
+        const prodNames = getProductDisplayNames(r);
+        return {
+          ...r,
+          product: prodNames.join(", "),
+        };
+      });
+
+    setAllRows((prev) => enrichRows(prev));
+    setFilteredData((prev) => enrichRows(prev));
+    setRows((prev) => enrichRows(prev));
+  }, [products, getProductDisplayNames]);
 
   useEffect(() => {
     fetchData();
@@ -367,6 +470,27 @@ export default function Lead() {
         </span>
       ),
       className: "min-w-[120px] max-w-[150px]"
+    },
+    {
+      key: "product",
+      label: (
+        <div className="leading-tight">
+          <div>Product</div>
+        </div>
+      ),
+      render: (r) => {
+        const names = getProductDisplayNames(r);
+        const fullText = names.length > 0 ? names.join(", ") : (r.product || "");
+        return (
+          <span
+            className="text-slate-800 font-medium text-xs block max-w-[130px] truncate mx-auto cursor-default"
+            title={fullText}
+          >
+            {fullText || "-"}
+          </span>
+        );
+      },
+      className: "min-w-[110px] max-w-[150px]"
     },
     {
       key: "mobile_number",
