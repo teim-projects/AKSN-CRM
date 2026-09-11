@@ -12,6 +12,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useUserRole } from "../hooks/useAuth";
 import NotificationDrawer from "./NotificationDrawer";
+import ChatbotAssistant from "./chatbot/ChatbotAssistant";
+import { Sparkles } from "lucide-react";
 
 // ✅ NEW: Terms & Conditions Icon
 function TermsIcon(props) {
@@ -84,6 +86,7 @@ const allSidebarItems = [
 export default function Sidebar({ children }) {
   const [isOpen, setIsOpen] = useState(() => typeof window !== "undefined" && window.innerWidth >= 1024);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [collapsedSections, setCollapsedSections] = useState({});
   const location = useLocation();
@@ -282,6 +285,8 @@ export default function Sidebar({ children }) {
           onNotificationClick={() => setIsNotificationOpen(true)}
           unreadCount={unreadNotifCount}
           modules={filteredItems}
+          onChatbotClick={() => setIsChatbotOpen((prev) => !prev)}
+          isChatbotOpen={isChatbotOpen}
         />
 
         <main className="flex-1 p-3 sm:p-5 md:p-6 w-full bg-[#f4f5f9] overflow-x-hidden">
@@ -295,11 +300,26 @@ export default function Sidebar({ children }) {
         onClose={() => setIsNotificationOpen(false)}
         onUnreadCountChange={setUnreadNotifCount}
       />
+
+      {/* AI CHATBOT ASSISTANT - DRAGGABLE ANYWHERE */}
+      <ChatbotAssistant
+        isOpen={isChatbotOpen}
+        onClose={() => setIsChatbotOpen(false)}
+      />
     </div>
   );
 }
 
-const Navbar = ({ onMenuClick, pageTitle, isSidebarOpen, onNotificationClick, unreadCount, modules = [] }) => {
+const Navbar = ({ 
+  onMenuClick, 
+  pageTitle, 
+  isSidebarOpen, 
+  onNotificationClick, 
+  unreadCount, 
+  modules = [],
+  onChatbotClick,
+  isChatbotOpen
+}) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -617,6 +637,20 @@ const Navbar = ({ onMenuClick, pageTitle, isSidebarOpen, onNotificationClick, un
             </div>
           </div>
         )}
+
+        {/* AI CHATBOT BUTTON (Beside notification bell) */}
+        <button
+          onClick={onChatbotClick}
+          className={`p-1.5 sm:p-2 rounded-xl relative transition-all cursor-pointer flex items-center justify-center ${
+            isChatbotOpen
+              ? "bg-blue-50 text-blue-600 shadow-xs"
+              : "text-gray-400 hover:text-blue-600 hover:bg-gray-50"
+          }`}
+          title="AKSN AI Assistant (Ask any Lead or CRM doubt)"
+        >
+          <Sparkles className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-indigo-500 hover:text-blue-600 transition-transform hover:scale-110" />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-500 rounded-full animate-pulse border border-white" />
+        </button>
 
         <button
           onClick={onNotificationClick}

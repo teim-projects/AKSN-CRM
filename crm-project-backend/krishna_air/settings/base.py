@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'product_management',
     'quotation',
     'amc',
+    'chatbot',
 ] 
 
 SITE_ID = 1

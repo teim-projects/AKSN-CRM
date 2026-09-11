@@ -52,6 +52,8 @@ urlpatterns = [
     path('amc/', include('amc.urls')),
     path('lead/amc/', include('amc.urls')),
     path('templates/', include('api.urls_templates')),
+    path('chatbot/', include('chatbot.urls')),
+    path('api/chatbot/', include('chatbot.urls')),
 ]
 
 if settings.DEBUG:
