@@ -57,8 +57,12 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
   }, [open, leadId, baseApi, token]);
 
   const getProductName = (id) => {
-    const product = products.find(p => p.id === id);
-    return product ? product.name : id;
+    if (!id) return "";
+    const str = typeof id === "object" ? (id.name || id.product || "") : String(id);
+    const product = products.find(p => String(p.id) === String(str) || p.name === str);
+    if (product) return product.name;
+    if (/^\d+$/.test(str.trim())) return "";
+    return str;
   };
 
   const getDisplayValue = (value, options = []) => {
@@ -233,15 +237,21 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
                 </div>
                 <div className="md:col-span-2">
                   <span className="font-medium text-slate-600">Products Interested:</span>{" "}
-                  {lead.product_interested && lead.product_interested.length > 0 ? (
-                    <span className="flex flex-wrap gap-1 mt-1">
-                      {lead.product_interested.map((id, idx) => (
-                        <span key={idx} className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-xs border border-blue-100">
-                          {getProductName(id)}
-                        </span>
-                      ))}
-                    </span>
-                  ) : "—"}
+                  {(() => {
+                    const validProducts = (lead.product_interested || [])
+                      .map((id) => getProductName(id))
+                      .filter(Boolean);
+                    if (validProducts.length === 0) return "—";
+                    return (
+                      <span className="flex flex-wrap gap-1 mt-1">
+                        {validProducts.map((pName, idx) => (
+                          <span key={idx} className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-xs border border-blue-100">
+                            {pName}
+                          </span>
+                        ))}
+                      </span>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

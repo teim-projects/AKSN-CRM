@@ -163,11 +163,14 @@ export default function RecordViewer({
               if (/^\d+$/.test(p) && productList.length > 0) {
                 const found = productList.find((pr) => String(pr.id) === p);
                 if (found) p = found.name;
+                else p = "";
+              } else if (/^\d+$/.test(p)) {
+                p = "";
               }
               return p;
             }).filter(Boolean);
             if (names.length > 0) return names.join(", ");
-            return JSON.stringify(value, null, 2);
+            return "—";
           }
           // Array of primitives
           const mapped = value.map((item) => {
@@ -175,10 +178,13 @@ export default function RecordViewer({
             if (/^\d+$/.test(str) && productList.length > 0) {
               const found = productList.find((pr) => String(pr.id) === str);
               if (found) str = found.name;
+              else str = "";
+            } else if (/^\d+$/.test(str)) {
+              str = "";
             }
             return str;
-          });
-          return mapped.join(", ");
+          }).filter(Boolean);
+          return mapped.length > 0 ? mapped.join(", ") : "—";
         }
         // Check if object has name property
         if (value !== null && value.name) {
@@ -190,9 +196,12 @@ export default function RecordViewer({
       }
     }
 
-    if ((key === "product" || key === "product_purchased" || key === "product_interested") && /^\d+$/.test(String(value).trim()) && productList.length > 0) {
-      const found = productList.find((pr) => String(pr.id) === String(value).trim());
-      if (found) return found.name;
+    if ((key === "product" || key === "product_purchased" || key === "product_interested") && /^\d+$/.test(String(value).trim())) {
+      if (productList.length > 0) {
+        const found = productList.find((pr) => String(pr.id) === String(value).trim());
+        if (found) return found.name;
+      }
+      return "—";
     }
 
     // Format date strings

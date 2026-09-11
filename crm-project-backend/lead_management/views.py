@@ -1022,18 +1022,18 @@ class LeadViewSet(viewsets.ModelViewSet):
                     p_obj = Product.objects.filter(id=int(str(p_name).strip())).first()
                     if p_obj:
                         p_name = p_obj.name
-                if p_name:
+                if p_name and not str(p_name).strip().isdigit():
                     p_copy = dict(p_item)
                     p_copy["product"] = p_name
                     resolved_products.append(p_copy)
             elif isinstance(p_item, (int, float)) or (isinstance(p_item, str) and p_item.strip().isdigit()):
                 p_obj = Product.objects.filter(id=int(str(p_item).strip())).first()
-                prod_title = p_obj.name if p_obj else str(p_item)
-                resolved_products.append({
-                    "product": prod_title,
-                    "value": float(lead.amount) if lead.amount else None
-                })
-            elif isinstance(p_item, str) and p_item.strip():
+                if p_obj:
+                    resolved_products.append({
+                        "product": p_obj.name,
+                        "value": float(lead.amount) if lead.amount else None
+                    })
+            elif isinstance(p_item, str) and p_item.strip() and not p_item.strip().isdigit():
                 resolved_products.append({
                     "product": p_item.strip(),
                     "value": float(lead.amount) if lead.amount else None

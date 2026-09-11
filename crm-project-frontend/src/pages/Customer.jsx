@@ -231,6 +231,9 @@ export default function Customer() {
         if (/^\d+$/.test(val) && productList.length > 0) {
           const found = productList.find((p) => String(p.id) === val);
           if (found) val = found.name;
+          else val = "";
+        } else if (/^\d+$/.test(val)) {
+          val = "";
         }
         return val;
       })

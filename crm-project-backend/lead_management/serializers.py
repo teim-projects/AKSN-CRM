@@ -9,6 +9,67 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 
 User = get_user_model()
+
+
+def resolve_product_names_list(items):
+    """
+    Normalizes a list of products (which might contain IDs, dicts, or strings)
+    into a clean list of product name strings. Drops unresolvable raw digits or empty values.
+    """
+    if not items:
+        return []
+    if not isinstance(items, list):
+        items = [items]
+
+    from product_management.models import Product
+
+    ids_to_lookup = set()
+    for item in items:
+        if isinstance(item, int):
+            ids_to_lookup.add(item)
+        elif isinstance(item, str) and item.strip().isdigit():
+            ids_to_lookup.add(int(item.strip()))
+        elif isinstance(item, dict):
+            val = item.get("name") or item.get("product") or item.get("product_name") or ""
+            if isinstance(val, int) or (isinstance(val, str) and str(val).strip().isdigit()):
+                ids_to_lookup.add(int(str(val).strip()))
+
+    prod_map = {}
+    if ids_to_lookup:
+        for p in Product.objects.filter(id__in=ids_to_lookup):
+            prod_map[p.id] = p.name
+
+    resolved = []
+    for item in items:
+        if not item:
+            continue
+        if isinstance(item, dict):
+            val = item.get("name") or item.get("product") or item.get("product_name") or ""
+            val_str = str(val).strip()
+            if val_str.isdigit():
+                name = prod_map.get(int(val_str))
+                if name:
+                    resolved.append(name)
+            elif val_str:
+                resolved.append(val_str)
+        elif isinstance(item, int) or (isinstance(item, str) and str(item).strip().isdigit()):
+            name = prod_map.get(int(str(item).strip()))
+            if name:
+                resolved.append(name)
+        elif isinstance(item, str):
+            val_str = item.strip()
+            if val_str and not val_str.isdigit():
+                resolved.append(val_str)
+
+    seen = set()
+    out = []
+    for x in resolved:
+        if x not in seen:
+            seen.add(x)
+            out.append(x)
+    return out
+
+
 class CustomerSerializer(serializers.ModelSerializer):
     sales_executive_details = CustomUserDetailsSerializer(
         source="sales_executive",
@@ -70,6 +131,33 @@ class CustomerSerializer(serializers.ModelSerializer):
                     "Customer with this contact number already exists."
                 )
         return value
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        raw_purchased = instance.product_purchased
+        if raw_purchased and isinstance(raw_purchased, list):
+            from product_management.models import Product
+            resolved = []
+            for item in raw_purchased:
+                if isinstance(item, dict):
+                    p_name = item.get("product") or item.get("name") or item.get("product_name") or ""
+                    p_str = str(p_name).strip()
+                    if p_str.isdigit():
+                        p_obj = Product.objects.filter(id=int(p_str)).first()
+                        if p_obj:
+                            item_copy = dict(item)
+                            item_copy["product"] = p_obj.name
+                            resolved.append(item_copy)
+                    elif p_str:
+                        resolved.append(item)
+                elif isinstance(item, (int, float)) or (isinstance(item, str) and str(item).strip().isdigit()):
+                    p_obj = Product.objects.filter(id=int(str(item).strip())).first()
+                    if p_obj:
+                        resolved.append({"product": p_obj.name, "value": None})
+                elif isinstance(item, str) and item.strip() and not item.strip().isdigit():
+                    resolved.append({"product": item.strip(), "value": None})
+            data['product_purchased'] = resolved
+        return data
 
 
 class LeadFAQSerializer(serializers.ModelSerializer):
@@ -190,6 +278,9 @@ class LeadFollowUpSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             validated_data["created_by"] = request.user
             
+        if "products_interested" in validated_data and validated_data["products_interested"] is not None:
+            validated_data["products_interested"] = resolve_product_names_list(validated_data["products_interested"])
+
         followup = LeadFollowUp.objects.create(**validated_data)
         
         # ✅ Update lead's products if provided
@@ -207,6 +298,9 @@ class LeadFollowUpSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         faq_data = validated_data.pop("faq_answers", None)
         
+        if "products_interested" in validated_data and validated_data["products_interested"] is not None:
+            validated_data["products_interested"] = resolve_product_names_list(validated_data["products_interested"])
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         
@@ -224,6 +318,12 @@ class LeadFollowUpSerializer(serializers.ModelSerializer):
                 LeadFollowUpFAQAnswer.objects.create(followup=instance, **item)
         
         return instance
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.products_interested is not None:
+            data["products_interested"] = resolve_product_names_list(instance.products_interested)
+        return data
 
 
 
@@ -363,15 +463,25 @@ class LeadSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if request and request.user.is_authenticated:
             validated_data["created_by"] = request.user
+        if "product_interested" in validated_data and validated_data["product_interested"] is not None:
+            validated_data["product_interested"] = resolve_product_names_list(validated_data["product_interested"])
         lead = lead_management.objects.create(**validated_data)
         return lead
 
     @transaction.atomic
     def update(self, instance, validated_data):
+        if "product_interested" in validated_data and validated_data["product_interested"] is not None:
+            validated_data["product_interested"] = resolve_product_names_list(validated_data["product_interested"])
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
         return instance
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.product_interested is not None:
+            data["product_interested"] = resolve_product_names_list(instance.product_interested)
+        return data
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -403,12 +513,22 @@ class ProjectSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if request and request.user.is_authenticated and "created_by" not in validated_data:
             validated_data["created_by"] = request.user
+        if "product" in validated_data and validated_data["product"] is not None:
+            validated_data["product"] = resolve_product_names_list(validated_data["product"])
         project = Project.objects.create(**validated_data)
         return project
 
     @transaction.atomic
     def update(self, instance, validated_data):
+        if "product" in validated_data and validated_data["product"] is not None:
+            validated_data["product"] = resolve_product_names_list(validated_data["product"])
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
         return instance
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.product is not None:
+            data["product"] = resolve_product_names_list(instance.product)
+        return data

@@ -53,27 +53,50 @@ const FollowupHistoryModal = ({ open, onClose, lead }) => {
                   </div>
 
                   {/* Show products & deal amount from this follow-up */}
-                  {(fu.products_interested?.length > 0 || fu.amount) && (
-                    <div className="mb-4 p-3 bg-blue-50/50 border border-blue-100 rounded-xl">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-bold text-blue-700 block">Products Discussed</span>
-                        {fu.amount !== undefined && fu.amount !== null && fu.amount !== "" && (
-                          <span className="text-xs font-bold text-blue-900 bg-white px-2.5 py-0.5 rounded-md border border-blue-200">
-                            Amount: ₹{parseFloat(fu.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </span>
+                  {(() => {
+                    const resolvedProds = (fu.products_interested || [])
+                      .map((product) => {
+                        let displayName = typeof product === "object" && product !== null
+                          ? (product.name || product.product || product.product_name || "")
+                          : String(product || "").trim();
+                        if (/^\d+$/.test(displayName) && products.length > 0) {
+                          const match = products.find(p => String(p.id) === displayName || p.name === displayName);
+                          if (match) displayName = match.name;
+                          else displayName = "";
+                        } else if (/^\d+$/.test(displayName)) {
+                          displayName = "";
+                        }
+                        return displayName;
+                      })
+                      .filter(Boolean);
+
+                    const hasProds = resolvedProds.length > 0;
+                    const hasAmount = fu.amount !== undefined && fu.amount !== null && fu.amount !== "";
+
+                    if (!hasProds && !hasAmount) return null;
+
+                    return (
+                      <div className="mb-4 p-3 bg-blue-50/50 border border-blue-100 rounded-xl">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-xs font-bold text-blue-700 block">Products Discussed</span>
+                          {hasAmount && (
+                            <span className="text-xs font-bold text-blue-900 bg-white px-2.5 py-0.5 rounded-md border border-blue-200">
+                              Amount: ₹{parseFloat(fu.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          )}
+                        </div>
+                        {hasProds && (
+                          <div className="flex flex-wrap gap-2">
+                            {resolvedProds.map((pName, idx) => (
+                              <span key={idx} className="px-3 py-1 bg-white border border-blue-200 rounded-full text-xs font-medium text-blue-700">
+                                {pName}
+                              </span>
+                            ))}
+                          </div>
                         )}
                       </div>
-                      {fu.products_interested && fu.products_interested.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {fu.products_interested.map((product, idx) => (
-                            <span key={idx} className="px-3 py-1 bg-white border border-blue-200 rounded-full text-xs font-medium text-blue-700">
-                              {product}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Discussion Summary */}
                   <div className="text-sm text-slate-600 mb-5 font-normal leading-relaxed">
@@ -311,15 +334,16 @@ export default function AddLeadFollowUpForm({
   const selectedProductsInfo = useMemo(() => {
     return productInterested.map((val) => {
       const prod = products.find(
-        (p) => p.id === val || p.id === Number(val) || p.name === val
+        (p) => String(p.id) === String(val) || p.name === val
       );
+      const name = prod ? prod.name : (/^\d+$/.test(String(val)) ? "" : String(val));
       return {
-        id: val,
-        name: prod ? prod.name : String(val),
+        id: prod ? prod.id : val,
+        name: name,
         code: prod?.product_code || "",
         unit_price: prod ? parseFloat(prod.unit_price) || 0 : 0,
       };
-    });
+    }).filter((p) => p.name);
   }, [productInterested, products]);
 
   const calculatedTotalPrice = useMemo(() => {
@@ -329,8 +353,9 @@ export default function AddLeadFollowUpForm({
   // Get product options for react-select - same as AddLeadForm
   const productSelectOptions = useMemo(() => {
     return products.map((p) => ({
-      value: p.id,
+      value: p.name || String(p.id),
       label: p.name,
+      id: p.id,
     }));
   }, [products]);
 
@@ -339,12 +364,12 @@ export default function AddLeadFollowUpForm({
     return productSelectOptions.filter(option =>
       productInterested.some(val =>
         val === option.value ||
-        Number(val) === option.value ||
-        String(val) === String(option.value) ||
-        val === option.label
+        val === option.label ||
+        String(val) === String(option.id) ||
+        products.some(p => (String(p.id) === String(val) || p.name === val) && (p.name === option.label || String(p.id) === String(option.id)))
       )
     );
-  }, [productSelectOptions, productInterested]);
+  }, [productSelectOptions, productInterested, products]);
 
   // Fetch products when form opens - same as AddLeadForm
   useEffect(() => {
@@ -401,11 +426,18 @@ export default function AddLeadFollowUpForm({
         const data = await res.json();
         setLeadData(data);
 
-        // Load products from lead - storing product IDs
+        // Load products from lead - storing product names
         if (data.product_interested && Array.isArray(data.product_interested)) {
-          // If product_interested contains product names, we need to find their IDs
-          // For now, we'll store the names and match later
-          setProductInterested(data.product_interested);
+          const names = data.product_interested
+            .map((item) => {
+              if (typeof item === 'object' && item !== null) {
+                return item.name || item.product || item.product_name || "";
+              }
+              const str = String(item || "").trim();
+              return /^\d+$/.test(str) ? "" : str;
+            })
+            .filter(Boolean);
+          setProductInterested(names);
         }
 
         if (!followup) {
@@ -473,7 +505,16 @@ export default function AddLeadFollowUpForm({
 
       // Load products from followup
       if (followup.products_interested && Array.isArray(followup.products_interested)) {
-        setProductInterested(followup.products_interested);
+        const names = followup.products_interested
+          .map((item) => {
+            if (typeof item === 'object' && item !== null) {
+              return item.name || item.product || item.product_name || "";
+            }
+            const str = String(item || "").trim();
+            return /^\d+$/.test(str) ? "" : str;
+          })
+          .filter(Boolean);
+        setProductInterested(names);
       }
 
       if (followup.faq_answers?.length) {

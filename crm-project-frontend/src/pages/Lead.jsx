@@ -170,7 +170,7 @@ export default function Lead() {
     const map = new Map();
     products.forEach((p) => {
       if (p && p.id !== undefined && p.id !== null) {
-        map.set(String(p.id).trim(), p.name || String(p.id));
+        map.set(String(p.id).trim(), p.name || "");
       }
     });
     return map;
@@ -205,11 +205,13 @@ export default function Lead() {
           if (typeof item === "object") {
             const val = item.name || item.product || item.product_name || item.title || "";
             const valStr = String(val).trim();
-            if (productMap.has(valStr)) return productMap.get(valStr);
+            if (productMap.has(valStr) && productMap.get(valStr)) return productMap.get(valStr);
+            if (/^\d+$/.test(valStr)) return "";
             return typeof val === "string" ? val : String(val);
           }
           const str = String(item).trim();
-          if (productMap.has(str)) return productMap.get(str);
+          if (productMap.has(str) && productMap.get(str)) return productMap.get(str);
+          if (/^\d+$/.test(str)) return "";
           return str;
         })
         .filter(Boolean);
@@ -480,7 +482,7 @@ export default function Lead() {
       ),
       render: (r) => {
         const names = getProductDisplayNames(r);
-        const fullText = names.length > 0 ? names.join(", ") : (r.product || "");
+        const fullText = names.join(", ");
         return (
           <span
             className="text-slate-800 font-medium text-xs block max-w-[130px] truncate mx-auto cursor-default"
