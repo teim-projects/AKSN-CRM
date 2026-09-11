@@ -56,6 +56,37 @@ export default function AMC() {
   // Form modal state
   const [showForm, setShowForm] = useState(false);
   const [editingAMC, setEditingAMC] = useState(null);
+  const [productList, setProductList] = useState([]);
+
+  useEffect(() => {
+    const headers = {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+    fetch(`${BASE_API.replace(/\/$/, "")}/product/products/?limit=1000`, { headers })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        const list = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : [];
+        setProductList(list);
+      })
+      .catch(() => setProductList([]));
+  }, [BASE_API, token]);
+
+  const getAMCProductName = useCallback(
+    (prodVal) => {
+      if (!prodVal) return "-";
+      let val = typeof prodVal === "object" && prodVal !== null ? (prodVal.name || prodVal.product || "") : String(prodVal).trim();
+      if (/^\d+$/.test(val) && productList.length > 0) {
+        const match = productList.find((p) => String(p.id) === val);
+        if (match) return match.name || match.product_name || "-";
+        return "-";
+      }
+      if (/^\d+$/.test(val)) return "-";
+      if (val.toLowerCase() === "product" || val.toLowerCase() === "null" || val.toLowerCase() === "undefined") return "-";
+      return val || "-";
+    },
+    [productList]
+  );
 
   // Details viewing states
   const [viewingAMC, setViewingAMC] = useState(null);
@@ -212,6 +243,22 @@ export default function AMC() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    if (productList.length === 0) return;
+    const enrich = (list) =>
+      list.map((r) => {
+        const pName = getAMCProductName(r.product);
+        return {
+          ...r,
+          product: pName !== "-" ? pName : (r.product || ""),
+          product_name: pName !== "-" ? pName : (r.product || ""),
+        };
+      });
+    setAllRows((prev) => enrich(prev));
+    setFilteredData((prev) => enrich(prev));
+    setRows((prev) => enrich(prev));
+  }, [productList, getAMCProductName]);
 
   useEffect(() => {
     let result = filteredData;
@@ -402,15 +449,22 @@ export default function AMC() {
     },
     {
       key: "product",
-      label: "Product",
-      render: (r) => (
-        <span
-          className="text-slate-700 text-xs py-0 block max-w-[130px] truncate mx-auto cursor-default"
-          title={r.product || "-"}
-        >
-          {r.product || "-"}
-        </span>
+      label: (
+        <div className="leading-tight">
+          <div>Product</div>
+        </div>
       ),
+      render: (r) => {
+        const pName = getAMCProductName(r.product);
+        return (
+          <span
+            className="text-slate-800 font-medium text-xs py-0 block max-w-[130px] truncate mx-auto cursor-default"
+            title={pName}
+          >
+            {pName}
+          </span>
+        );
+      },
       className: "w-36 max-w-[140px]",
     },
     {
@@ -910,7 +964,7 @@ export default function AMC() {
 
                 <div>
                   <span className="font-semibold text-slate-500 block">Product:</span>
-                  <span className="text-blue-700 font-semibold">{viewingAMC.product || "—"}</span>
+                  <span className="text-blue-700 font-semibold">{getAMCProductName(viewingAMC.product)}</span>
                 </div>
 
                 <div>

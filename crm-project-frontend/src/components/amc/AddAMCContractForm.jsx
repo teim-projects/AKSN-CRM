@@ -121,7 +121,10 @@ export default function AddAMCContractForm({
       prodName = String(prodName || "").trim();
       if (/^\d+$/.test(prodName) && products.length > 0) {
         const foundP = products.find(p => String(p.id) === prodName);
-        if (foundP) prodName = foundP.name || foundP.product_name || prodName;
+        if (foundP) prodName = foundP.name || foundP.product_name || "";
+        else prodName = "";
+      } else if (/^\d+$/.test(prodName) || prodName.toLowerCase() === "product") {
+        prodName = "";
       }
 
       setFormData({
@@ -145,7 +148,10 @@ export default function AddAMCContractForm({
       firstProd = String(firstProd || "").trim();
       if (/^\d+$/.test(firstProd) && products.length > 0) {
         const foundP = products.find(p => String(p.id) === firstProd);
-        if (foundP) firstProd = foundP.name || foundP.product_name || firstProd;
+        if (foundP) firstProd = foundP.name || foundP.product_name || "";
+        else firstProd = "";
+      } else if (/^\d+$/.test(firstProd) || firstProd.toLowerCase() === "product") {
+        firstProd = "";
       }
 
       setFormData({
@@ -199,11 +205,13 @@ export default function AddAMCContractForm({
 
   const productSelectOptions = useMemo(
     () =>
-      products.map((p) => ({
-        value: p.name || p.product_name || String(p.id),
-        id: p.id,
-        label: p.name || p.product_name || "Product",
-      })),
+      products
+        .map((p) => ({
+          value: p.name || p.product_name || "",
+          id: p.id,
+          label: p.name || p.product_name || "",
+        }))
+        .filter((opt) => opt.value),
     [products]
   );
 
@@ -235,10 +243,22 @@ export default function AddAMCContractForm({
         ? parseInt(formData.support_coordinator, 10)
         : null;
 
+      let finalProduct = typeof formData.product === "object"
+        ? formData.product?.name || formData.product?.value || ""
+        : String(formData.product || "");
+      finalProduct = finalProduct.trim();
+      if (/^\d+$/.test(finalProduct) && products.length > 0) {
+        const found = products.find((p) => String(p.id) === finalProduct);
+        if (found) finalProduct = found.name || found.product_name || "";
+      }
+      if (/^\d+$/.test(finalProduct) || finalProduct.toLowerCase() === "product") {
+        finalProduct = "";
+      }
+
       const payload = {
         customer: custId,
         project: initialProject?.id ? parseInt(initialProject.id, 10) : null,
-        product: typeof formData.product === "object" ? formData.product?.name || formData.product?.value || "" : String(formData.product || ""),
+        product: finalProduct,
         amc_type: formData.amc_type,
         start_date: formData.start_date || null,
         end_date: formData.end_date || null,
@@ -382,6 +402,7 @@ export default function AddAMCContractForm({
                     const pr = products.find(p => String(p.id) === strVal);
                     if (pr) return { value: pr.name || pr.product_name, label: pr.name || pr.product_name };
                   }
+                  if (/^\d+$/.test(strVal) || strVal.toLowerCase() === "product") return null;
                   return { value: formData.product, label: formData.product };
                 })()}
                 onChange={(opt) =>

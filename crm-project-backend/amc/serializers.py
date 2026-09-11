@@ -19,6 +19,19 @@ class AMCCycleSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+def _resolve_amc_product_name(val):
+    if not val:
+        return ""
+    val_str = str(val).strip()
+    if val_str.isdigit():
+        from product_management.models import Product
+        p_obj = Product.objects.filter(id=int(val_str)).first()
+        return p_obj.name if p_obj else ""
+    if val_str.lower() in ("product", "null", "undefined", "none"):
+        return ""
+    return val_str
+
+
 class AMCContractSerializer(serializers.ModelSerializer):
     customer_details = CustomerSerializer(source="customer", read_only=True)
     project_details = ProjectSerializer(source="project", read_only=True)
@@ -46,6 +59,9 @@ class AMCContractSerializer(serializers.ModelSerializer):
         user = request.user if request and request.user.is_authenticated else None
         if user and "created_by" not in validated_data:
             validated_data["created_by"] = user
+
+        if "product" in validated_data:
+            validated_data["product"] = _resolve_amc_product_name(validated_data["product"])
 
         start_date = validated_data.get("start_date")
         end_date = validated_data.get("end_date")
@@ -83,6 +99,9 @@ class AMCContractSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, instance, validated_data):
+        if "product" in validated_data:
+            validated_data["product"] = _resolve_amc_product_name(validated_data["product"])
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
@@ -102,5 +121,11 @@ class AMCContractSerializer(serializers.ModelSerializer):
 
         instance.sync_active_cycle_data()
         return instance
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.product:
+            data["product"] = _resolve_amc_product_name(instance.product)
+        return data
 
 

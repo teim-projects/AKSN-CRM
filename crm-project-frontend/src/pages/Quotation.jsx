@@ -167,7 +167,16 @@ export default function Quotation() {
         throw new Error(`${res.status} ${res.statusText}`);
       }
 
-      const data = normalize(res.data);
+      const rawData = normalize(res.data);
+      const data = rawData.map((q) => {
+        const activeV = q.versions?.find((v) => v.is_active);
+        const pNames = getProductNames(activeV);
+        return {
+          ...q,
+          product: pNames !== "-" ? pNames : "",
+          products: pNames !== "-" ? pNames : "",
+        };
+      });
 
       setAllRows(data);
       setFilteredData(data);
@@ -441,6 +450,19 @@ export default function Quotation() {
     return q.versions?.find((v) => v.is_active);
   };
 
+  const getProductNames = (version) => {
+    if (!version?.items || !Array.isArray(version.items) || version.items.length === 0) return "-";
+    const names = version.items
+      .map((it) => {
+        if (typeof it === "object" && it !== null) {
+          return it.product_name || it.name || it.product || "";
+        }
+        return String(it || "").trim();
+      })
+      .filter((n) => n && !/^\d+$/.test(n) && n.toLowerCase() !== "item 1");
+    return names.length > 0 ? Array.from(new Set(names)).join(", ") : "-";
+  };
+
   const getProductCount = (version) => {
     if (!version?.items) return "0";
     return version.items.length;
@@ -573,17 +595,28 @@ export default function Quotation() {
           </div>
         );
       },
-      className: "whitespace-nowrap"
+      className: "whitespace-nowrap",
     },
     {
       key: "products",
-      label: "Products",
+      label: (
+        <div className="leading-tight">
+          <div>Products</div>
+        </div>
+      ),
       render: (r) => {
         const activeVersion = getActiveVersion(r);
-        const countText = `${getProductCount(activeVersion)} item(s)`;
-        return <span className="text-slate-700 text-xs whitespace-nowrap block" title={countText}>{countText}</span>;
+        const prodNames = getProductNames(activeVersion);
+        return (
+          <span
+            className="text-slate-800 font-medium text-xs block max-w-[140px] truncate mx-auto cursor-default"
+            title={prodNames}
+          >
+            {prodNames}
+          </span>
+        );
       },
-      className: "whitespace-nowrap"
+      className: "min-w-[120px] max-w-[160px]"
     },
     {
       key: "total_amount",
@@ -798,8 +831,8 @@ export default function Quotation() {
                       <td className="px-3 py-1.5 text-slate-500">
                         {v.created_at?.split("T")[0]}
                       </td>
-                      <td className="px-3 py-1.5 text-slate-600">
-                        {v.items?.length || 0} item(s)
+                      <td className="px-3 py-1.5 text-slate-700 font-medium max-w-[160px] truncate" title={getProductNames(v)}>
+                        {getProductNames(v)}
                       </td>
                       <td className="px-3 py-1.5 text-right font-semibold text-slate-900">
                         ₹{formatAmount(v.grand_total || v.total_amount)}
