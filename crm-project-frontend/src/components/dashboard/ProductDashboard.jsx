@@ -781,7 +781,7 @@ export default function ProductDashboard({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-600">
-                {products.map((row, idx) => {
+                {products.slice(0, 5).map((row, idx) => {
                   const catName =
                     row.category?.name ||
                     row.category_name ||

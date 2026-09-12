@@ -101,10 +101,10 @@ export default function QuotationDashboard({ quotations = [], isLoading = false 
     return isNaN(d.getTime()) ? str : d.toLocaleDateString("en-IN");
   };
 
-  // Recent 6 quotations
+  // Recent 5 quotations
   const recentQuotations = [...quotations]
     .sort((a, b) => new Date(b.created_at || b.quotation_date || 0) - new Date(a.created_at || a.quotation_date || 0))
-    .slice(0, 7);
+    .slice(0, 5);
 
   return (
     <div className="w-full space-y-5 font-sans antialiased text-slate-800">
@@ -362,7 +362,7 @@ export default function QuotationDashboard({ quotations = [], isLoading = false 
             to="/quotation"
             className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
           >
-            View All ({totalQuotations}) <ArrowUpRight className="w-3.5 h-3.5" />
+            View All Quotations ({totalQuotations}) <ArrowUpRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 

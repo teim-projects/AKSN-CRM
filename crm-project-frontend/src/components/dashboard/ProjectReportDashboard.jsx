@@ -107,7 +107,7 @@ export default function ProjectReportDashboard({
 
     const recent = [...projects]
       .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-      .slice(0, 8);
+      .slice(0, 5);
 
     return {
       totalValue: totalVal,
@@ -351,9 +351,9 @@ export default function ProjectReportDashboard({
           </div>
           <Link
             to="/projects"
-            className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 border border-blue-200 bg-blue-50/50 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition"
+            className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
           >
-            View All in Projects Module ({totalProjects}) <ArrowUpRight className="w-3.5 h-3.5" />
+            View All Projects ({totalProjects}) <ArrowUpRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 

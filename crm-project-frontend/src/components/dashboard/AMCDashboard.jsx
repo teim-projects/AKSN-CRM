@@ -70,7 +70,7 @@ export default function AMCDashboard({ contracts = [], isLoading = false }) {
     return isNaN(d.getTime()) ? str : d.toLocaleDateString("en-IN");
   };
 
-  // Recent or expiring contracts
+  // Recent or expiring contracts (top 5)
   const priorityContracts = [...contracts]
     .sort((a, b) => {
       // Prioritize expiring_soon first
@@ -78,7 +78,7 @@ export default function AMCDashboard({ contracts = [], isLoading = false }) {
       if (b.status === "expiring_soon" && a.status !== "expiring_soon") return 1;
       return new Date(b.end_date || 0) - new Date(a.end_date || 0);
     })
-    .slice(0, 7);
+    .slice(0, 5);
 
   return (
     <div className="w-full space-y-5 font-sans antialiased text-slate-800">
@@ -328,7 +328,7 @@ export default function AMCDashboard({ contracts = [], isLoading = false }) {
             to="/amc"
             className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
           >
-            View All ({totalContracts}) <ArrowUpRight className="w-3.5 h-3.5" />
+            View All AMC Contracts ({totalContracts}) <ArrowUpRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 

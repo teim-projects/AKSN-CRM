@@ -62,7 +62,7 @@ export default function RoleManagementDashboard({
     .sort((a, b) => b.count - a.count);
 
   const modulesCount = SYSTEM_MODULES?.length || 10;
-  const recentStaff = [...staff].slice(0, 7);
+  const recentStaff = [...staff].slice(0, 5);
 
   const [pieMode, setPieMode] = useState("role"); // "role" | "privilege"
   const [hoveredPieIndex, setHoveredPieIndex] = useState(null);

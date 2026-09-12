@@ -1,4 +1,6 @@
 import React from "react";
+import { Link } from "react-router-dom";
+import { ArrowUpRight } from "lucide-react";
 
 export default function LeadDashboard({
   stats = {},
@@ -660,9 +662,23 @@ export default function LeadDashboard({
 
       {/* RECENT ACTIVITIES LOG */}
       <div className="bg-white rounded-xl border border-slate-200/70 shadow-sm p-5">
-        <h3 className="text-xs font-bold text-slate-900 mb-4 tracking-wide uppercase">
-          Recent Lead Activity
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-xs font-bold text-slate-900 tracking-wide uppercase">
+              Recent Lead Activity
+            </h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Latest leads and pipeline updates
+            </p>
+          </div>
+          <Link
+            to="/leads"
+            className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+          >
+            View All Leads ({stats.totalLeads || 0}) <ArrowUpRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -676,7 +692,7 @@ export default function LeadDashboard({
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-600">
               {stats.recentActivities && stats.recentActivities.length > 0 ? (
-                stats.recentActivities.map((row, idx) => (
+                stats.recentActivities.slice(0, 5).map((row, idx) => (
                   <tr key={idx} className="hover:bg-slate-50/40 transition">
                     <td className="py-2.5 pl-1 text-slate-900 font-semibold">
                       {row.name}

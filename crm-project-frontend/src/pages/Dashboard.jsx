@@ -703,10 +703,10 @@ export default function Dashboard() {
       }))
       .sort((a, b) => b.revenue - a.revenue || b.wonLeads - a.wonLeads);
 
-    // Recent activities
+    // Recent activities (5 leads)
     const recentLeads = [...leads]
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-      .slice(0, 8);
+      .slice(0, 5);
 
     const recentActivities = recentLeads.map((lead) => {
       const leadFollowups = followups.filter((f) => f.lead === lead.id);
