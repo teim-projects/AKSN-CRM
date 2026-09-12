@@ -15,7 +15,7 @@ export default function FollowUp() {
   const API_URL = `${BASE_API}/lead/lead/`;
   const FOLLOWUP_API_URL = `${BASE_API}/lead/lead-followups/`;
 
-  const { hasPermission } = useUserRole(BASE_API);
+  const { hasPermission, userRole } = useUserRole(BASE_API);
   const canCreateFollowup = hasPermission("followups", "create");
 
   const [rows, setRows] = useState([]);
@@ -372,6 +372,31 @@ export default function FollowUp() {
       },
       className: "w-24 whitespace-nowrap"
     },
+    ...(userRole?.name !== "sales"
+      ? [{
+        key: "assign_to",
+        label: (
+          <div className="leading-tight">
+            <div>Assign</div>
+            <div>To</div>
+          </div>
+        ),
+        render: (r) => {
+          const name = r.assigned_executive_details?.full_name || r.assigned_executive_details?.first_name || (r.assigned_executive ? String(r.assigned_executive) : "");
+          const email = r.assigned_executive_details?.email || "";
+          const tooltip = name && email ? `${name} (${email})` : name || email || "-";
+          return (
+            <span
+              className="text-slate-800 font-medium text-xs block max-w-[130px] truncate mx-auto cursor-default"
+              title={tooltip}
+            >
+              {name || email || "-"}
+            </span>
+          );
+        },
+        className: "min-w-[110px] max-w-[140px]"
+      }]
+      : [])
   ];
 
   const actionsRenderer = useCallback((row) => (

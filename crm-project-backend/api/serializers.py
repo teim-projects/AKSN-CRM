@@ -261,12 +261,12 @@ phone_validator = RegexValidator(
 )
 
 class AddStaffSerializer(serializers.ModelSerializer):
-    # enforce 10 digits at serializer level
+    # enforce 10 digits when mobile_no is provided
     mobile_no = serializers.CharField(
         required=False,
         allow_blank=True,
-        max_length=10,
-        validators=[phone_validator],
+        allow_null=True,
+        max_length=15,
         help_text="10 digit mobile number (digits only)."
     )
 
@@ -282,23 +282,26 @@ class AddStaffSerializer(serializers.ModelSerializer):
         # strip whitespace from mobile if present
         mobile = attrs.get('mobile_no')
         if mobile is not None:
-            mobile = mobile.strip()
-            if mobile == '':
-                # treat blank as not provided
-                attrs.pop('mobile_no', None)
+            mobile = str(mobile).strip() if isinstance(mobile, str) else mobile
+            if not mobile:
+                attrs['mobile_no'] = None
             else:
                 attrs['mobile_no'] = mobile
 
-        # require at least one contact
+        # require at least one contact (email or mobile)
         if not attrs.get('email') and not attrs.get('mobile_no'):
             raise serializers.ValidationError("Either email or mobile_no is required.")
 
-        # mobile_no validator will have already run via field validators; 
-        # but double-check defensive: ensure digits only and length 10 if present
         mobile = attrs.get('mobile_no')
         if mobile:
             if not re.match(PHONE_10_DIGIT_RE, mobile):
                 raise serializers.ValidationError({"mobile_no": "Mobile number must be exactly 10 digits."})
+            # Check uniqueness against other users
+            qs = CustomUser.objects.filter(mobile_no=mobile)
+            if self.instance:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise serializers.ValidationError({"mobile_no": "A user with this mobile number already exists."})
 
         return attrs
 
@@ -320,6 +323,9 @@ class AddStaffSerializer(serializers.ModelSerializer):
         if not self._creator_is_admin_or_subadmin_or_super(creator):
             raise ValidationError("You do not have permission to assign roles.")
 
+        if not validated_data.get('mobile_no'):
+            validated_data['mobile_no'] = None
+
         # create user via manager
         user = CustomUser.objects.create_user(role=requested_role, password=password, **validated_data)
         user.is_staff = True
@@ -340,9 +346,12 @@ class AddStaffSerializer(serializers.ModelSerializer):
         if 'password' in validated_data:
             instance.set_password(validated_data.pop('password'))
 
-        # ensure mobile_no whitespace trimmed if present
-        if 'mobile_no' in validated_data and isinstance(validated_data['mobile_no'], str):
-            validated_data['mobile_no'] = validated_data['mobile_no'].strip()
+        # ensure mobile_no is properly updated or cleared to None
+        if 'mobile_no' in validated_data:
+            mobile = validated_data.pop('mobile_no')
+            if isinstance(mobile, str):
+                mobile = mobile.strip() or None
+            instance.mobile_no = mobile
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)

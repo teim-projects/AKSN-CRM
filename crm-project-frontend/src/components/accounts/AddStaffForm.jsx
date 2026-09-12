@@ -40,8 +40,9 @@ export default function AddStaffForm({
       Swal.fire({ icon: "error", title: "Validation", text: "Email is required" });
       return false;
     }
-    if (!mobile.toString().trim()) {
-      Swal.fire({ icon: "error", title: "Validation", text: "Mobile number is required" });
+    const cleanMobile = mobile ? mobile.toString().trim() : "";
+    if (cleanMobile && !/^\d{10}$/.test(cleanMobile)) {
+      Swal.fire({ icon: "error", title: "Validation", text: "Mobile number must be exactly 10 digits" });
       return false;
     }
     if (!firstName.trim()) {
@@ -67,11 +68,12 @@ export default function AddStaffForm({
 
     setLoading(true);
 
+    const cleanMobile = mobile ? mobile.toString().trim() : "";
     const payload = {
-      email,
-      mobile_no: mobile,
-      first_name: firstName,
-      last_name: lastName,
+      email: email.trim(),
+      mobile_no: cleanMobile || null,
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
       role,
     };
 
@@ -154,10 +156,12 @@ export default function AddStaffForm({
           </div>
 
           <div className="space-y-1">
-            <label className="block text-xs font-semibold text-slate-600">Mobile *</label>
+            <label className="block text-xs font-semibold text-slate-600">
+              Mobile <span className="text-slate-400 font-normal">(Optional)</span>
+            </label>
             <input 
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 text-slate-800 bg-white" 
-              placeholder="Enter 10-digit mobile phone" 
+              placeholder="Enter 10-digit mobile phone (optional)" 
               value={mobile}
               onChange={(e) => setMobile(e.target.value)} 
             />

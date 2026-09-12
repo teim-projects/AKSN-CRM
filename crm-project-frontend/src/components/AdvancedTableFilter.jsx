@@ -558,6 +558,8 @@ export default function AdvancedTableFilter({
       quotation_no: "Quotation No",
       quotation_date: "Quotation Date",
       quotation_for: "Quotation For",
+      assign_to: "Assign To",
+      assigned_to: "Assigned To",
     };
 
     if (labelMap[field]) return labelMap[field];
