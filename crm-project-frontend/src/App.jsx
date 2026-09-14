@@ -32,6 +32,7 @@ import TermsForm from "./components/terms_conditions/TermsForm";
 import RolesPage from "./pages/RolesPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import TemplatesPage from "./pages/TemplatesPage";
+import TallyIntegrationPage from "./pages/TallyIntegrationPage";
 import { useUserRole } from "./hooks/useAuth";
 
 function ProtectedRoute({ children }) {
@@ -290,6 +291,16 @@ function AppRoutes() {
         element={
           <ModuleProtectedRoute module="templates">
             <TemplatesPage />
+          </ModuleProtectedRoute>
+        }
+      />
+
+      {/* Tally Integration Route */}
+      <Route
+        path="/tally"
+        element={
+          <ModuleProtectedRoute module="tally">
+            <TallyIntegrationPage />
           </ModuleProtectedRoute>
         }
       />

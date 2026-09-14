@@ -92,3 +92,32 @@ body,
 .thin-scrollbar::-webkit-scrollbar-button {
   display: none !important;
 }
+
+/* Slim light scrollbar for cards and dashboards */
+.slim-scrollbar {
+  scrollbar-width: thin !important;
+  scrollbar-color: #cbd5e1 transparent !important;
+}
+
+.slim-scrollbar::-webkit-scrollbar {
+  height: 5px !important;
+  width: 5px !important;
+}
+
+.slim-scrollbar::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.slim-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1 !important;
+  border-radius: 9999px !important;
+  border: none !important;
+}
+
+.slim-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8 !important;
+}
+
+.slim-scrollbar::-webkit-scrollbar-button {
+  display: none !important;
+}

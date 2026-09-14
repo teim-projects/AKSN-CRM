@@ -5,6 +5,7 @@ import Base from "../components/Base";
 import TableView from "../components/TableView";
 import AddAMCContractForm from "../components/amc/AddAMCContractForm";
 import RenewAMCModal from "../components/amc/RenewAMCModal";
+import AMCCalendarView from "../components/amc/AMCCalendarView";
 import RecordViewer from "../components/RecordViewer";
 import AdvancedTableFilter from "../components/AdvancedTableFilter";
 import {
@@ -18,6 +19,8 @@ import {
   MdHistory,
   MdAutorenew,
   MdMail,
+  MdCalendarMonth,
+  MdViewList,
 } from "react-icons/md";
 import Swal from "sweetalert2";
 import SendMessageModal from "../components/templates/SendMessageModal";
@@ -52,6 +55,7 @@ export default function AMC() {
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [viewMode, setViewMode] = useState("table"); // 'table' | 'calendar'
 
   // Form modal state
   const [showForm, setShowForm] = useState(false);
@@ -791,6 +795,34 @@ export default function AMC() {
               Filter
             </button>
 
+            {/* Calendar View Toggle placed directly beside Filter */}
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+              <button
+                onClick={() => setViewMode("table")}
+                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+                  viewMode === "table"
+                    ? "bg-white text-slate-800 shadow-xs"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+                title="Table View"
+              >
+                <MdViewList className="text-sm" />
+                <span>Table</span>
+              </button>
+              <button
+                onClick={() => setViewMode("calendar")}
+                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+                  viewMode === "calendar"
+                    ? "bg-blue-600 text-white shadow-xs font-bold"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+                title="Calendar View"
+              >
+                <MdCalendarMonth className="text-sm" />
+                <span>Calendar</span>
+              </button>
+            </div>
+
             {canCreateAMC && (
               <button
                 onClick={() => {
@@ -840,22 +872,38 @@ export default function AMC() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs overflow-hidden">
-          <TableView
-            columns={columns}
-            rows={getCurrentPageData()}
-            loading={loading}
-            error={error}
-            page={currentPage}
-            totalPages={totalPages}
-            onPageChange={(p) => setCurrentPage(p)}
-            pageSize={itemsPerPage}
-            actions={actionsRenderer}
-            rowClassName={getRowClassName}
-            renderExpandedRow={renderExpandedRow}
-            emptyMessage="No AMC contracts matched the active criteria"
+        {viewMode === "calendar" ? (
+          <AMCCalendarView
+            contracts={allRows}
+            onViewRecord={(r) => {
+              setSelectedRecord(r);
+              setRecordViewerOpen(true);
+            }}
+            onViewDetails={(r) => setViewingAMC(r)}
+            onRenewRecord={(r) => {
+              setRenewingAMC(r);
+              setShowRenewModal(true);
+            }}
+            formatDate={formatDate}
           />
-        </div>
+        ) : (
+          <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs overflow-hidden">
+            <TableView
+              columns={columns}
+              rows={getCurrentPageData()}
+              loading={loading}
+              error={error}
+              page={currentPage}
+              totalPages={totalPages}
+              onPageChange={(p) => setCurrentPage(p)}
+              pageSize={itemsPerPage}
+              actions={actionsRenderer}
+              rowClassName={getRowClassName}
+              renderExpandedRow={renderExpandedRow}
+              emptyMessage="No AMC contracts matched the active criteria"
+            />
+          </div>
+        )}
       </div>
 
       {/* FILTER DRAWER - PORTAL TO BODY PREVENTS LAYOUT PUSH AND WHITE BOTTOM STRIP */}

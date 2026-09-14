@@ -324,7 +324,7 @@ export default function LeadDashboard({
               Revenue by sales executive
             </p>
 
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[295px] overflow-y-auto pr-1.5 slim-scrollbar">
               {stats.executivePerformance &&
                 stats.executivePerformance.length > 0 ? (
                 stats.executivePerformance.map((exec, idx) => (

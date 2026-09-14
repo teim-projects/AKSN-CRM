@@ -36,7 +36,6 @@ const ProductList = () => {
     const canEditProduct = hasPermission("products", "edit");
     const canDeleteProduct = hasPermission("products", "delete");
     const navigate = useNavigate(); 
-    const [products, setProducts] = useState([]);
     const [allProducts, setAllProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -59,8 +58,6 @@ const ProductList = () => {
 
     // Pagination states
     const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [totalCount, setTotalCount] = useState(0);
 
     const token = useMemo(() => (
         localStorage.getItem("access") ||
@@ -98,47 +95,24 @@ const ProductList = () => {
             
             setAllProducts(results);
             setFilteredData(results);
-            setProducts(results);
-            setTotalCount(results.length);
-            setTotalPages(Math.max(1, Math.ceil(results.length / itemsPerPage)));
             setCurrentPage(1);
         } catch (err) {
             console.error('Error fetching products:', err);
-            // Check if it's an authentication error
             if (err.response && err.response.status === 401) {
                 setError("Authentication failed. Please login again.");
-                // Optionally redirect to login
-                // navigate('/login');
             } else {
                 setError(err.message || String(err));
             }
-            setProducts([]);
             setAllProducts([]);
             setFilteredData([]);
-            setTotalCount(0);
-            setTotalPages(1);
         } finally {
             setLoading(false);
         }
-    }, [apiClient, itemsPerPage]);
+    }, [apiClient]);
 
     useEffect(() => {
         fetchProducts();
     }, [fetchProducts]);
-
-    // Update pagination when filtered data changes
-    useEffect(() => {
-        setProducts(filteredData);
-        setTotalCount(filteredData.length);
-        setTotalPages(Math.max(1, Math.ceil(filteredData.length / itemsPerPage)));
-        setCurrentPage(1);
-    }, [filteredData, itemsPerPage]);
-
-    // Get current page data
-    const getCurrentPageData = useCallback(() => {
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        return products.slice(startIndex, startIndex + itemsPerPage);
-    }, [products, currentPage, itemsPerPage]);
 
     const handleDelete = async (id) => {
         const res = await Swal.fire({
@@ -178,8 +152,8 @@ const ProductList = () => {
         ];
     }, [allProducts]);
 
-    // Also filter by selected category on top of advanced filter
-    const getFilteredAndCategorizedData = useCallback(() => {
+    // Filter by selected category pill on top of advanced filter
+    const displayData = useMemo(() => {
         let data = filteredData;
         if (selectedCategory !== "All") {
             data = data.filter(p => {
@@ -190,6 +164,20 @@ const ProductList = () => {
         return data;
     }, [filteredData, selectedCategory]);
 
+    const totalCount = displayData.length;
+    const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage));
+
+    // Reset page to 1 whenever category filter or advanced filter changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedCategory, filteredData]);
+
+    // Paginated slice for current page
+    const currentPageData = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return displayData.slice(startIndex, startIndex + itemsPerPage);
+    }, [displayData, currentPage, itemsPerPage]);
+
     const formatCurrency = (amount) => {
         if (!amount) return "₹0.00";
         return new Intl.NumberFormat('en-IN', {
@@ -198,17 +186,6 @@ const ProductList = () => {
             maximumFractionDigits: 0
         }).format(amount);
     };
-
-    const currentPageData = getCurrentPageData();
-    const displayData = getFilteredAndCategorizedData();
-
-    // Update products when filter or category changes
-    useEffect(() => {
-        setProducts(displayData);
-        setTotalCount(displayData.length);
-        setTotalPages(Math.max(1, Math.ceil(displayData.length / itemsPerPage)));
-        setCurrentPage(1);
-    }, [displayData, itemsPerPage]);
 
     // Columns for the filter (using product fields)
     const filterColumns = [
@@ -247,7 +224,7 @@ const ProductList = () => {
                         </button>
                         <button 
                             onClick={() => navigate('/categories')}
-                            className="px-3.5 py-1.5 border border-slate-200 bg-white text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-xs"
+                            className="px-3.5 py-1.5 border border-slate-200 bg-white text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-xs cursor-pointer"
                         >
                             Manage Categories
                         </button>
@@ -256,7 +233,7 @@ const ProductList = () => {
                                 onClick={() => {
                                     setSelectedProductId(null);
                                     setShowProductForm(true);
-                                }}
+                                    }}
                                 className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10 cursor-pointer"
                             >
                                 + Add Product
@@ -274,7 +251,7 @@ const ProductList = () => {
                                 <button
                                     key={cat.name}
                                     onClick={() => setSelectedCategory(cat.name)}
-                                    className={`px-3.5 py-1.5 text-xs font-semibold rounded-full whitespace-nowrap transition-all flex items-center gap-1.5 border ${
+                                    className={`px-3.5 py-1.5 text-xs font-semibold rounded-full whitespace-nowrap transition-all flex items-center gap-1.5 border cursor-pointer ${
                                         isActive
                                             ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-[1.01]'
                                             : 'bg-white text-slate-600 border-slate-200 shadow-xs hover:shadow-md hover:bg-slate-50/80'

@@ -54,7 +54,9 @@ urlpatterns = [
     path('templates/', include('api.urls_templates')),
     path('chatbot/', include('chatbot.urls')),
     path('api/chatbot/', include('chatbot.urls')),
-]
+    path('tally/', include('tally.urls')),
+    path('api/tally/', include('tally.urls')),
+]  # Reloaded for Tally connector download route
 
 if settings.DEBUG:
         urlpatterns += static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)

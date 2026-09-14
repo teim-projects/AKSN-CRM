@@ -60,6 +60,14 @@ function TemplateIcon(props) {
   );
 }
 
+function TallyIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none">
+      <path d="M9 7h6m-6 4h6m-6 4h4M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 const allSidebarItems = [
   { key: "home", label: "Dashboard", icon: HomeIcon, path: "/dashboard", section: "OVERVIEW" },
 
@@ -75,8 +83,12 @@ const allSidebarItems = [
 
   // MASTER DATA (Catalog & Master Configurations)
   { key: "products", label: "Product Master", icon: BoxIcon, path: "/products", section: "MASTER DATA" },
+  { key: "categories", label: "Category Master", icon: CategoryIcon, path: "/categories", section: "MASTER DATA" },
   { key: "terms", label: "Terms & Conditions", icon: TermsIcon, path: "/terms", section: "MASTER DATA" },
   { key: "templates", label: "Message Templates", icon: TemplateIcon, path: "/templates", section: "MASTER DATA" },
+
+  // INTEGRATIONS (External Systems & Accounting)
+  { key: "tally", label: "Tally Integration", icon: TallyIcon, path: "/tally", section: "INTEGRATIONS" },
 
   // ADMINISTRATION (System & Role Management)
   { key: "accounts", label: "Accounts", icon: BuildingIcon, path: "/accounts", section: "ADMINISTRATION" },
@@ -176,11 +188,13 @@ export default function Sidebar({ children }) {
       followups: "followups",
       quotes: "quotations",
       products: "products",
+      categories: "products",
       contacts: "customers",
       projects: "projects",
       amc: "amc",
       terms: "terms",
       templates: "templates",
+      tally: "tally",
       accounts: "accounts",
       roles: "roles",
     };
@@ -196,7 +210,7 @@ export default function Sidebar({ children }) {
     return currentItem ? currentItem.label : "Executive Dashboard";
   };
 
-  const sections = ["OVERVIEW", "SALES", "OPERATIONS", "MASTER DATA", "ADMINISTRATION"];
+  const sections = ["OVERVIEW", "SALES", "OPERATIONS", "MASTER DATA", "INTEGRATIONS", "ADMINISTRATION"];
 
   return (
     <div className="h-screen h-[100dvh] bg-[#12192c] flex flex-row font-sans antialiased relative w-full overflow-hidden">
@@ -735,6 +749,7 @@ function TargetIcon(props) { return <svg {...props} viewBox="0 0 24 24" fill="no
 function UserIcon(props) { return <svg {...props} viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="2" /><path d="M5 20a7 7 0 0114 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>; }
 function BuildingIcon(props) { return <svg {...props} viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" strokeWidth="2" /><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>; }
 function BoxIcon(props) { return <svg {...props} viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 00-1-1.73L13 3.27a2 2 0 00-2 0L4 6.27A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
+function CategoryIcon(props) { return <svg {...props} viewBox="0 0 24 24" fill="none"><path d="M7 7h.01M7 3h5a2 2 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V5a2 2 0 012-2h2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
 function QuoteIcon(props) { return <svg {...props} viewBox="0 0 24 24" fill="none"><path d="M8 7H5a2 2 0 00-2 2v4a2 2 0 002 2h3V7zM19 7h-3a2 2 0 00-2 2v4a2 2 0 002 2h3V7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
 
 function FollowUpIcon(props) {
