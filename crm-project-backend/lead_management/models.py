@@ -13,6 +13,7 @@ class LeadSource(models.TextChoices):
     SOCIAL_MEDIA = 'social_media', 'Social Media'
     EMAIL_CAMPAIGN = 'email_campaign', 'Email Campaign'
     EXHIBITION = 'exhibition', 'Exhibition'
+    VISIT = 'visit', 'Visit'
     OTHER = 'other', 'Other'
 
 

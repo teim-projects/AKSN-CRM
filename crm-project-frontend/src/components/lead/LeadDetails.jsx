@@ -78,6 +78,8 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
     { id: "social_media", name: "Social Media" },
     { id: "email_campaign", name: "Email Campaign" },
     { id: "exhibition", name: "Exhibition" },
+    { id: "visit", name: "Visit" },
+    { id: "other", name: "Other" },
   ];
 
   const industryOptions = [

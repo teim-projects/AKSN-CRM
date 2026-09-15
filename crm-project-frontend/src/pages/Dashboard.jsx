@@ -621,6 +621,7 @@ export default function Dashboard() {
       social_media: { label: "Social Media", color: "#10b981", bg: "bg-emerald-500" },
       email_campaign: { label: "Email Campaign", color: "#f59e0b", bg: "bg-amber-500" },
       exhibition: { label: "Exhibition", color: "#ef4444", bg: "bg-red-500" },
+      visit: { label: "Visit", color: "#06b6d4", bg: "bg-cyan-500" },
       other: { label: "Other", color: "#94a3b8", bg: "bg-slate-400" },
     };
 
