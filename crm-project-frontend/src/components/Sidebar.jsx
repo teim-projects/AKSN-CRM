@@ -83,7 +83,6 @@ const allSidebarItems = [
 
   // MASTER DATA (Catalog & Master Configurations)
   { key: "products", label: "Product Master", icon: BoxIcon, path: "/products", section: "MASTER DATA" },
-  { key: "categories", label: "Category Master", icon: CategoryIcon, path: "/categories", section: "MASTER DATA" },
   { key: "terms", label: "Terms & Conditions", icon: TermsIcon, path: "/terms", section: "MASTER DATA" },
   { key: "templates", label: "Message Templates", icon: TemplateIcon, path: "/templates", section: "MASTER DATA" },
 
@@ -206,6 +205,7 @@ export default function Sidebar({ children }) {
   }, [loadingRole, hasPermission]);
 
   const getPageTitle = () => {
+    if (currentPath.startsWith("/categories")) return "Category Master";
     const currentItem = allSidebarItems.find(item => isActive(item.path, currentPath));
     return currentItem ? currentItem.label : "Executive Dashboard";
   };
