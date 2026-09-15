@@ -142,3 +142,81 @@ class TallyIntegrationTests(TestCase):
         }, format='json')
         self.assertEqual(hb_resp2.status_code, 200)
         self.assertIsNotNone(hb_resp2.data.get('pending_job'))
+
+    def test_laptop_switch_clears_stale_companies(self):
+        # 1. Pair Laptop A
+        code_resp = self.client.post('/api/tally/pairing-code/')
+        pairing_code_a = code_resp.data['pairing_code']
+
+        laptop_a_client = APIClient()
+        pair_a_resp = laptop_a_client.post('/api/tally/connector/pair/', {
+            'pairing_code': pairing_code_a,
+            'connector_name': 'LAPTOP-A',
+            'connector_id': 'DEV-A'
+        }, format='json')
+        self.assertEqual(pair_a_resp.status_code, 200)
+        token_a = pair_a_resp.data['auth_token']
+
+        laptop_a_client.credentials(HTTP_X_TALLY_TOKEN=token_a)
+        laptop_a_client.post('/api/tally/connector/heartbeat/', {
+            'is_tally_online': True,
+            'tally_version': 'TallyPrime 4.0',
+            'companies': [
+                {'name': 'Laptop A Company 1', 'identifier': 'A1'},
+                {'name': 'Laptop A Company 2', 'identifier': 'A2'},
+            ],
+            'current_company': 'Laptop A Company 1',
+            'company_identifier': 'A1',
+        }, format='json')
+
+        # Verify CRM sees Laptop A's 2 companies
+        status_resp = self.client.get('/api/tally/status/')
+        self.assertEqual(status_resp.status_code, 200)
+        self.assertEqual(status_resp.data['tally_company_name'], 'Laptop A Company 1')
+        comp_names = [c['name'] for c in status_resp.data['available_companies']]
+        self.assertEqual(comp_names, ['Laptop A Company 1', 'Laptop A Company 2'])
+
+        # 2. User disconnects Laptop A
+        disconnect_resp = self.client.post('/api/tally/disconnect/')
+        self.assertEqual(disconnect_resp.status_code, 200)
+
+        status_after_disconnect = self.client.get('/api/tally/status/')
+        self.assertEqual(status_after_disconnect.data['status'], 'disconnected')
+        self.assertEqual(status_after_disconnect.data['available_companies'], [])
+        self.assertEqual(status_after_disconnect.data['tally_company_name'], '')
+
+        # 3. User connects Laptop B with a new pairing code
+        code_b_resp = self.client.post('/api/tally/pairing-code/')
+        pairing_code_b = code_b_resp.data['pairing_code']
+
+        laptop_b_client = APIClient()
+        pair_b_resp = laptop_b_client.post('/api/tally/connector/pair/', {
+            'pairing_code': pairing_code_b,
+            'connector_name': 'LAPTOP-B',
+            'connector_id': 'DEV-B'
+        }, format='json')
+        self.assertEqual(pair_b_resp.status_code, 200)
+        token_b = pair_b_resp.data['auth_token']
+
+        laptop_b_client.credentials(HTTP_X_TALLY_TOKEN=token_b)
+        laptop_b_client.post('/api/tally/connector/heartbeat/', {
+            'is_tally_online': True,
+            'tally_version': 'TallyPrime 4.1',
+            'companies': [
+                {'name': 'Laptop B Company 1', 'identifier': 'B1'},
+                {'name': 'Laptop B Company 2', 'identifier': 'B2'},
+            ],
+            'current_company': 'Laptop B Company 1',
+            'company_identifier': 'B1',
+        }, format='json')
+
+        # 4. Verify CRM status now ONLY has Laptop B's companies, NO Laptop A companies!
+        status_b_resp = self.client.get('/api/tally/status/')
+        self.assertEqual(status_b_resp.status_code, 200)
+        self.assertEqual(status_b_resp.data['status'], 'connected')
+        self.assertEqual(status_b_resp.data['connector_name'], 'LAPTOP-B')
+        self.assertEqual(status_b_resp.data['tally_company_name'], 'Laptop B Company 1')
+        b_comp_names = [c['name'] for c in status_b_resp.data['available_companies']]
+        self.assertEqual(b_comp_names, ['Laptop B Company 1', 'Laptop B Company 2'])
+        self.assertNotIn('Laptop A Company 1', b_comp_names)
+        self.assertNotIn('Laptop A Company 2', b_comp_names)

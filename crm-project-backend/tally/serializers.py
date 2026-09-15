@@ -21,7 +21,7 @@ class TallyInvoiceListSerializer(serializers.ModelSerializer):
     class Meta:
         model = TallyInvoice
         fields = [
-            'id', 'voucher_number', 'voucher_type', 'date',
+            'id', 'tally_company_identifier', 'voucher_number', 'voucher_type', 'date',
             'party_name', 'gstin', 'state', 'subtotal',
             'total_tax', 'total_amount', 'currency',
             'sync_status', 'created_at', 'items_count'

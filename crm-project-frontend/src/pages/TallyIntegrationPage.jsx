@@ -59,8 +59,13 @@ export default function TallyIntegrationPage() {
       })
       .then((data) => {
         setStatusData(data);
-        if (data.tally_company_name) {
+        const validCompanies = (data.available_companies || []).map((c) => c.name);
+        if (data.tally_company_name && validCompanies.includes(data.tally_company_name)) {
           setSelectedCompany(data.tally_company_name);
+        } else if (validCompanies.length > 0) {
+          setSelectedCompany(validCompanies[0]);
+        } else {
+          setSelectedCompany(data.tally_company_name || "");
         }
       })
       .catch((err) => {

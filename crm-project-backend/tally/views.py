@@ -194,6 +194,13 @@ class TallyInvoiceListView(APIView):
         if voucher_type:
             queryset = queryset.filter(voucher_type__iexact=voucher_type)
 
+        company = request.query_params.get('company', '').strip()
+        if company:
+            queryset = queryset.filter(
+                Q(tally_company_identifier__iexact=company) |
+                Q(tally_company_identifier__icontains=company)
+            )
+
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(queryset, request)
         serializer = TallyInvoiceListSerializer(page, many=True)
@@ -238,6 +245,11 @@ class TallyDisconnectView(APIView):
         integration.auth_token = None
         integration.pairing_code = ''
         integration.pairing_code_expires_at = None
+        integration.connector_name = ''
+        integration.connector_id = ''
+        integration.available_companies = []
+        integration.tally_company_name = ''
+        integration.tally_company_identifier = ''
         integration.last_error = 'User disconnected integration.'
         integration.save()
 
@@ -287,6 +299,10 @@ class ConnectorPairView(APIView):
         integration.pairing_code_expires_at = None
         integration.last_connected_at = timezone.now()
         integration.last_error = ''
+        # Clear out any previous connector/machine's company state to guarantee a clean slate
+        integration.available_companies = []
+        integration.tally_company_name = ''
+        integration.tally_company_identifier = ''
         integration.save()
 
         return Response({
@@ -294,8 +310,8 @@ class ConnectorPairView(APIView):
             'auth_token': token,
             'integration_id': str(integration.id),
             'connector_name': integration.connector_name,
-            'selected_company': integration.tally_company_name,
-            'selected_company_identifier': integration.tally_company_identifier
+            'selected_company': '',
+            'selected_company_identifier': ''
         })
 
 
@@ -340,20 +356,16 @@ class ConnectorHeartbeatView(APIView):
         if companies:
             real_companies = [c for c in companies if c.get('name') not in ('Active Tally Company', 'Default Company')]
             if real_companies:
-                # Merge with existing known companies so previously detected companies aren't lost
-                existing_map = {c['name']: c for c in (integration.available_companies or []) if c.get('name') not in ('Active Tally Company', 'Default Company')}
-                for c in real_companies:
-                    existing_map[c['name']] = c
-                integration.available_companies = list(existing_map.values())
+                # Directly reflect the companies currently open on the connected machine
+                # (Do NOT merge with historical companies from other machines/sessions)
+                integration.available_companies = real_companies
 
-                detected_name = real_companies[0].get('name', '')
-                detected_id = real_companies[0].get('identifier', detected_name)
-
-                # ONLY initialize company if not set or if still the old placeholder.
-                # Never overwrite the company chosen by the user in the CRM!
-                if not integration.tally_company_name or integration.tally_company_name in ('Active Tally Company', 'Default Company'):
-                    integration.tally_company_name = detected_name
-                    integration.tally_company_identifier = detected_id
+                valid_names = [c.get('name') for c in real_companies]
+                # If no company is selected, or if the previously selected company is not present on this machine,
+                # default to the first available company from this machine.
+                if not integration.tally_company_name or integration.tally_company_name not in valid_names:
+                    integration.tally_company_name = real_companies[0].get('name', '')
+                    integration.tally_company_identifier = real_companies[0].get('identifier', integration.tally_company_name)
 
         integration.save()
 
