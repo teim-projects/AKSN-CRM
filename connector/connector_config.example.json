@@ -1,8 +1,8 @@
 {
   "server_url": "http://127.0.0.1:8000",
   "tally_url": "http://localhost:9000",
-  "auth_token": "SXCBsEqCbuakfs5kI-rA-f2WnwBrLAJnf1yjfbkEihuRnetk92lVovmbcAWtgvlI",
-  "connector_name": "LAPTOP-IET2E3CV",
+  "auth_token": null,
+  "connector_name": "",
   "selected_company": "",
   "selected_company_identifier": ""
 }

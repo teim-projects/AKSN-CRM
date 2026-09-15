@@ -30,8 +30,72 @@ else:
 
 CONFIG_FILE = os.path.join(BASE_DIR, "connector_config.json")
 
-DEFAULT_SERVER_URL = "http://127.0.0.1:8000"
+LIVE_SERVER_URL = "https://aksn-crm.tallyahilyanagar.com"
+LOCAL_SERVER_URL = "http://127.0.0.1:8000"
+DEFAULT_SERVER_URL = LIVE_SERVER_URL
 DEFAULT_TALLY_URL = "http://localhost:9000"
+
+_lock_socket = None
+
+
+def acquire_instance_lock(port=19001):
+    """
+    Prevents multiple instances of TallyConnector from running concurrently in the background.
+    Binds a local TCP socket on port 19001.
+    """
+    global _lock_socket
+    try:
+        _lock_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        _lock_socket.bind(('127.0.0.1', port))
+        return True
+    except OSError:
+        return False
+
+
+def parse_pairing_input(raw_input):
+    """
+    Intelligently extracts server_url and pairing_code from user input, supporting:
+      1. Just pairing code: 'TALLY-ABCD-1234'
+      2. Full CLI command: 'TallyConnector.exe --server http://localhost:8000 --pair TALLY-ABCD-1234'
+      3. Python CLI: 'python tally_connector.py --server https://... --pair TALLY-ABCD-1234'
+      4. Combined URL and code: 'http://localhost:8000 TALLY-ABCD-1234'
+    """
+    raw = (raw_input or "").strip()
+    if not raw:
+        return None, None
+
+    server = None
+    code = None
+
+    # Check for --server <url>
+    server_match = re.search(r'--server\s+([^\s]+)', raw, re.IGNORECASE)
+    if server_match:
+        server = server_match.group(1).strip()
+    else:
+        # Check for any http:// or https:// URL in input
+        url_match = re.search(r'(https?://[^\s]+)', raw, re.IGNORECASE)
+        if url_match:
+            server = url_match.group(1).strip()
+
+    # Check for code TALLY-XXXX-XXXX
+    code_match = re.search(r'(TALLY-[A-Z0-9]{4}-[A-Z0-9]{4})', raw, re.IGNORECASE)
+    if code_match:
+        code = code_match.group(1).upper().strip()
+    else:
+        tokens = [t.strip().upper().lstrip('-') for t in raw.split() if t.strip()]
+        for t in reversed(tokens):
+            if t.startswith('TALLY-') or (len(t) == 15 and t.startswith('TALLY')):
+                code = t
+                break
+        if not code and tokens:
+            code = tokens[-1]
+
+    if server:
+        if not server.startswith("http://") and not server.startswith("https://"):
+            server = f"http://{server}"
+        server = server.rstrip("/")
+
+    return server, code
 
 
 def safe_exit(code=0):
@@ -61,10 +125,30 @@ class TallyConnector:
         self.tally_url = raw_tally
 
         self.auth_token = self.config.get("auth_token")
-        self.connector_name = self.config.get("connector_name", socket.gethostname())
+        # Dynamic hostname resolution: always reflect actual machine name
+        self.connector_name = socket.gethostname()
         self.selected_company = self.config.get("selected_company", "")
         self.selected_company_identifier = self.config.get("selected_company_identifier", "")
         self.mock_mode = False
+
+    def validate_token(self):
+        """
+        Tests if current auth_token is recognized by the CRM server.
+        If rejected (401/403), clears the token and saves config to self-heal.
+        """
+        if not self.auth_token:
+            return False
+        code, resp = self._make_crm_request("/api/tally/connector/heartbeat/", method="POST", payload={
+            "is_tally_online": False,
+            "verify_only": True
+        })
+        if code in (401, 403):
+            print(f"[!] Stored credentials rejected by CRM at {self.server_url} (HTTP {code}).")
+            print("[*] Clearing stale credentials to allow re-pairing...")
+            self.auth_token = None
+            self.save_config()
+            return False
+        return True
 
     def load_config(self):
         if os.path.exists(CONFIG_FILE):
@@ -156,9 +240,20 @@ class TallyConnector:
 
     def pair(self, pairing_code=None):
         if not pairing_code:
-            pairing_code = input("\nEnter pairing code generated from CRM (e.g. TALLY-XXXX-XXXX): ").strip()
+            print(f"\nEnter pairing code generated from CRM (e.g. TALLY-XXXX-XXXX)")
+            print(f"Current Target Server: {self.server_url}")
+            print(f"Tip: You can paste the full command from the CRM pairing modal!")
+            pairing_code = input("Code or Command [or 'q' to quit]: ").strip()
+            if not pairing_code or pairing_code.lower() == 'q':
+                return False
 
-        pairing_code = pairing_code.upper().strip()
+        parsed_server, parsed_code = parse_pairing_input(pairing_code)
+        if parsed_server and parsed_server != self.server_url:
+            print(f"[*] Switching CRM Server URL: {self.server_url} -> {parsed_server}")
+            self.server_url = parsed_server
+            self.save_config()
+
+        pairing_code = (parsed_code or pairing_code).upper().strip()
         if not pairing_code:
             print("[!] Pairing code cannot be empty.")
             return False
@@ -182,15 +277,30 @@ class TallyConnector:
         else:
             err_msg = resp.get('error') or resp
             print(f"[✗] Pairing FAILED (HTTP {status_code}): {err_msg}")
-            if "Connection failed to CRM server" in str(err_msg) and len(sys.argv) <= 1:
-                print(f"\n[!] Could not contact CRM server at {self.server_url}.")
-                change = input(f"Enter correct CRM Server URL (or press Enter to keep {self.server_url}): ").strip()
-                if change:
-                    if not change.startswith("http://") and not change.startswith("https://"):
-                        change = f"http://{change}"
-                    self.server_url = change.rstrip("/")
+            if len(sys.argv) <= 1 or "Invalid pairing code" in str(err_msg) or "Connection failed" in str(err_msg):
+                print(f"\n[?] Current target server: {self.server_url}")
+                print("Was this pairing code generated from another CRM server?")
+                print(f"  [1] Try Live Server ({LIVE_SERVER_URL})")
+                print(f"  [2] Try Local Server ({LOCAL_SERVER_URL})")
+                print(f"  [3] Enter custom Server URL")
+                print(f"  [Enter] Cancel or try different code")
+                choice = input("Select option (1/2/3) or press Enter: ").strip()
+                if choice == "1":
+                    self.server_url = LIVE_SERVER_URL
                     self.save_config()
                     return self.pair(pairing_code)
+                elif choice == "2":
+                    self.server_url = LOCAL_SERVER_URL
+                    self.save_config()
+                    return self.pair(pairing_code)
+                elif choice == "3":
+                    custom = input("Enter CRM Server URL: ").strip()
+                    if custom:
+                        if not custom.startswith("http://") and not custom.startswith("https://"):
+                            custom = f"http://{custom}"
+                        self.server_url = custom.rstrip("/")
+                        self.save_config()
+                        return self.pair(pairing_code)
             return False
 
     # ==========================================
@@ -771,8 +881,12 @@ class TallyConnector:
                         job_target = pending_job.get("target_company") or self.selected_company
                         print(f"[*] Received pending sync job {pending_job.get('job_id')} from CRM for company: '{job_target}'!")
                         self.perform_sync(job_id=pending_job.get("job_id"), company_name=job_target)
-                elif code == 401:
-                    print("[!] Authorization error: Token rejected by CRM server. Re-pairing may be required.")
+                elif code in (401, 403):
+                    print(f"\n[!] Authorization error: Token rejected by CRM server (HTTP {code}).")
+                    print("[*] Re-pairing is required. Clearing invalid token...")
+                    self.auth_token = None
+                    self.save_config()
+                    return False
                 else:
                     print(f"[!] Heartbeat warning (HTTP {code}): {resp.get('error') or resp}")
 
@@ -783,18 +897,21 @@ class TallyConnector:
                 print(f"[!] Daemon loop exception: {e}")
 
             time.sleep(interval)
+        return True
 
 
 def main():
-    # Preprocess sys.argv to gracefully handle accidental flags like `--TALLY-XXXX-XXXX`
-    extracted_code = None
+    if not acquire_instance_lock():
+        print("\n[!] Another instance of Tally Connector is already running on this machine.")
+        print("[!] Please check your running processes or task manager and close it first.")
+        safe_exit(1)
+
+    # Preprocess sys.argv to fix accidental flags like `--TALLY-XXXX-XXXX` into `--pair TALLY-XXXX-XXXX`
     cleaned_argv = []
     for arg in sys.argv[1:]:
         upper = arg.upper().strip()
         if upper.startswith("--TALLY-") or upper.startswith("-TALLY-"):
-            extracted_code = upper.lstrip("-")
-        elif upper.startswith("TALLY-") and not upper.startswith("--"):
-            extracted_code = upper
+            cleaned_argv.extend(["--pair", upper.lstrip("-")])
         else:
             cleaned_argv.append(arg)
 
@@ -810,7 +927,7 @@ def main():
 
     args = parser.parse_args(cleaned_argv)
 
-    pair_code = args.pair or args.code or extracted_code
+    pair_code = args.pair or args.code
 
     connector = TallyConnector(server_url=args.server, tally_url=args.tally)
     if args.mock:
@@ -847,23 +964,49 @@ def main():
     print(f"  Machine    : {connector.connector_name}")
     print("=======================================================\n")
 
-    # If already paired, run daemon immediately
+    # If auth_token exists, validate it with CRM
     if connector.auth_token:
-        print("[✓] Connector is paired with CRM.")
-        connector.run_daemon(interval=args.interval)
-        return
+        print("[*] Validating stored session with CRM...")
+        if connector.validate_token():
+            print(f"[✓] Connector is paired with CRM ({connector.server_url}).")
+            daemon_ok = connector.run_daemon(interval=args.interval)
+            if daemon_ok:
+                return
+            print("\n[*] Session ended or token revoked. Returning to pairing setup...")
+        else:
+            print("[!] Existing token was invalid or belongs to another device/server.")
 
-    # If not paired, interactively prompt the user
+    # If not paired or token was invalidated, interactively prompt the user
     while not connector.auth_token:
-        print("Connector is not paired yet.")
-        print("To pair, open your CRM in the browser, navigate to:")
-        print("  -> Settings > Integrations > Tally > Connect Tally")
-        print("and copy the pairing code (e.g. TALLY-7F82-91KD).\n")
+        print("\nConnector is not paired yet.")
+        print(f"Target CRM Server: {connector.server_url}")
+        print("Quick Switch: [1] Live Server  [2] Local Server  [s] Custom URL")
+        print("To pair, enter pairing code (e.g. TALLY-XXXX-XXXX) or paste the full command from CRM:")
 
-        user_input = input("Enter Pairing Code [or 'q' to quit]: ").strip()
+        user_input = input("\nEnter Code, Command, or Option [or 'q' to quit]: ").strip()
         if not user_input or user_input.lower() == 'q':
             print("\n[!] Setup cancelled.")
             safe_exit(0)
+
+        if user_input == "1":
+            connector.server_url = LIVE_SERVER_URL
+            connector.save_config()
+            print(f"[✓] Switched target CRM server to LIVE: {connector.server_url}")
+            continue
+        elif user_input == "2":
+            connector.server_url = LOCAL_SERVER_URL
+            connector.save_config()
+            print(f"[✓] Switched target CRM server to LOCAL: {connector.server_url}")
+            continue
+        elif user_input.lower() == 's':
+            new_srv = input(f"Enter CRM Server URL (current: {connector.server_url}): ").strip()
+            if new_srv:
+                if not new_srv.startswith("http://") and not new_srv.startswith("https://"):
+                    new_srv = f"http://{new_srv}"
+                connector.server_url = new_srv.rstrip("/")
+                connector.save_config()
+                print(f"[✓] Updated CRM Server URL to: {connector.server_url}")
+            continue
 
         if connector.pair(user_input):
             print("\n[✓] Successfully paired!")

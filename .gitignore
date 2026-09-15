@@ -1,1 +1,8 @@
 crm-project-backend/env/.env.dev
+
+# Windows Tally Connector local state & builds
+connector/connector_config.json
+connector/build/
+connector/dist/
+connector/__pycache__/
+connector/*.spec

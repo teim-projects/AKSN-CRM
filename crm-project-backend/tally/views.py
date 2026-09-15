@@ -40,18 +40,28 @@ def generate_pairing_code_str():
 def get_or_create_integration_for_user(user):
     """
     Returns the active TallyIntegration.
-    If multiple exist, returns the most recently updated one.
+    Ensures a single canonical integration record exists and cleans up historical duplicates.
     """
-    integration = TallyIntegration.objects.first()
-    if not integration:
-        integration = TallyIntegration.objects.create(
+    integrations = list(TallyIntegration.objects.all())
+    if not integrations:
+        return TallyIntegration.objects.create(
             created_by=user,
             status='disconnected'
         )
-    elif not integration.created_by and user:
-        integration.created_by = user
-        integration.save(update_fields=['created_by'])
-    return integration
+
+    primary = integrations[0]
+    if not primary.created_by and user:
+        primary.created_by = user
+        primary.save(update_fields=['created_by'])
+
+    if len(integrations) > 1:
+        for extra in integrations[1:]:
+            extra.invoices.all().update(integration=primary)
+            extra.sync_jobs.all().update(integration=primary)
+            extra.sync_logs.all().update(integration=primary)
+            extra.delete()
+
+    return primary
 
 
 # ==========================================

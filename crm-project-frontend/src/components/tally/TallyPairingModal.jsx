@@ -7,7 +7,14 @@ export default function TallyPairingModal({ isOpen, onClose, onPairedSuccess, ba
   const [timeLeft, setTimeLeft] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [cmdCopied, setCmdCopied] = useState(false);
+  const [commandMode, setCommandMode] = useState("exe"); // "exe" | "python"
   const [error, setError] = useState("");
+
+  const cleanServerUrl = (baseApi || (typeof window !== "undefined" ? window.location.origin : "http://127.0.0.1:8000")).replace(/\/$/, "");
+  const commandToRun = commandMode === "exe"
+    ? `TallyConnector.exe --server ${cleanServerUrl} --pair ${pairingCode}`
+    : `python tally_connector.py --server ${cleanServerUrl} --pair ${pairingCode}`;
 
   const token = localStorage.getItem("access") || localStorage.getItem("token");
 
@@ -159,30 +166,101 @@ export default function TallyPairingModal({ isOpen, onClose, onPairedSuccess, ba
               </div>
 
               {/* Instructions */}
-              <div className="border border-slate-200/80 rounded-lg p-4 bg-white space-y-2.5 text-xs text-slate-700">
-                <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider mb-1">
+              <div className="border border-slate-200/80 rounded-lg p-4 bg-white space-y-3 text-xs text-slate-700">
+                <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
                   Next Steps:
                 </h4>
                 <div className="flex gap-2">
                   <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-[11px] flex-shrink-0">1</span>
-                  <span>Open <strong>TallyPrime</strong> on your Windows machine (port 9000).</span>
+                  <span>Ensure <strong>TallyPrime</strong> is open on your machine (port 9000).</span>
                 </div>
                 <div className="flex gap-2">
                   <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-[11px] flex-shrink-0">2</span>
-                  <span>Double-click <strong>TallyConnector.exe</strong> and enter this code, or run via command line:</span>
+                  <span>Run the connector command on this machine:</span>
                 </div>
-                <div className="p-2 bg-slate-900 text-slate-100 rounded-md font-mono text-[11px] select-all overflow-x-auto">
-                  TallyConnector.exe --pair {pairingCode}
+
+                {/* Command Mode Tabs & Code Box */}
+                <div className="pt-1 space-y-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5 p-0.5 bg-slate-100 rounded-lg border border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => setCommandMode("exe")}
+                        className={`px-3 py-1 text-[11px] font-semibold rounded-md transition-all cursor-pointer ${
+                          commandMode === "exe"
+                            ? "bg-white text-blue-600 shadow-xs"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        Windows App (.exe)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCommandMode("python")}
+                        className={`px-3 py-1 text-[11px] font-semibold rounded-md transition-all cursor-pointer ${
+                          commandMode === "python"
+                            ? "bg-white text-blue-600 shadow-xs"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        Python Script (.py)
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(commandToRun);
+                        setCmdCopied(true);
+                        setTimeout(() => setCmdCopied(false), 2500);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-[11px] font-semibold transition-colors cursor-pointer shadow-xs"
+                      title="Copy full command"
+                    >
+                      {cmdCopied ? (
+                        <>
+                          <MdCheck className="text-emerald-300 text-sm" />
+                          <span className="text-white font-bold">Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <MdContentCopy className="text-blue-100 text-sm" />
+                          <span>Copy Command</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Clean code box with word-wrap and distinct styling */}
+                  <div className="bg-slate-950 text-slate-100 rounded-lg p-3 font-mono text-[11.5px] border border-slate-800 shadow-inner select-all break-all leading-relaxed whitespace-pre-wrap">
+                    {commandToRun}
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5 px-0.5">
+                    <span>
+                      Target CRM Server: <strong className="text-slate-800 font-semibold">{cleanServerUrl}</strong>
+                    </span>
+                  </div>
                 </div>
-                <div className="pt-0.5">
+
+                <div className="flex flex-wrap items-center gap-3 pt-0.5 text-[11px]">
                   <a
-                    href={`${baseApi}/api/tally/download-connector/?format=exe`}
+                    href={`${cleanServerUrl}/api/tally/download-connector/?format=exe`}
                     download="TallyConnector.exe"
-                    className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-semibold underline text-[11px]"
+                    className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-semibold underline"
                   >
-                    Need the app? Download TallyConnector.exe
+                    Download TallyConnector.exe
+                  </a>
+                  <span className="text-slate-300">•</span>
+                  <a
+                    href={`${cleanServerUrl}/api/tally/download-connector/?format=py`}
+                    download="tally_connector.py"
+                    className="inline-flex items-center gap-1 text-slate-600 hover:text-slate-800 font-semibold underline"
+                  >
+                    Download tally_connector.py
                   </a>
                 </div>
+
                 <div className="flex items-center gap-2 pt-1 text-slate-500">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   <span>Waiting for connector to establish handshake...</span>

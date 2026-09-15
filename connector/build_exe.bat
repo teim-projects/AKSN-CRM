@@ -5,17 +5,23 @@ echo ========================================================
 echo Building Tally Connector Windows Executable (.exe)
 echo ========================================================
 
-:: Check for PyInstaller in backend .venv first
-set "PYINSTALLER_EXE=..\crm-project-backend\.venv\Scripts\pyinstaller.exe"
+:: Check for PyInstaller in backend venv or .venv
+set "PYINSTALLER_EXE=..\crm-project-backend\venv\Scripts\pyinstaller.exe"
+if not exist "%PYINSTALLER_EXE%" set "PYINSTALLER_EXE=..\crm-project-backend\.venv\Scripts\pyinstaller.exe"
 
 if not exist "%PYINSTALLER_EXE%" (
     where pyinstaller >nul 2>nul
     if %ERRORLEVEL% EQU 0 (
         set "PYINSTALLER_EXE=pyinstaller"
     ) else (
-        echo [!] PyInstaller not found. Attempting pip install...
-        pip install pyinstaller
-        set "PYINSTALLER_EXE=pyinstaller"
+        echo [!] PyInstaller not found in backend venv. Attempting pip install into backend venv...
+        if exist "..\crm-project-backend\venv\Scripts\python.exe" (
+            ..\crm-project-backend\venv\Scripts\python.exe -m pip install pyinstaller
+            set "PYINSTALLER_EXE=..\crm-project-backend\venv\Scripts\pyinstaller.exe"
+        ) else (
+            pip install pyinstaller
+            set "PYINSTALLER_EXE=pyinstaller"
+        )
     )
 )
 
