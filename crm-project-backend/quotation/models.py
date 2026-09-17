@@ -68,8 +68,60 @@ class TermsConditions(models.Model):
         verbose_name_plural = "Terms & Conditions"
         unique_together = ['category', 'name']
     
+class BillingDetail(models.Model):
+    """Company Banking & Billing Details Master (Bank, IFSC, Account, UPI, QR Code)"""
+    ACCOUNT_TYPE_CHOICES = (
+        ("Current", "Current Account"),
+        ("Savings", "Savings Account"),
+        ("CC", "Cash Credit (CC)"),
+        ("OD", "Overdraft (OD)"),
+    )
+
+    account_holder_name = models.CharField(max_length=255, verbose_name="Account Holder Name")
+    bank_name = models.CharField(max_length=255, verbose_name="Bank Name")
+    account_number = models.CharField(max_length=50, verbose_name="Account Number")
+    account_type = models.CharField(max_length=50, choices=ACCOUNT_TYPE_CHOICES, default="Current", verbose_name="Account Type")
+    ifsc_code = models.CharField(max_length=20, verbose_name="IFSC Code")
+    branch_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Branch Name")
+    
+    upi_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="UPI ID")
+    qr_code = models.ImageField(upload_to="billing/qr_codes/", blank=True, null=True, verbose_name="QR Code Image")
+    
+    swift_code = models.CharField(max_length=30, blank=True, null=True, verbose_name="SWIFT / BIC Code")
+    company_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Beneficiary / Company Name")
+    gst_number = models.CharField(max_length=20, blank=True, null=True, verbose_name="GSTIN")
+    pan_number = models.CharField(max_length=20, blank=True, null=True, verbose_name="PAN Number")
+    notes = models.TextField(blank=True, null=True, verbose_name="Payment Instructions / Notes")
+    
+    is_default = models.BooleanField(default=False, verbose_name="Is Primary / Default")
+    is_active = models.BooleanField(default=True, verbose_name="Is Active")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='billing_details_created'
+    )
+
+    class Meta:
+        ordering = ['-is_default', '-created_at']
+        verbose_name = "Billing Detail"
+        verbose_name_plural = "Billing Details"
+
     def __str__(self):
-        return f"{self.category.name} - {self.name}"
+        return f"{self.bank_name} - {self.account_number} ({self.account_holder_name})"
+
+    def save(self, *args, **kwargs):
+        if self.is_default:
+            # When this is marked default, unset default on other billing details
+            BillingDetail.objects.filter(is_default=True).exclude(pk=self.pk).update(is_default=False)
+        elif not self.pk and not BillingDetail.objects.filter(is_default=True).exists():
+            # If creating first record and none is default, set it as default
+            self.is_default = True
+        super().save(*args, **kwargs)
 
 
 
@@ -106,6 +158,14 @@ class Quotation(models.Model):
     is_dropped = models.BooleanField(default=False, verbose_name="Is Dropped")
     
     # Quotation Details
+    billing_detail = models.ForeignKey(
+        "BillingDetail",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="quotations",
+        verbose_name="Billing Detail"
+    )
     subject = models.CharField(max_length=255, verbose_name="Subject", null=True, blank=True)
     quotation_date = models.DateField(auto_now_add=True, verbose_name="Quotation Date")
     

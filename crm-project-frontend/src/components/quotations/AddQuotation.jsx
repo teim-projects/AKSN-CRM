@@ -242,6 +242,47 @@ export default function AddQuotation({ id, leadData, onBack }) {
     fetchTermCategories();
   }, [isEdit]);
 
+  // Dynamically reconcile selectedTerms against active master terms categories
+  useEffect(() => {
+    if (!termCategories || termCategories.length === 0 || selectedTerms.length === 0) return;
+    const activeMasterMap = new Map();
+    termCategories.forEach((cat) => {
+      if (cat.is_active !== false && Array.isArray(cat.terms)) {
+        cat.terms.forEach((t) => {
+          if (t.is_active !== false) {
+            if (t.id) activeMasterMap.set(String(t.id), t);
+            if (t.name) activeMasterMap.set(t.name.trim().toLowerCase(), t);
+          }
+        });
+      }
+    });
+
+    setSelectedTerms((prev) => {
+      let changed = false;
+      const updated = [];
+      for (const st of prev) {
+        const match =
+          (st.id && activeMasterMap.get(String(st.id))) ||
+          (st.name && activeMasterMap.get(st.name.trim().toLowerCase()));
+        if (match) {
+          const newDesc = match.description !== undefined ? match.description : st.description;
+          if (newDesc !== st.description || match.name !== st.name) {
+            changed = true;
+          }
+          updated.push({
+            ...st,
+            id: match.id || st.id,
+            name: match.name || st.name,
+            description: newDesc,
+          });
+        } else {
+          changed = true;
+        }
+      }
+      return changed ? updated : prev;
+    });
+  }, [termCategories]);
+
   // Load quotation for edit
   useEffect(() => {
     if (!isEdit) return;

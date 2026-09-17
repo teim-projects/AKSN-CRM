@@ -6,14 +6,16 @@ from .views import (
     subject_suggestions,
     TermCategoryViewSet,
     TermsConditionsViewSet,
+    BillingDetailViewSet,
 )
 
 router = DefaultRouter()
 
-# Register only Quotation ViewSet
+# Register ViewSets
 router.register(r'quotation', QuotationViewSet, basename='quotation')
 router.register(r'term-categories', TermCategoryViewSet, basename='term-categories')
 router.register(r'terms', TermsConditionsViewSet, basename='terms')
+router.register(r'billing-details', BillingDetailViewSet, basename='billing-details')
 
 urlpatterns = [
     # Suggestions endpoints

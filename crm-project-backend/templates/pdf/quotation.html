@@ -393,7 +393,36 @@
         }
 
         .term-item {
-            margin-bottom: 4px;
+            margin-bottom: 5px;
+        }
+
+        .term-sub-bullets {
+            margin-top: 2px;
+            margin-left: 14px;
+        }
+
+        .term-sub-bullet {
+            font-size: 10px;
+            color: #1e293b;
+            font-weight: 500;
+            line-height: 1.45;
+            margin-top: 1.5px;
+        }
+
+        .thank-you-section {
+            margin-top: 10px;
+            width: 52%;
+            max-width: 52%;
+            font-size: 9.5px;
+            font-style: italic;
+            color: #1e293b;
+            line-height: 1.45;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .thank-you-line {
+            margin-bottom: 2px;
         }
 
         /* SIGNATURES SECTION */
@@ -609,16 +638,64 @@
                 <div class="terms-title">Terms Condition</div>
                 <div class="terms-content">
                     {% for term in terms_list %}
-                    <div class="term-item"><strong>&bull; {{ term.name }}:</strong> {{ term.description }}</div>
+                    <div class="term-item">
+                        {% if term.bullets and term.bullets|length > 1 %}
+                            <strong>&bull; {{ term.name }}:</strong> {{ term.bullets.0 }}
+                            <div class="term-sub-bullets">
+                                {% for sub_bullet in term.bullets|slice:"1:" %}
+                                <div class="term-sub-bullet">&bull; {{ sub_bullet }}</div>
+                                {% endfor %}
+                            </div>
+                        {% elif term.bullets and term.bullets|length == 1 %}
+                            <strong>&bull; {{ term.name }}:</strong> {{ term.bullets.0 }}
+                        {% else %}
+                            <strong>&bull; {{ term.name }}:</strong> {{ term.description }}
+                        {% endif %}
+                    </div>
                     {% endfor %}
                 </div>
                 {% endif %}
 
                 {% if thank_you_note %}
-                <div style="margin-top: 8px; font-size: 9px; font-style: italic; color: #1e293b;">
-                    {{ thank_you_note }}
+                <div class="thank-you-section">
+                    {% if thank_you_lines %}
+                        {% for line in thank_you_lines %}
+                        <div class="thank-you-line">{{ line }}</div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="thank-you-line">{{ thank_you_note }}</div>
+                    {% endif %}
                 </div>
                 {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- BANK & BILLING DETAILS SECTION -->
+            {% if billing_detail %}
+            <div style="clear: both; margin-top: 15px; margin-bottom: 15px; width: 100%; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px 12px; background-color: #f8fafc;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="vertical-align: top; font-size: 9.5px; line-height: 1.5; color: #1e293b;">
+                            <div style="font-weight: bold; color: #3b7b99; font-size: 10.5px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Bank &amp; Payment Details</div>
+                            <div><strong>Bank Name:</strong> {{ billing_detail.bank_name }} {% if billing_detail.branch_name %}({{ billing_detail.branch_name }}){% endif %}</div>
+                            <div><strong>Beneficiary / A/C Name:</strong> {{ billing_detail.account_holder_name }}</div>
+                            <div><strong>Account Number:</strong> {{ billing_detail.account_number }} ({{ billing_detail.account_type }})</div>
+                            <div><strong>IFSC Code:</strong> {{ billing_detail.ifsc_code }}</div>
+                            {% if billing_detail.upi_id %}
+                            <div><strong>UPI ID:</strong> {{ billing_detail.upi_id }}</div>
+                            {% endif %}
+                            {% if billing_detail.notes %}
+                            <div style="font-style: italic; color: #475569; margin-top: 3px;"><strong>Note:</strong> {{ billing_detail.notes }}</div>
+                            {% endif %}
+                        </td>
+                        {% if qr_code_base64 %}
+                        <td style="vertical-align: top; text-align: right; width: 90px;">
+                            <div style="font-size: 8.5px; color: #64748b; margin-bottom: 2px; text-align: center;">Scan to Pay</div>
+                            <img src="{{ qr_code_base64 }}" style="width: 75px; height: 75px; object-fit: contain; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px; background: #fff;" alt="Payment QR" />
+                        </td>
+                        {% endif %}
+                    </tr>
+                </table>
             </div>
             {% endif %}
 

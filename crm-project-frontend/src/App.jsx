@@ -33,6 +33,8 @@ import RolesPage from "./pages/RolesPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import TemplatesPage from "./pages/TemplatesPage";
 import TallyIntegrationPage from "./pages/TallyIntegrationPage";
+import BillingDetailsList from "./components/billing/BillingDetailsList";
+import BillingDetailsForm from "./components/billing/BillingDetailsForm";
 import { useUserRole } from "./hooks/useAuth";
 
 function ProtectedRoute({ children }) {
@@ -301,6 +303,32 @@ function AppRoutes() {
         element={
           <ModuleProtectedRoute module="tally">
             <TallyIntegrationPage />
+          </ModuleProtectedRoute>
+        }
+      />
+
+      {/* Billing Details Master Routes */}
+      <Route
+        path="/billing-details"
+        element={
+          <ModuleProtectedRoute module="billing">
+            <BillingDetailsList />
+          </ModuleProtectedRoute>
+        }
+      />
+      <Route
+        path="/billing-details/add"
+        element={
+          <ModuleProtectedRoute module="billing" action="create">
+            <BillingDetailsForm />
+          </ModuleProtectedRoute>
+        }
+      />
+      <Route
+        path="/billing-details/edit/:id"
+        element={
+          <ModuleProtectedRoute module="billing" action="edit">
+            <BillingDetailsForm />
           </ModuleProtectedRoute>
         }
       />

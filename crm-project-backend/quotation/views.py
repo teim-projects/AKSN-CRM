@@ -2,6 +2,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import action, api_view
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
@@ -10,12 +11,12 @@ import logging
 from .serializers import (
     QuotationSerializer, QuotationCreateSerializer,
     TermCategorySerializer, TermCategoryCreateSerializer,
-    TermsConditionsSerializer, TermsConditionsCreateSerializer
+    TermsConditionsSerializer, TermsConditionsCreateSerializer,
+    BillingDetailSerializer
 )
 
 from django.http import HttpResponse
-from .models import Quotation, QuotationVersion, TermCategory, TermsConditions
-from .serializers import QuotationSerializer, QuotationCreateSerializer
+from .models import Quotation, QuotationVersion, TermCategory, TermsConditions, BillingDetail
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,43 @@ class TermsConditionsViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
+
+
+# =====================================================
+# BILLING DETAILS MASTER VIEWS
+# =====================================================
+
+class BillingDetailViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing company bank & billing accounts"""
+    permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
+    queryset = BillingDetail.objects.all()
+    serializer_class = BillingDetailSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['bank_name', 'account_holder_name', 'account_number', 'ifsc_code', 'upi_id', 'company_name']
+    filterset_fields = ['is_active', 'is_default', 'account_type']
+    ordering_fields = ['created_at', 'bank_name', 'is_default']
+    ordering = ['-is_default', '-created_at']
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+    @action(detail=True, methods=['post'], url_path='set-default')
+    def set_default(self, request, pk=None):
+        """Set this billing account as primary/default and demote others"""
+        obj = self.get_object()
+        BillingDetail.objects.filter(is_default=True).exclude(pk=obj.pk).update(is_default=False)
+        obj.is_default = True
+        obj.save(update_fields=['is_default', 'updated_at'])
+        return Response(self.get_serializer(obj).data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='toggle-status')
+    def toggle_status(self, request, pk=None):
+        """Toggle active/inactive status"""
+        obj = self.get_object()
+        obj.is_active = not obj.is_active
+        obj.save(update_fields=['is_active', 'updated_at'])
+        return Response(self.get_serializer(obj).data, status=status.HTTP_200_OK)
 
 
 

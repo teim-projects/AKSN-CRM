@@ -259,6 +259,22 @@ export const getFilterableValue = (item, field) => {
     return item.total_amount || item.grand_total || item.amount || "";
   }
 
+  // 12. Status & Boolean Active
+  if (field === "status" || field === "is_active") {
+    const s = item.status ?? item.status_display ?? item.is_active;
+    if (s === true || s === "true" || s === "Active" || s === "active") return "Active active true yes";
+    if (s === false || s === "false" || s === "Inactive" || s === "inactive") return "Inactive inactive false no";
+    return String(s || "");
+  }
+
+  // 13. Primary / Default Account
+  if (field === "is_default" || field === "primary" || field === "primary_status") {
+    const d = item.is_default ?? item.primary ?? item.primary_status;
+    if (d === true || d === "true" || d === "Primary" || d === "Yes" || d === "yes") return "Primary primary yes true";
+    if (d === false || d === "false" || d === "Secondary" || d === "No" || d === "no") return "Secondary secondary no false";
+    return String(d || "");
+  }
+
   const val = item[field];
   if (val === null || val === undefined) return "";
   if (typeof val === "object") {
@@ -383,6 +399,9 @@ export default function AdvancedTableFilter({
     "serial_no",
     "sno",
     "s_no",
+    "qr_code",
+    "qr_code_url",
+    "actions",
   ];
 
   // Detect fields from data
@@ -558,6 +577,15 @@ export default function AdvancedTableFilter({
       quotation_no: "Quotation No",
       quotation_date: "Quotation Date",
       quotation_for: "Quotation For",
+      bank_name: "Bank Name",
+      account_holder_name: "Beneficiary Name",
+      account_number: "Account Number",
+      account_type: "Account Type",
+      ifsc_code: "IFSC Code",
+      branch_name: "Branch",
+      upi_id: "UPI ID",
+      is_default: "Primary Account",
+      primary_status: "Primary Account",
     };
 
     if (labelMap[field]) return labelMap[field];

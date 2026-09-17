@@ -60,6 +60,11 @@ export const SYSTEM_MODULES = [
     name: "Message Templates",
     description: "Manage dynamic Email and WhatsApp message templates",
   },
+  {
+    key: "billing",
+    name: "Billing & Bank Master",
+    description: "Manage bank accounts, IFSC, UPI IDs, and QR code details",
+  },
 ];
 
 // Helper to get default permissions for a role name

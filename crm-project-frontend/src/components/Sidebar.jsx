@@ -68,6 +68,14 @@ function TallyIcon(props) {
   );
 }
 
+function BillingIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none">
+      <path d="M3 21h18M3 10h18M5 10v11M9 10v11M15 10v11M19 10v11M12 3l9 7H3l9-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 const allSidebarItems = [
   { key: "home", label: "Dashboard", icon: HomeIcon, path: "/dashboard", section: "OVERVIEW" },
 
@@ -85,6 +93,7 @@ const allSidebarItems = [
   { key: "products", label: "Product Master", icon: BoxIcon, path: "/products", section: "MASTER DATA" },
   { key: "terms", label: "Terms & Conditions", icon: TermsIcon, path: "/terms", section: "MASTER DATA" },
   { key: "templates", label: "Message Templates", icon: TemplateIcon, path: "/templates", section: "MASTER DATA" },
+  { key: "billing", label: "Billing Details", icon: BillingIcon, path: "/billing-details", section: "MASTER DATA" },
 
   // INTEGRATIONS (External Systems & Accounting)
   { key: "tally", label: "Tally Integration", icon: TallyIcon, path: "/tally", section: "INTEGRATIONS" },
@@ -196,6 +205,7 @@ export default function Sidebar({ children }) {
       tally: "tally",
       accounts: "accounts",
       roles: "roles",
+      billing: "billing",
     };
 
     return allSidebarItems.filter((item) => {
@@ -206,6 +216,7 @@ export default function Sidebar({ children }) {
 
   const getPageTitle = () => {
     if (currentPath.startsWith("/categories")) return "Category Master";
+    if (currentPath.startsWith("/billing-details")) return "Billing Details Master";
     const currentItem = allSidebarItems.find(item => isActive(item.path, currentPath));
     return currentItem ? currentItem.label : "Executive Dashboard";
   };

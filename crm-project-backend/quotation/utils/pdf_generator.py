@@ -24,6 +24,9 @@ def get_user_display_name(user_obj):
     return full_name
 
 
+import re
+
+
 def parse_description_bullets(text):
     if not text or not str(text).strip():
         return []
@@ -36,6 +39,27 @@ def parse_description_bullets(text):
             bullets.append(cleaned + '.')
     if not raw.endswith('.') and bullets:
         bullets[-1] = bullets[-1].rstrip('.')
+    return bullets
+
+
+def parse_term_bullets(text):
+    """
+    Parse terms and condition description into bullet points split by full stop
+    or newline, preserving numbers like 18.5% and stripping redundant leading bullet characters.
+    """
+    if not text or not str(text).strip():
+        return []
+    raw = str(text).strip()
+    parts = re.split(r'(?<!\d)\.(?!\d)|[\n\r]+', raw)
+    bullets = []
+    for p in parts:
+        cleaned = ' '.join(p.split()).strip()
+        # Strip leading bullet symbols if user already typed them
+        cleaned = re.sub(r'^[•\-\*\u2022\u2023\u25E6\u2043\u2219]\s*', '', cleaned).strip()
+        if cleaned:
+            if not cleaned.endswith(('.', ':', ';', '!', '?')):
+                cleaned += '.'
+            bullets.append(cleaned)
     return bullets
 
 
@@ -95,8 +119,50 @@ def _build_quotation_pdf_context(quotation, version):
     else:
         gst_percentage = Decimal('18')
 
-    # Selected Terms & Conditions
+    # Selected Terms & Conditions (dynamically synchronized with active database master)
     raw_terms = version.terms_and_conditions or quotation.terms_and_conditions or []
+    from quotation.serializers import filter_active_terms
+    active_terms_list = filter_active_terms(raw_terms)
+
+    # Master terms map to ensure latest master description and name are used (for both old and new quotations)
+    from quotation.models import TermsConditions
+    master_terms_by_id = {t.id: t for t in TermsConditions.objects.filter(is_active=True, category__is_active=True).select_related('category')}
+    master_terms_by_name = {t.name.strip().lower(): t for t in master_terms_by_id.values()}
+
+    formatted_terms = []
+    for term in active_terms_list:
+        if not isinstance(term, dict):
+            continue
+        term_id = term.get('id')
+        term_name = (term.get('name') or '').strip()
+
+        master_obj = None
+        if term_id is not None:
+            try:
+                master_obj = master_terms_by_id.get(int(term_id))
+            except (ValueError, TypeError):
+                pass
+        if not master_obj and term_name:
+            master_obj = master_terms_by_name.get(term_name.lower())
+
+        if master_obj:
+            display_name = master_obj.name
+            term_desc = master_obj.description if master_obj.description else (term.get('description') or '')
+            category_name = master_obj.category.name if master_obj.category else term.get('category_name', '')
+        else:
+            display_name = term_name
+            term_desc = term.get('description') or ''
+            category_name = term.get('category_name', '')
+
+        term_desc = term_desc.strip()
+        bullets = parse_term_bullets(term_desc)
+        formatted_terms.append({
+            'id': term.get('id'),
+            'name': display_name,
+            'category_name': category_name,
+            'description': term_desc,
+            'bullets': bullets,
+        })
 
     # Lead Fallbacks for Client Information
     lead = quotation.lead
@@ -139,7 +205,30 @@ def _build_quotation_pdf_context(quotation, version):
             except Exception as err:
                 logger.error(f"Error encoding logo from {lpath}: {err}")
 
+    # Billing / Bank details (Quotation specific or default primary master)
+    from quotation.models import BillingDetail
+    billing_detail = getattr(quotation, 'billing_detail', None)
+    if not billing_detail:
+        billing_detail = BillingDetail.objects.filter(is_active=True, is_default=True).first()
+    if not billing_detail:
+        billing_detail = BillingDetail.objects.filter(is_active=True).first()
+
+    qr_code_base64 = ""
+    if billing_detail and billing_detail.qr_code:
+        try:
+            qr_file_path = billing_detail.qr_code.path
+            if os.path.exists(qr_file_path):
+                with open(qr_file_path, 'rb') as qf:
+                    qdata = qf.read()
+                    qext = 'png' if qr_file_path.lower().endswith('.png') else 'jpeg'
+                    qr_code_base64 = f"data:image/{qext};base64," + base64.b64encode(qdata).decode('utf-8')
+        except Exception as qr_err:
+            logger.error(f"Error encoding QR code for PDF: {qr_err}")
+
     q_date = quotation.quotation_date or (version.created_at.date() if hasattr(version.created_at, 'date') else version.created_at)
+
+    raw_thank_you = (quotation.thank_you_note or '').strip()
+    thank_you_lines = parse_term_bullets(raw_thank_you)
 
     return {
         'quotation': quotation,
@@ -157,9 +246,10 @@ def _build_quotation_pdf_context(quotation, version):
         'gst_number': gst_number,
         'subject': quotation.subject or 'Quotation for Products & Services',
         'assigned_executive': assigned_executive_str,
-        'thank_you_note': quotation.thank_you_note or '',
+        'thank_you_note': raw_thank_you,
+        'thank_you_lines': thank_you_lines,
         'quotation_items': formatted_items,
-        'terms_list': raw_terms,
+        'terms_list': formatted_terms,
         'subtotal': subtotal,
         'gst_amount': gst_amount,
         'sgst_amount': (gst_amount / Decimal('2')) if gst_amount else Decimal('0'),
@@ -170,6 +260,8 @@ def _build_quotation_pdf_context(quotation, version):
         'logo_base64': logo_base64,
         'quotation_for': getattr(quotation, 'quotation_for', 'Pune') or 'Pune',
         'company_address': "AKSN Infotech Office No:-10B, 2nd Floor, Prestige Point Behind Telephone Exchange, Bajirao Road, 283, Shukrawar Peth, PUNE 411002 India GSTIN: 27AAXFA5487A1Z4",
+        'billing_detail': billing_detail,
+        'qr_code_base64': qr_code_base64,
     }
 
 
