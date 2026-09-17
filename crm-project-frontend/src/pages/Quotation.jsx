@@ -11,6 +11,7 @@ import AdvancedTableFilter from "../components/AdvancedTableFilter";
 import axios from "axios";
 import { useUserRole } from '../hooks/useAuth';
 import SendMessageModal from "../components/templates/SendMessageModal";
+import { exportToExcel, formatExcelDate } from "../utils/excelExport";
 
 const BASE_API = import.meta.env.VITE_BASE_API_URL ?? "http://127.0.0.1:8000";
 
@@ -948,6 +949,44 @@ export default function Quotation() {
 
   const currentPageData = getCurrentPageData();
 
+  const handleExportExcel = () => {
+    const dataToExport = rows && rows.length > 0 ? rows : allRows;
+    const formatted = dataToExport.map((r, idx) => {
+      const activeVer = getActiveVersion(r);
+      const isFinalized = r.is_finalized || activeVer?.is_finalized;
+      const subtotal = parseFloat(activeVer?.subtotal || r.subtotal || 0);
+      const gst = parseFloat(activeVer?.total_gst || r.total_gst || 0);
+      const grandTotal = parseFloat(activeVer?.grand_total || activeVer?.total_amount || r.grand_total || r.total_amount || 0);
+
+      return {
+        "Sr No": idx + 1,
+        "Quotation No": r.quotation_no || r.quotation_number || `AKSN-${String(r.id).padStart(3, "0")}`,
+        "Date": formatExcelDate(activeVer?.created_at || r.quotation_date || r.created_at),
+        "Quotation For": r.quotation_for || "Pune",
+        "Company Name": r.company_name || "-",
+        "Contact Person": r.contact_person || "-",
+        "Mobile Number": r.mobile_number || "-",
+        "Email Address": r.email_address || "-",
+        "Active Version": activeVer?.version_no || "v1",
+        "Finalized": isFinalized ? "Yes" : "No",
+        "Status": r.is_dropped ? "Dropped" : (activeVer?.is_active ? "Active" : "Archived"),
+        "Products": getProductNames(activeVer) || getProductNames(r) || "-",
+        "Subtotal (₹)": subtotal,
+        "Total GST (₹)": gst,
+        "Grand Total (₹)": grandTotal,
+        "State": r.state || "-",
+        "City": r.city || "-",
+        "GST Type": r.gst_type || "-",
+      };
+    });
+
+    exportToExcel({
+      data: formatted,
+      fileName: "Quotations",
+      sheetName: "Quotations",
+    });
+  };
+
   return (
     <Base title="">
       <div className="w-full space-y-4 font-sans antialiased text-slate-800 pt-1 sm:pt-2 px-1">
@@ -1005,6 +1044,16 @@ export default function Quotation() {
             >
               <MdFilterList className="text-slate-400" />
               Filter
+            </button>
+
+            {/* Export to Excel Button */}
+            <button
+              onClick={handleExportExcel}
+              className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+              title="Export Quotations to Excel"
+            >
+              <MdDownload className="text-emerald-600 text-sm" />
+              Export
             </button>
 
             {canCreateQuotation && (

@@ -3,13 +3,14 @@ import { createPortal } from 'react-dom';
 import Base from '../Base';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom'; 
-import { MdEdit, MdDelete, MdFilterList, MdZoomIn, MdOutlineNavigateNext, MdOutlineNavigateBefore } from 'react-icons/md';
+import { MdEdit, MdDelete, MdFilterList, MdZoomIn, MdOutlineNavigateNext, MdOutlineNavigateBefore, MdDownload } from 'react-icons/md';
 import { Package } from 'lucide-react'; 
 import Swal from 'sweetalert2';
 import ProductForm from './ProductForm'; 
 import AdvancedTableFilter from '../AdvancedTableFilter';
 import RecordViewer from '../RecordViewer';
 import { useUserRole } from '../../hooks/useAuth';
+import { exportToExcel, formatExcelDate } from '../../utils/excelExport';
 
 const formatDescriptionAsBracketedCommas = (text) => {
     if (!text || typeof text !== "string" || !text.trim()) return "";
@@ -199,6 +200,33 @@ const ProductList = () => {
         { key: "is_service", label: "Is Service" },
     ];
 
+    const handleExportExcel = () => {
+        const dataToExport = displayData && displayData.length > 0 ? displayData : allProducts;
+        const formatted = dataToExport.map((p, idx) => ({
+            "Sr No": idx + 1,
+            "Product Name": p.name || "-",
+            "Product Code": p.product_code || "-",
+            "Category": p.category_name || (p.is_service ? "Service" : "Product"),
+            "Type": p.is_service ? "Service" : "Product",
+            "Unit Price (₹)": p.unit_price ? parseFloat(p.unit_price) : 0,
+            "HSN / SAC Code": p.hsn_sac_code || "-",
+            "GST Type": p.gst_type || "GST",
+            "GST Percentage (%)": p.gst_percentage ? parseFloat(p.gst_percentage) : 18,
+            "Price with GST (₹)": p.price_with_gst ? parseFloat(p.price_with_gst) : (
+                p.unit_price ? parseFloat((parseFloat(p.unit_price) * (1 + (parseFloat(p.gst_percentage || 18) / 100))).toFixed(2)) : 0
+            ),
+            "Status": p.status || (p.is_active ? "ACTIVE" : "INACTIVE"),
+            "Description": p.description || "-",
+            "Created Date": formatExcelDate(p.created_at),
+        }));
+
+        exportToExcel({
+            data: formatted,
+            fileName: "Product_Services_Catalog",
+            sheetName: "Products",
+        });
+    };
+
     return (
         <Base title="">
             <div className="w-full space-y-5 font-sans antialiased text-slate-800 pt-1 sm:pt-2 px-1">
@@ -217,10 +245,18 @@ const ProductList = () => {
                     <div className="mt-3 md:mt-0 flex items-center gap-2.5">
                         <button
                             onClick={() => setIsFilterOpen(true)}
-                            className="px-3.5 py-1.5 border border-slate-200 bg-white text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-xs flex items-center gap-1.5"
+                            className="px-3.5 py-1.5 border border-slate-200 bg-white text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
                         >
                             <MdFilterList className="text-slate-400" />
                             Filter
+                        </button>
+                        <button
+                            onClick={handleExportExcel}
+                            className="px-3.5 py-1.5 border border-slate-200 bg-white text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+                            title="Export Products to Excel"
+                        >
+                            <MdDownload className="text-emerald-600 text-sm" />
+                            Export
                         </button>
                         <button 
                             onClick={() => navigate('/categories')}

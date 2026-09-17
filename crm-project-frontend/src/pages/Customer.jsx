@@ -3,13 +3,14 @@ import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 import Base from "../components/Base";
 import TableView from "../components/TableView";
-import { MdEdit, MdDelete, MdOutlineRemoveRedEye, MdFilterList, MdZoomIn, MdMail } from "react-icons/md";
+import { MdEdit, MdDelete, MdOutlineRemoveRedEye, MdFilterList, MdZoomIn, MdMail, MdDownload } from "react-icons/md";
 import Swal from "sweetalert2";
 import AddCustomerForm from "../components/customers/AddCustomerForm";
 import AdvancedTableFilter from "../components/AdvancedTableFilter";
 import RecordViewer from "../components/RecordViewer";
 import SendMessageModal from "../components/templates/SendMessageModal";
 import { useUserRole } from '../hooks/useAuth';
+import { exportToExcel, formatExcelDate } from "../utils/excelExport";
 
 export default function Customer() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -698,6 +699,42 @@ export default function Customer() {
 
   const currentPageData = getCurrentPageData();
 
+  const handleExportExcel = () => {
+    const dataToExport = rows && rows.length > 0 ? rows : allRows;
+    const formatted = dataToExport.map((r, idx) => ({
+      "Sr No": idx + 1,
+      "Customer Code": r.customer_code || `C${String(r.id).padStart(3, "0")}`,
+      "Company Name": r.name || "-",
+      "Contact Person": r.contact_person || "-",
+      "Contact Number": r.contact_number || "-",
+      "Email Address": r.email || "-",
+      "Industry Category": r.industry_category_display || r.industry_category || "-",
+      "Lead Source": r.lead_source_display || r.lead_source || "-",
+      "GST Number": r.gst_number || "-",
+      "PAN Number": r.pan_number || "-",
+      "MSME Number": r.msme_number || "-",
+      "Billing Address": r.billing_address || "-",
+      "City": r.city || "-",
+      "State": r.state || "-",
+      "Pin Code": r.pin_code || "-",
+      "Products Purchased": Array.isArray(r.product_purchased)
+        ? r.product_purchased.map((p) => (typeof p === "object" ? p.name || p.product || "" : p)).filter(Boolean).join(", ")
+        : (r.product_purchased || "-"),
+      "Project Value (₹)": r.project_value ? parseFloat(r.project_value) : 0,
+      "Payment Terms": r.payment_terms_display || r.payment_terms || "-",
+      "AMC Start Date": formatExcelDate(r.amc_start_date),
+      "AMC End Date": formatExcelDate(r.amc_end_date),
+      "Customer Status": r.customer_status_display || r.customer_status || "-",
+      "Created At": formatExcelDate(r.created_at),
+    }));
+
+    exportToExcel({
+      data: formatted,
+      fileName: "Customers",
+      sheetName: "Customers",
+    });
+  };
+
   return (
     <Base title="">
       <div className="w-full space-y-4 font-sans antialiased text-slate-800 pt-1 sm:pt-2 px-1">
@@ -720,6 +757,14 @@ export default function Customer() {
             >
               <MdFilterList className="text-slate-400" />
               Filter
+            </button>
+            <button
+              onClick={handleExportExcel}
+              className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+              title="Export Customers to Excel"
+            >
+              <MdDownload className="text-emerald-600 text-sm" />
+              Export
             </button>
             {canCreateCustomer && (
               <button

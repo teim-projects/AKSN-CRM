@@ -6,7 +6,7 @@ import TableView from "../components/TableView";
 import LeadDetails from "../components/lead/LeadDetails";
 import AddLeadFollowUpForm from "../components/lead/AddLeadFollowUpForm";
 import AddLeadForm from "../components/lead/AddLeadForm";
-import { MdEdit, MdDelete, MdOutlineRemoveRedEye, MdEditDocument, MdAdd, MdFilterList, MdZoomIn, MdUpload, MdMail } from "react-icons/md";
+import { MdEdit, MdDelete, MdOutlineRemoveRedEye, MdEditDocument, MdAdd, MdFilterList, MdZoomIn, MdUpload, MdMail, MdDownload } from "react-icons/md";
 import Swal from "sweetalert2";
 import { useUserRole } from '../hooks/useAuth';
 import AddQuotation from "../components/quotations/AddQuotation";
@@ -14,6 +14,7 @@ import AdvancedTableFilter from "../components/AdvancedTableFilter";
 import RecordViewer from "../components/RecordViewer";
 import ImportLeadModal from "../components/lead/ImportLeadModal";
 import SendMessageModal from "../components/templates/SendMessageModal";
+import { exportToExcel, formatExcelDate } from "../utils/excelExport";
 
 export default function Lead() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -667,6 +668,45 @@ export default function Lead() {
 
   const currentPageData = getCurrentPageData();
 
+  const handleExportExcel = () => {
+    const dataToExport = rows && rows.length > 0 ? rows : allRows;
+    const formatted = dataToExport.map((r, idx) => ({
+      "Sr No": idx + 1,
+      "Enquiry No": r.lead_id || r.enquiry_id || `LEAD-${r.id}`,
+      "Enquiry Date": formatExcelDate(r.enquiry_date || r.created_at),
+      "Next Followup Date": formatExcelDate(r.followup_date),
+      "Company Name": r.company_name || "-",
+      "Contact Person": r.contact_person || "-",
+      "Mobile Number": r.mobile_number || "-",
+      "Email Address": r.email_address || "-",
+      "Pipeline Stage": r.pipeline_stage_display || r.pipeline_stage || "-",
+      "Status": r.status_display || r.status || "-",
+      "Products Interested": Array.isArray(r.product_interested)
+        ? r.product_interested.map((p) => (typeof p === "object" ? p.name || p.product || "" : p)).filter(Boolean).join(", ")
+        : (r.product_interested || "-"),
+      "Requirement Details": r.requirement_details || "-",
+      "Lead Source": r.lead_source_display || r.lead_source || "-",
+      "Priority": r.priority_display || r.priority || "-",
+      "Industry Type": r.industry_type_display || r.industry_type || "-",
+      "Expected Closure Date": formatExcelDate(r.expected_closure_date),
+      "Assigned Executive": r.assigned_executive_details?.full_name || r.assigned_executive_details?.first_name || (r.assigned_executive ? String(r.assigned_executive) : "-"),
+      "State": r.state || "-",
+      "City": r.city || "-",
+      "Address": r.address || "-",
+      "GST Number": r.gst_number || "-",
+      "PAN Number": r.pan_number || "-",
+      "Estimated Amount (₹)": r.amount ? parseFloat(r.amount) : 0,
+      "Converted to Customer": r.is_converted ? "Yes" : "No",
+      "Created At": formatExcelDate(r.created_at),
+    }));
+
+    exportToExcel({
+      data: formatted,
+      fileName: "Leads_Enquiries",
+      sheetName: "Leads",
+    });
+  };
+
   return (
     <Base title="">
       <div className="w-full space-y-4 font-sans antialiased text-slate-800 pt-1 sm:pt-2 px-1">
@@ -700,6 +740,14 @@ export default function Lead() {
                 Import
               </button>
             )}
+            <button
+              onClick={handleExportExcel}
+              className="px-3.5 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
+              title="Export Leads to Excel"
+            >
+              <MdDownload className="text-emerald-600 text-sm" />
+              Export
+            </button>
             {canCreateLead && (
               <button
                 onClick={() => { setEditingLead(null); setShowLeadForm(true); }}

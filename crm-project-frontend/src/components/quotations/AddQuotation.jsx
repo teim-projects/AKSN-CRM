@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import axios from "axios";
 import Swal from "sweetalert2";
 import Select from "react-select";
@@ -17,6 +17,104 @@ api.interceptors.request.use((config) => {
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
+
+function normalizeProductList(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {
+        // fallback
+      }
+    }
+    return trimmed.split(",").map((s) => s.trim()).filter(Boolean);
+  }
+  return [raw];
+}
+
+function mapLeadProductsToItems(rawProds, catalog = []) {
+  const prods = normalizeProductList(rawProds);
+  if (!prods || prods.length === 0) return [];
+
+  return prods
+    .map((p, idx) => {
+      let rawName = "";
+      let rawId = null;
+      let rawPrice = 0;
+      let rawQty = 1;
+      let rawDesc = "";
+
+      if (typeof p === "object" && p !== null) {
+        rawId = p.id || p.product_id || null;
+        rawName = p.name || p.product || p.product_name || "";
+        rawPrice = parseFloat(p.unit_price || p.price || p.rate || p.value || p.amount || 0) || 0;
+        rawQty = parseFloat(p.quantity || p.qty || 1) || 1;
+        rawDesc = p.description || "";
+      } else if (typeof p === "number") {
+        rawId = p;
+      } else if (typeof p === "string") {
+        const trimmed = p.trim();
+        if (/^\d+$/.test(trimmed)) {
+          rawId = parseInt(trimmed, 10);
+        } else {
+          rawName = trimmed;
+        }
+      }
+
+      let match = null;
+      if (Array.isArray(catalog) && catalog.length > 0) {
+        if (rawId) {
+          match = catalog.find((item) => Number(item.id) === Number(rawId));
+        }
+        if (!match && rawName) {
+          const lowerName = rawName.toLowerCase();
+          match = catalog.find(
+            (item) =>
+              (item.name && item.name.toLowerCase() === lowerName) ||
+              (item.product_code && item.product_code.toLowerCase() === lowerName)
+          );
+          if (!match) {
+            match = catalog.find(
+              (item) => item.name && item.name.toLowerCase().includes(lowerName)
+            );
+          }
+        }
+      }
+
+      const productName = match?.name || rawName;
+      if (!productName || /^\d+$/.test(String(productName).trim())) {
+        return null;
+      }
+
+      const itemUnitPrice = match ? (parseFloat(match.unit_price) || 0) : rawPrice;
+      const itemDescription = (match?.description && match.description.trim()) ? match.description : rawDesc;
+      const itemGst = match ? (parseFloat(match.gst_percentage) ?? 18) : 18;
+      const itemHsn = match?.hsn_sac_code || "";
+      const itemCode = match?.product_code || "";
+      const itemCategory = match?.category_name || (typeof match?.category === "object" ? match?.category?.name : match?.category) || "";
+      const itemUnit = match?.unit || "NOS";
+
+      return {
+        id: Date.now() + idx + Math.random(),
+        product_id: match ? match.id : (rawId || null),
+        product_name: productName,
+        product_code: itemCode,
+        category: itemCategory,
+        hsn_sac_code: itemHsn,
+        description: itemDescription,
+        quantity: rawQty,
+        unit: itemUnit,
+        unit_price: itemUnitPrice,
+        gst_percentage: itemGst,
+      };
+    })
+    .filter(Boolean);
+}
 
 export default function AddQuotation({ id, leadData, onBack }) {
   const isEdit = !!id;
@@ -56,6 +154,7 @@ export default function AddQuotation({ id, leadData, onBack }) {
 
   const [items, setItems] = useState([]);
   const [availableProducts, setAvailableProducts] = useState([]);
+  const availableProductsRef = useRef([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
 
   // Single mobile number search
@@ -221,6 +320,31 @@ export default function AddQuotation({ id, leadData, onBack }) {
     loadQuotation();
   }, [id, isEdit]);
 
+  // Load products catalog
+  const fetchProducts = useCallback(async () => {
+    if (availableProductsRef.current && availableProductsRef.current.length > 0) {
+      return availableProductsRef.current;
+    }
+    setLoadingProducts(true);
+    try {
+      const res = await api.get(`product/products/`);
+      const products = Array.isArray(res.data) ? res.data : res.data?.results || [];
+      availableProductsRef.current = products;
+      setAvailableProducts(products);
+      return products;
+    } catch (err) {
+      console.error("Error loading products:", err);
+      setAvailableProducts([]);
+      return [];
+    } finally {
+      setLoadingProducts(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
   // Auto-populate form data when leadData is passed from Lead table action
   useEffect(() => {
     if (isEdit || !leadData) return;
@@ -244,74 +368,27 @@ export default function AddQuotation({ id, leadData, onBack }) {
       subject: leadData.company_name ? `Quotation for ${leadData.company_name}` : prev.subject,
     }));
 
-    // Auto-map lead's interested products into quotation items
-    const prods = leadData.product_interested || leadData.product_interested_list || [];
-    if (Array.isArray(prods) && prods.length > 0) {
-      const mappedItems = prods
-        .map((p, idx) => {
-          let prodName = "";
-          let prodVal = typeof p === "object" && p !== null ? (p?.value || p?.price || p?.amount || 0) : (leadData.amount || 0);
-
-          if (typeof p === "object" && p !== null) {
-            prodName = p?.product || p?.name || p?.product_name || "";
-          } else {
-            prodName = String(p || "").trim();
-          }
-
-          // If prodName is numeric ID or matches product, resolve from availableProducts
-          if (availableProducts && availableProducts.length > 0) {
-            const match = availableProducts.find(
-              (pr) => String(pr.id) === String(prodName) || String(pr.id) === String(p) || pr.name === prodName
-            );
-            if (match) {
-              prodName = match.name || match.product_name || prodName;
-              if (!prodVal && match.unit_price) prodVal = match.unit_price;
-            }
-          }
-
-          // If prodName is still numeric or empty, do not add dummy placeholder item
-          if (!prodName || /^\d+$/.test(prodName)) {
-            return null;
-          }
-
-          return {
-            id: Date.now() + idx,
-            product_name: prodName,
-            description: "",
-            qty: 1,
-            rate: parseFloat(prodVal) || 0,
-            amount: parseFloat(prodVal) || 0,
-          };
-        })
-        .filter(Boolean);
-      setItems(mappedItems);
-    } else {
-      setItems([]);
-    }
-  }, [isEdit, leadData, availableProducts]);
-
-  // Load products
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setLoadingProducts(true);
-      try {
-        const res = await api.get(`product/products/`);
-        const products = Array.isArray(res.data) ? res.data : res.data?.results || [];
-        setAvailableProducts(products);
-      } catch (err) {
-        console.error("Error loading products:", err);
-        setAvailableProducts([]);
-      } finally {
-        setLoadingProducts(false);
+    // Auto-map lead's interested products into quotation items with full description & pricing
+    const populateLeadItems = async () => {
+      let catalog = availableProductsRef.current;
+      if (!catalog || catalog.length === 0) {
+        catalog = await fetchProducts();
+      }
+      const prods = leadData.product_interested || leadData.product_interested_list || leadData.product_purchased || [];
+      const mappedItems = mapLeadProductsToItems(prods, catalog);
+      if (mappedItems.length > 0) {
+        setItems(mappedItems);
       }
     };
-    fetchProducts();
-  }, []);
+
+    populateLeadItems();
+  }, [isEdit, leadData, fetchProducts]);
 
   // Search lead by mobile number
   const searchLeadByMobile = useCallback(
     async (mobile) => {
-      if (!mobile || mobile.length < 10) {
+      const cleanMobile = String(mobile || "").replace(/\D/g, "");
+      if (!cleanMobile || cleanMobile.length < 10) {
         setLeadFound(null);
         setFormData((prev) => ({
           ...prev,
@@ -330,19 +407,50 @@ export default function AddQuotation({ id, leadData, onBack }) {
 
       setSearchingLead(true);
       try {
-        const res = await api.get(`lead/lead/?search=${mobile}`);
+        const res = await api.get(`lead/lead/?search=${cleanMobile}`);
         const data = Array.isArray(res.data) ? res.data : res.data?.results || [];
 
-        const lead = data.find((l) => l.mobile_number === mobile);
+        let lead = data.find((l) => String(l.mobile_number || "").replace(/\D/g, "") === cleanMobile);
+
+        // Fallback: search converted customers
+        if (!lead) {
+          try {
+            const custRes = await api.get(`lead/customers/?search=${cleanMobile}`);
+            const custData = Array.isArray(custRes.data) ? custRes.data : custRes.data?.results || [];
+            const cust = custData.find(
+              (c) => String(c.contact_number || "").replace(/\D/g, "") === cleanMobile
+            );
+            if (cust) {
+              lead = {
+                id: cust.lead || null,
+                company_name: cust.name || "",
+                contact_person: cust.contact_person || "",
+                mobile_number: cust.contact_number || mobile,
+                email_address: cust.email || "",
+                linkedin_profile_url: "",
+                gst_number: cust.gst_number || "",
+                pan_number: cust.pan_number || "",
+                msme_number: cust.msme_number || "",
+                state: cust.state || "",
+                city: cust.city || "",
+                address: cust.billing_address || "",
+                industry_type: cust.industry_category || "",
+                product_interested: cust.product_purchased || (cust.lead_details?.product_interested || []),
+              };
+            }
+          } catch (custErr) {
+            console.error("Error searching customer fallback:", custErr);
+          }
+        }
 
         if (lead) {
           setLeadFound(lead);
           setFormData((prev) => ({
             ...prev,
-            lead: lead.id,
+            lead: lead.id || "",
             company_name: lead.company_name || "",
             contact_person: lead.contact_person || "",
-            mobile_number: lead.mobile_number || "",
+            mobile_number: lead.mobile_number || mobile,
             email_address: lead.email_address || "",
             linkedin_profile_url: lead.linkedin_profile_url || "",
             gst_number: lead.gst_number || "",
@@ -352,7 +460,30 @@ export default function AddQuotation({ id, leadData, onBack }) {
             city: lead.city || "",
             address: lead.address || "",
             industry_type: lead.industry_type || "",
+            subject: lead.company_name ? `Quotation for ${lead.company_name}` : prev.subject,
           }));
+
+          // Automatically populate quotation items with product details from lead
+          if (!isEdit) {
+            let catalog = availableProductsRef.current;
+            if (!catalog || catalog.length === 0) {
+              catalog = await fetchProducts();
+            }
+            const prods = lead.product_interested || lead.product_interested_list || lead.product_purchased || [];
+            const mapped = mapLeadProductsToItems(prods, catalog);
+            if (mapped.length > 0) {
+              setItems((prev) => {
+                if (!prev || prev.length === 0) return mapped;
+                const existingNames = new Set(
+                  prev.map((it) => (it.product_name || "").toLowerCase().trim())
+                );
+                const newItems = mapped.filter(
+                  (it) => !existingNames.has((it.product_name || "").toLowerCase().trim())
+                );
+                return [...prev, ...newItems];
+              });
+            }
+          }
         } else {
           setLeadFound(null);
           if (!isEdit) {
@@ -377,7 +508,7 @@ export default function AddQuotation({ id, leadData, onBack }) {
         setSearchingLead(false);
       }
     },
-    [isEdit]
+    [isEdit, fetchProducts]
   );
 
   function debounce(fn, delay) {
@@ -424,11 +555,11 @@ export default function AddQuotation({ id, leadData, onBack }) {
         product_id: product.id,
         product_name: product.name,
         product_code: product.product_code || "",
-        category: product.category?.name || "",
+        category: product.category_name || (typeof product.category === "object" ? product.category?.name : product.category) || "",
         hsn_sac_code: product.hsn_sac_code || "",
         description: product.description || "",
         quantity: 1,
-        unit: "NOS",
+        unit: product.unit || "NOS",
         unit_price: parseFloat(product.unit_price) || 0,
         gst_percentage: parseFloat(product.gst_percentage) || 18,
       },

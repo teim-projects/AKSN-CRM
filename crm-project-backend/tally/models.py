@@ -60,6 +60,7 @@ class TallyIntegration(models.Model):
 class TallySyncJob(models.Model):
     JOB_TYPES = (
         ('full_sync', 'Full Sync'),
+        ('date_range_sync', 'Date Range Sync'),
         ('incremental_sync', 'Incremental Sync'),
         ('company_refresh', 'Company Refresh'),
     )
@@ -78,6 +79,8 @@ class TallySyncJob(models.Model):
         related_name='sync_jobs'
     )
     job_type = models.CharField(max_length=50, choices=JOB_TYPES, default='full_sync')
+    start_date = models.DateField(null=True, blank=True, help_text="Voucher date range start filter")
+    end_date = models.DateField(null=True, blank=True, help_text="Voucher date range end filter")
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -86,7 +89,8 @@ class TallySyncJob(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"Job {self.job_type} - {self.status} ({self.created_at})"
+        range_str = f" [{self.start_date} to {self.end_date}]" if (self.start_date or self.end_date) else ""
+        return f"Job {self.job_type}{range_str} - {self.status} ({self.created_at})"
 
 
 class TallySyncLog(models.Model):
@@ -108,6 +112,8 @@ class TallySyncLog(models.Model):
         related_name='sync_logs'
     )
     sync_type = models.CharField(max_length=50, choices=SYNC_TYPES, default='manual')
+    start_date = models.DateField(null=True, blank=True, help_text="Sync date range start")
+    end_date = models.DateField(null=True, blank=True, help_text="Sync date range end")
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='running')
     started_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)

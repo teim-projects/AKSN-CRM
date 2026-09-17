@@ -275,8 +275,8 @@ class AddStaffSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ('id', 'email', 'mobile_no', 'first_name', 'last_name', 'role', 'password')
-        read_only_fields = ('id',)
+        fields = ('id', 'email', 'mobile_no', 'first_name', 'last_name', 'role', 'password', 'date_joined', 'is_active')
+        read_only_fields = ('id', 'date_joined')
 
     def validate(self, attrs):
         # strip whitespace from mobile if present

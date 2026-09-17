@@ -3,11 +3,12 @@ import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 import Base from "../../components/Base";
 import TableView from "../../components/TableView";
-import { MdAdd, MdFilterList, MdMail } from "react-icons/md";
+import { MdAdd, MdFilterList, MdMail, MdDownload } from "react-icons/md";
 import AddLeadFollowUpForm from "./AddLeadFollowUpForm";
 import AdvancedTableFilter from "../AdvancedTableFilter";
 import SendMessageModal from "../templates/SendMessageModal";
 import { useUserRole } from "../../hooks/useAuth";
+import { exportToExcel, formatExcelDate } from "../../utils/excelExport";
 
 export default function FollowUp() {
   const [searchParams] = useSearchParams();
@@ -494,6 +495,28 @@ export default function FollowUp() {
 
   const currentPageData = getCurrentPageData();
 
+  const handleExportExcel = () => {
+    const dataToExport = rows && rows.length > 0 ? rows : allRows;
+    const formatted = dataToExport.map((r, idx) => ({
+      "Sr No": idx + 1,
+      "Company Name": r.company_name || "-",
+      "Contact Person": r.contact_person || "-",
+      "Mobile Number": r.mobile_number || "-",
+      "Last Follow-up Date": formatExcelDate(r.last_followup_date),
+      "Next Follow-up Date": formatExcelDate(r.effective_followup_date || r.followup_date),
+      "Total Follow-ups": r.followup_count || 0,
+      "Status": r.status === 'close_win' ? 'Close Win' : r.status === 'close_loss' ? 'Close Loss' : r.status === 'closed' ? 'Closed' : r.status === 'in_process' ? 'In Process' : 'Open',
+      "Pipeline Stage": r.pipeline_stage || "-",
+      "Assigned Executive": r.assigned_executive_details?.full_name || r.assigned_executive_details?.first_name || (r.assigned_executive ? String(r.assigned_executive) : "-"),
+    }));
+
+    exportToExcel({
+      data: formatted,
+      fileName: "Follow_Ups",
+      sheetName: "Follow-ups",
+    });
+  };
+
   return (
     <Base title="">
       <div className="w-full space-y-4 font-sans antialiased text-slate-800 pt-1 sm:pt-2 px-1">
@@ -551,6 +574,16 @@ export default function FollowUp() {
             >
               <MdFilterList className="text-slate-400" />
               Filter
+            </button>
+
+            {/* Export to Excel Button */}
+            <button
+              onClick={handleExportExcel}
+              className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+              title="Export Follow-ups to Excel"
+            >
+              <MdDownload className="text-emerald-600 text-sm" />
+              Export
             </button>
 
             {canCreateFollowup && (

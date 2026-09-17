@@ -3,6 +3,7 @@ import Base from "../components/Base";
 import TableView from "../components/TableView";
 import TallyInvoiceDetailModal from "../components/tally/TallyInvoiceDetailModal";
 import TallyPairingModal from "../components/tally/TallyPairingModal";
+import TallySyncModal from "../components/tally/TallySyncModal";
 import Swal from "sweetalert2";
 import {
   MdOutlineRemoveRedEye,
@@ -21,6 +22,7 @@ export default function TallyIntegrationPage() {
   const [statusData, setStatusData] = useState(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
   const [isPairingModalOpen, setIsPairingModalOpen] = useState(false);
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
   // Invoices state
@@ -31,6 +33,8 @@ export default function TallyIntegrationPage() {
   const [itemsPerPage] = useState(10);
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [voucherTypeFilter, setVoucherTypeFilter] = useState("");
+  const [startDateFilter, setStartDateFilter] = useState("");
+  const [endDateFilter, setEndDateFilter] = useState("");
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
@@ -88,6 +92,8 @@ export default function TallyIntegrationPage() {
     let url = `${baseApi}/api/tally/invoices/?page=${invoicePage}&page_size=${itemsPerPage}`;
     if (invoiceSearch.trim()) url += `&search=${encodeURIComponent(invoiceSearch.trim())}`;
     if (voucherTypeFilter) url += `&voucher_type=${encodeURIComponent(voucherTypeFilter)}`;
+    if (startDateFilter) url += `&start_date=${encodeURIComponent(startDateFilter)}`;
+    if (endDateFilter) url += `&end_date=${encodeURIComponent(endDateFilter)}`;
 
     fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
@@ -103,7 +109,7 @@ export default function TallyIntegrationPage() {
       .finally(() => {
         setIsLoadingInvoices(false);
       });
-  }, [baseApi, token, invoicePage, itemsPerPage, invoiceSearch, voucherTypeFilter]);
+  }, [baseApi, token, invoicePage, itemsPerPage, invoiceSearch, voucherTypeFilter, startDateFilter, endDateFilter]);
 
   useEffect(() => {
     if (activeTab === "invoices") {
@@ -136,8 +142,9 @@ export default function TallyIntegrationPage() {
     }
   }, [activeTab, fetchHistory]);
 
-  // Manual Trigger: Sync Now
-  const handleSyncNow = async () => {
+  // Manual Trigger: Sync Now (supports full sync or specific date range)
+  const handleSyncNow = async (dateRange = {}) => {
+    const { fromDate, toDate } = dateRange;
     setIsSyncing(true);
     try {
       const res = await fetch(`${baseApi}/api/tally/sync-now/`, {
@@ -146,16 +153,23 @@ export default function TallyIntegrationPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
+        body: JSON.stringify({
+          from_date: fromDate || null,
+          to_date: toDate || null,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || "Failed to trigger sync");
       }
 
+      setIsSyncModalOpen(false);
+
       Swal.fire({
         icon: "success",
+        title: "Sync Command Queued",
         text: data.message || "Manual sync command queued for connector",
-        timer: 2000,
+        timer: 2500,
         showConfirmButton: false,
       });
 
@@ -626,10 +640,10 @@ export default function TallyIntegrationPage() {
           <div className="mt-3 md:mt-0 flex items-center gap-2 sm:gap-3">
             {/* Sync Now Button */}
             <button
-              onClick={handleSyncNow}
+              onClick={() => setIsSyncModalOpen(true)}
               disabled={isSyncing}
               className="px-4 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-              title="Request manual synchronization from Windows connector"
+              title="Synchronize invoices from Tally (All or Date Range)"
             >
               <MdSync className={`text-slate-500 text-sm ${isSyncing ? "animate-spin text-blue-600" : ""}`} />
               <span>{isSyncing ? "Syncing..." : "Sync Now"}</span>
@@ -697,14 +711,14 @@ export default function TallyIntegrationPage() {
 
           {/* Quick Search & Filter when on Invoices Tab */}
           {activeTab === "invoices" && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
               <input
                 type="text"
                 placeholder="Search invoice or party..."
                 value={invoiceSearch}
                 onChange={(e) => setInvoiceSearch(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && fetchInvoices()}
-                className="w-48 sm:w-56 px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                className="w-44 sm:w-48 px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
               />
               <select
                 value={voucherTypeFilter}
@@ -717,6 +731,42 @@ export default function TallyIntegrationPage() {
                 <option value="">All Types</option>
                 <option value="Sales">Sales</option>
               </select>
+              <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-600">
+                <span className="text-[10.5px] text-slate-400 font-medium">From:</span>
+                <input
+                  type="date"
+                  value={startDateFilter}
+                  onChange={(e) => {
+                    setStartDateFilter(e.target.value);
+                    setInvoicePage(1);
+                  }}
+                  className="text-xs border-0 p-0 focus:ring-0 text-slate-700 bg-transparent"
+                />
+                <span className="text-[10.5px] text-slate-400 font-medium ml-1">To:</span>
+                <input
+                  type="date"
+                  value={endDateFilter}
+                  onChange={(e) => {
+                    setEndDateFilter(e.target.value);
+                    setInvoicePage(1);
+                  }}
+                  className="text-xs border-0 p-0 focus:ring-0 text-slate-700 bg-transparent"
+                />
+                {(startDateFilter || endDateFilter) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStartDateFilter("");
+                      setEndDateFilter("");
+                      setInvoicePage(1);
+                    }}
+                    className="text-[11px] text-slate-400 hover:text-rose-600 px-1 cursor-pointer font-bold"
+                    title="Clear date filter"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -929,6 +979,14 @@ export default function TallyIntegrationPage() {
             />
           </div>
         )}
+
+        {/* Tally Sync Modal (Full or Date Range) */}
+        <TallySyncModal
+          isOpen={isSyncModalOpen}
+          onClose={() => setIsSyncModalOpen(false)}
+          onConfirmSync={handleSyncNow}
+          isSyncing={isSyncing}
+        />
 
         {/* Invoice Detail Modal */}
         <TallyInvoiceDetailModal

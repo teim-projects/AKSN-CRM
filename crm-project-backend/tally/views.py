@@ -152,15 +152,34 @@ class TriggerSyncNowView(APIView):
                 'error': f'Cannot sync: Tally connector is {integration.status}. Make sure the connector is running and paired.'
             }, status=status.HTTP_400_BAD_REQUEST)
 
+        raw_from = request.data.get('from_date') or request.data.get('start_date') or ''
+        raw_to = request.data.get('to_date') or request.data.get('end_date') or ''
+
+        from_date = raw_from.strip() if isinstance(raw_from, str) and raw_from.strip() else None
+        to_date = raw_to.strip() if isinstance(raw_to, str) and raw_to.strip() else None
+
+        job_type = 'date_range_sync' if (from_date or to_date) else 'full_sync'
+
         job = TallySyncJob.objects.create(
             integration=integration,
-            job_type='full_sync',
+            job_type=job_type,
+            start_date=from_date,
+            end_date=to_date,
             status='pending'
         )
 
+        msg = (
+            f"Date range synchronization ({from_date or 'Start'} to {to_date or 'Latest'}) triggered. The connector will fetch matching invoices on next poll."
+            if (from_date or to_date)
+            else "Full synchronization triggered. The connector will fetch invoices on next poll."
+        )
+
         return Response({
-            'message': 'Manual synchronization triggered. The connector will fetch invoices on next poll.',
-            'job_id': str(job.id)
+            'message': msg,
+            'job_id': str(job.id),
+            'job_type': job.job_type,
+            'start_date': str(job.start_date) if job.start_date else None,
+            'end_date': str(job.end_date) if job.end_date else None,
         })
 
 
@@ -379,7 +398,9 @@ class ConnectorHeartbeatView(APIView):
                 'job_id': str(pending_job.id),
                 'job_type': pending_job.job_type,
                 'target_company': integration.tally_company_name,
-                'company_identifier': integration.tally_company_identifier
+                'company_identifier': integration.tally_company_identifier,
+                'from_date': str(pending_job.start_date) if pending_job.start_date else None,
+                'to_date': str(pending_job.end_date) if pending_job.end_date else None,
             }
 
         return Response({
@@ -408,10 +429,21 @@ class ConnectorUploadInvoicesView(APIView):
         company_name = request.data.get('company_name', integration.tally_company_name)
         company_identifier = request.data.get('company_identifier', integration.tally_company_identifier or company_name)
         invoices_data = request.data.get('invoices', [])
+        from_date = request.data.get('from_date') or request.data.get('start_date') or None
+        to_date = request.data.get('to_date') or request.data.get('end_date') or None
+
+        # If job_id exists and dates weren't in upload payload, fetch from job
+        if job_id and not (from_date or to_date):
+            job_obj = TallySyncJob.objects.filter(id=job_id).first()
+            if job_obj:
+                from_date = str(job_obj.start_date) if job_obj.start_date else None
+                to_date = str(job_obj.end_date) if job_obj.end_date else None
 
         sync_log = TallySyncLog.objects.create(
             integration=integration,
             sync_type='manual' if job_id else 'automatic',
+            start_date=from_date or None,
+            end_date=to_date or None,
             status='running',
             records_processed=len(invoices_data)
         )
@@ -433,6 +465,14 @@ class ConnectorUploadInvoicesView(APIView):
                 voucher_number = str(inv.get('voucher_number') or 'UNKNOWN').strip()
                 voucher_type = str(inv.get('voucher_type') or 'Sales').strip()
                 inv_date = inv.get('date') or None
+
+                # Backend Date boundary check: if sync was triggered with a date range, enforce it here too
+                if inv_date:
+                    inv_date_str = str(inv_date).strip()
+                    if from_date and inv_date_str < str(from_date):
+                        continue
+                    if to_date and inv_date_str > str(to_date):
+                        continue
                 party_name = str(inv.get('party_name') or 'Cash / Unknown Party').strip()
                 party_ledger_id = str(inv.get('party_ledger_id') or '').strip()
                 gstin = str(inv.get('gstin') or '').strip()
@@ -531,7 +571,14 @@ class ConnectorUploadInvoicesView(APIView):
         sync_log.records_created = created_count
         sync_log.records_updated = updated_count
         sync_log.records_failed = failed_count
-        sync_log.error_details = "\n".join(errors[:20])
+
+        details_list = []
+        if from_date or to_date:
+            details_list.append(f"Date range: {from_date or 'Beginning'} to {to_date or 'Latest'}")
+        if errors:
+            details_list.extend(errors[:20])
+        sync_log.error_details = "\n".join(details_list)
+
         sync_log.status = 'success' if failed_count == 0 else ('partial' if (created_count + updated_count) > 0 else 'failed')
         sync_log.completed_at = timezone.now()
         sync_log.save()

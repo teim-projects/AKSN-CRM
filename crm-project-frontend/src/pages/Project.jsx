@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 import Base from "../components/Base";
 import TableView from "../components/TableView";
-import { MdEdit, MdDelete, MdOutlineRemoveRedEye, MdFilterList, MdAdd, MdZoomIn, MdHandshake, MdMail } from "react-icons/md";
+import { MdEdit, MdDelete, MdOutlineRemoveRedEye, MdFilterList, MdAdd, MdZoomIn, MdHandshake, MdMail, MdDownload } from "react-icons/md";
 import Swal from "sweetalert2";
 import AddProjectForm from "../components/projects/AddProjectForm";
 import AddAMCContractForm from "../components/amc/AddAMCContractForm";
@@ -11,6 +11,7 @@ import RecordViewer from "../components/RecordViewer";
 import AdvancedTableFilter from "../components/AdvancedTableFilter";
 import SendMessageModal from "../components/templates/SendMessageModal";
 import { useUserRole } from "../hooks/useAuth";
+import { exportToExcel, formatExcelDate } from "../utils/excelExport";
 
 export default function Project() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -509,6 +510,31 @@ export default function Project() {
     return rows.slice(start, start + itemsPerPage);
   };
 
+  const handleExportExcel = () => {
+    const dataToExport = rows && rows.length > 0 ? rows : allRows;
+    const formatted = dataToExport.map((r, idx) => ({
+      "Sr No": idx + 1,
+      "Project Code": r.project_code || `PRJ-${String(r.id).padStart(3, "0")}`,
+      "Customer / Company Name": r.customer_name || r.customer_details?.name || "-",
+      "Contact Person": r.contact_person || r.customer_details?.contact_person || "-",
+      "Mobile Number": r.contact_number || r.customer_details?.contact_number || "-",
+      "Project Executive": r.project_executive_details?.full_name || r.project_executive_details?.first_name || (r.project_executive ? String(r.project_executive) : "-"),
+      "Stage / Status": r.stage || r.status || "-",
+      "Expected Go Live Date": formatExcelDate(r.expected_to_go_live),
+      "Project Value (₹)": r.project_value ? parseFloat(r.project_value) : 0,
+      "AMC Start Date": formatExcelDate(r.amc_start_date),
+      "AMC End Date": formatExcelDate(r.amc_end_date),
+      "Scope of Work / Remarks": r.scope_of_work || r.remarks || "-",
+      "Created Date": formatExcelDate(r.created_at),
+    }));
+
+    exportToExcel({
+      data: formatted,
+      fileName: "Projects",
+      sheetName: "Projects",
+    });
+  };
+
   return (
     <Base title="">
       <div className="w-full space-y-4 font-sans antialiased text-slate-800 pt-1 sm:pt-2 px-1">
@@ -531,6 +557,15 @@ export default function Project() {
             >
               <MdFilterList className="text-slate-400" />
               Filter
+            </button>
+
+            <button
+              onClick={handleExportExcel}
+              className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+              title="Export Projects to Excel"
+            >
+              <MdDownload className="text-emerald-600 text-sm" />
+              Export
             </button>
 
             {canCreateProject && (

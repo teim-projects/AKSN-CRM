@@ -108,7 +108,32 @@ def safe_exit(code=0):
             input("Press Enter to exit...")
         except Exception:
             pass
-    sys.exit(code)
+def _clean_date_tally(val, default=""):
+    """
+    Normalizes a date into Tally's 8-digit YYYYMMDD format.
+    Accepts 'YYYY-MM-DD', 'YYYYMMDD', 'YYYY/MM/DD', etc.
+    """
+    if not val:
+        return default
+    digits = re.sub(r'[^0-9]', '', str(val).strip())
+    if len(digits) == 8:
+        return digits
+    return default
+
+
+def _normalize_iso_date(val):
+    """
+    Normalizes a date into standard 'YYYY-MM-DD' ISO format.
+    """
+    if not val:
+        return None
+    val_str = str(val).strip()
+    if re.match(r'^\d{4}-\d{2}-\d{2}$', val_str):
+        return val_str
+    digits = re.sub(r'[^0-9]', '', val_str)
+    if len(digits) == 8:
+        return f"{digits[:4]}-{digits[4:6]}-{digits[6:]}"
+    return None
 
 
 class TallyConnector:
@@ -367,12 +392,14 @@ class TallyConnector:
 
         return True, "TallyPrime 4.x", companies, ""
 
-    def fetch_invoices_from_tally(self, company_name=None):
+    def fetch_invoices_from_tally(self, company_name=None, from_date=None, to_date=None):
         """
         Fetches sales vouchers from TallyPrime via XML or mock data generator.
+        Supports date range filtering. If from_date and to_date are omitted,
+        pulls full historical invoices (19900101 to 20991231).
         """
         if self.mock_mode:
-            return self._generate_mock_invoices()
+            return self._generate_mock_invoices(from_date=from_date, to_date=to_date)
 
         target_company = (company_name or self.selected_company or "").strip()
         escaped_company = (
@@ -386,7 +413,10 @@ class TallyConnector:
 
         company_header = f"<SVCURRENTCOMPANY>{escaped_company}</SVCURRENTCOMPANY>" if escaped_company else ""
 
-        # Request Sales vouchers collection from Tally with full historical date range
+        sv_from = _clean_date_tally(from_date, default="19900101")
+        sv_to = _clean_date_tally(to_date, default="20991231")
+
+        # Request Sales vouchers collection from Tally with specified or default date range
         xml_req = f"""<ENVELOPE>
   <HEADER>
     <VERSION>1</VERSION>
@@ -398,8 +428,8 @@ class TallyConnector:
     <DESC>
       <STATICVARIABLES>
         <SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>
-        <SVFROMDATE>19900101</SVFROMDATE>
-        <SVTODATE>20991231</SVTODATE>
+        <SVFROMDATE>{sv_from}</SVFROMDATE>
+        <SVTODATE>{sv_to}</SVTODATE>
         {company_header}
       </STATICVARIABLES>
       <TDL>
@@ -417,7 +447,7 @@ class TallyConnector:
         success, response = self._query_tally_xml(xml_req)
         invoices = []
         if success:
-            invoices = self._parse_tally_vouchers_xml(response)
+            invoices = self._parse_tally_vouchers_xml(response, from_date=from_date, to_date=to_date)
 
         # If 0 invoices with company header, try querying active company directly as fallback
         if not invoices and company_header:
@@ -425,18 +455,21 @@ class TallyConnector:
             fallback_req = xml_req.replace(company_header, "")
             fb_success, fb_response = self._query_tally_xml(fallback_req)
             if fb_success:
-                fb_invoices = self._parse_tally_vouchers_xml(fb_response)
+                fb_invoices = self._parse_tally_vouchers_xml(fb_response, from_date=from_date, to_date=to_date)
                 if fb_invoices:
                     print(f"[*] Retrieved {len(fb_invoices)} vouchers from active company!")
                     return fb_invoices
 
         return invoices
 
-    def _parse_tally_vouchers_xml(self, xml_content):
+    def _parse_tally_vouchers_xml(self, xml_content, from_date=None, to_date=None):
         """
         Parses raw Tally XML vouchers into structured dictionary list.
+        Applies date range filtering if from_date or to_date are specified.
         """
         invoices = []
+        norm_from = _normalize_iso_date(from_date)
+        norm_to = _normalize_iso_date(to_date)
         try:
             # Clean Tally internal non-standard XML entities
             clean_xml = re.sub(r'&#\d+;', '', xml_content)
@@ -476,6 +509,13 @@ class TallyConnector:
                 formatted_date = None
                 if date_str and len(date_str) == 8 and date_str.isdigit():
                     formatted_date = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}"
+
+                # Strict date boundary filtering if date range was specified
+                if formatted_date:
+                    if norm_from and formatted_date < norm_from:
+                        continue
+                    if norm_to and formatted_date > norm_to:
+                        continue
 
                 party_name = voucher.findtext("PARTYLEDGERNAME") or voucher.findtext("PARTYNAME") or "Unknown Party"
                 party_gstin = voucher.findtext("PARTYGSTIN") or voucher.findtext("CMPGSTIN") or ""
@@ -633,11 +673,11 @@ class TallyConnector:
 
         return invoices
 
-    def _generate_mock_invoices(self):
+    def _generate_mock_invoices(self, from_date=None, to_date=None):
         """
         Realistic Indian GST test sales invoices for testing without live TallyPrime.
         """
-        return [
+        mock_list = [
             {
                 "tally_guid": "TALLY-GUID-1001-ABC",
                 "tally_alter_id": "1001",
@@ -798,14 +838,30 @@ class TallyConnector:
             }
         ]
 
+        norm_from = _normalize_iso_date(from_date)
+        norm_to = _normalize_iso_date(to_date)
+        if not norm_from and not norm_to:
+            return mock_list
+
+        filtered = []
+        for inv in mock_list:
+            inv_d = inv.get("date")
+            if norm_from and inv_d and inv_d < norm_from:
+                continue
+            if norm_to and inv_d and inv_d > norm_to:
+                continue
+            filtered.append(inv)
+        return filtered
+
     # ==========================================
     # SYNC EXECUTION
     # ==========================================
 
-    def perform_sync(self, job_id=None, company_name=None):
+    def perform_sync(self, job_id=None, company_name=None, from_date=None, to_date=None):
         target_company = (company_name or self.selected_company or "").strip()
-        print(f"\n[*] Starting invoice synchronization from Tally for company: '{target_company}'...")
-        invoices = self.fetch_invoices_from_tally(target_company)
+        range_desc = f" [{from_date or 'Start'} to {to_date or 'Latest'}]" if (from_date or to_date) else " [All Invoices]"
+        print(f"\n[*] Starting invoice synchronization from Tally for company: '{target_company}'{range_desc}...")
+        invoices = self.fetch_invoices_from_tally(target_company, from_date=from_date, to_date=to_date)
         print(f"[*] Retrieved {len(invoices)} invoices from Tally.")
         if not invoices:
             print(f"[!] Note: 0 invoices found. Please verify '{target_company}' is open in TallyPrime (Alt + F3) and has Sales vouchers.")
@@ -814,6 +870,8 @@ class TallyConnector:
             "job_id": job_id,
             "company_name": target_company,
             "company_identifier": self.selected_company_identifier or target_company,
+            "from_date": from_date,
+            "to_date": to_date,
             "invoices": invoices,
         }
 
@@ -879,8 +937,16 @@ class TallyConnector:
                     pending_job = resp.get("pending_job")
                     if pending_job:
                         job_target = pending_job.get("target_company") or self.selected_company
-                        print(f"[*] Received pending sync job {pending_job.get('job_id')} from CRM for company: '{job_target}'!")
-                        self.perform_sync(job_id=pending_job.get("job_id"), company_name=job_target)
+                        from_d = pending_job.get("from_date")
+                        to_d = pending_job.get("to_date")
+                        range_msg = f" (Date Range: {from_d or 'Beginning'} to {to_d or 'Latest'})" if (from_d or to_d) else " (All Invoices)"
+                        print(f"[*] Received pending sync job {pending_job.get('job_id')} from CRM for company: '{job_target}'{range_msg}!")
+                        self.perform_sync(
+                            job_id=pending_job.get("job_id"),
+                            company_name=job_target,
+                            from_date=from_d,
+                            to_date=to_d
+                        )
                 elif code in (401, 403):
                     print(f"\n[!] Authorization error: Token rejected by CRM server (HTTP {code}).")
                     print("[*] Re-pairing is required. Clearing invalid token...")
@@ -921,6 +987,8 @@ def main():
     parser.add_argument("--tally", help="Local Tally HTTP URL (default: http://localhost:9000)")
     parser.add_argument("--pair", help="Pairing code generated from CRM (e.g. TALLY-XXXX-XXXX)")
     parser.add_argument("--sync", action="store_true", help="Perform one-off invoice sync and exit")
+    parser.add_argument("--from-date", help="Optional sync start date (YYYY-MM-DD or YYYYMMDD)")
+    parser.add_argument("--to-date", help="Optional sync end date (YYYY-MM-DD or YYYYMMDD)")
     parser.add_argument("--daemon", action="store_true", help="Run in continuous background polling mode")
     parser.add_argument("--mock", action="store_true", help="Run in mock demo mode with synthetic Tally vouchers")
     parser.add_argument("--interval", type=int, default=10, help="Heartbeat polling interval in seconds")
@@ -940,7 +1008,7 @@ def main():
         if not success:
             safe_exit(1)
         if args.sync:
-            connector.perform_sync()
+            connector.perform_sync(from_date=args.from_date, to_date=args.to_date)
             safe_exit(0)
         else:
             connector.run_daemon(interval=args.interval)
@@ -951,7 +1019,7 @@ def main():
         if not connector.auth_token:
             print("[!] Cannot sync: connector is not paired yet. Run with --pair <code> first.")
             safe_exit(1)
-        connector.perform_sync()
+        connector.perform_sync(from_date=args.from_date, to_date=args.to_date)
         safe_exit(0)
         return
 
