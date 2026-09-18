@@ -24,10 +24,59 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token =
-    localStorage.getItem("access") || localStorage.getItem("access_token");
+    localStorage.getItem("access") ||
+    localStorage.getItem("access_token") ||
+    localStorage.getItem("token") ||
+    localStorage.getItem("authToken");
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      const refreshToken = localStorage.getItem("refresh");
+      if (refreshToken) {
+        try {
+          const res = await axios.post(`${BASE_API}/token/refresh/`, {
+            refresh: refreshToken,
+          });
+          if (res.data?.access) {
+            localStorage.setItem("access", res.data.access);
+            originalRequest.headers.Authorization = `Bearer ${res.data.access}`;
+            return api(originalRequest);
+          }
+        } catch (refreshErr) {
+          console.error("Token refresh failed:", refreshErr);
+          Swal.fire({
+            icon: "warning",
+            title: "Session Expired",
+            text: "Your session has expired. Please log in again to continue.",
+            confirmButtonText: "Log In",
+            confirmButtonColor: "#2563eb",
+          }).then(() => {
+            window.location.href = "/login";
+          });
+          return Promise.reject(refreshErr);
+        }
+      } else {
+        Swal.fire({
+          icon: "warning",
+          title: "Session Expired",
+          text: "Your session has expired. Please log in again to continue.",
+          confirmButtonText: "Log In",
+          confirmButtonColor: "#2563eb",
+        }).then(() => {
+          window.location.href = "/login";
+        });
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default function TemplatesPage() {
   const { hasPermission } = useUserRole(BASE_API);
@@ -127,13 +176,20 @@ export default function TemplatesPage() {
       fetchTemplates();
     } catch (err) {
       console.error("Save template error:", err);
+      const errorMsg =
+        err.response?.data?.detail ||
+        err.response?.data?.error ||
+        (Array.isArray(err.response?.data?.name) ? err.response.data.name[0] : null) ||
+        (Array.isArray(err.response?.data?.subject) ? err.response.data.subject[0] : null) ||
+        (Array.isArray(err.response?.data?.body) ? err.response.data.body[0] : null) ||
+        (err.response?.status === 401
+          ? "Your login session has expired. Please log in again to save templates."
+          : "Could not save message template.");
+
       Swal.fire({
         icon: "error",
         title: "Failed to Save",
-        text:
-          err.response?.data?.error ||
-          err.response?.data?.name?.[0] ||
-          "Could not save message template.",
+        text: errorMsg,
       });
     } finally {
       setIsSubmitting(false);

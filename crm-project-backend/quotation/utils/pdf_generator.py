@@ -205,6 +205,24 @@ def _build_quotation_pdf_context(quotation, version):
             except Exception as err:
                 logger.error(f"Error encoding logo from {lpath}: {err}")
 
+    # Encode signature base64 (Checking local static and user downloads folder)
+    signature_base64 = ""
+    candidate_sig_paths = [
+        r"S:\installers\Downloads\aksn sign.png",
+        os.path.join(settings.BASE_DIR, 'static', 'images', 'aksn-sign.png'),
+        r"S:\installers\Downloads\aksn-sign.png",
+    ]
+
+    for spath in candidate_sig_paths:
+        if os.path.exists(spath):
+            try:
+                with open(spath, 'rb') as sf:
+                    sdata = sf.read()
+                    signature_base64 = "data:image/png;base64," + base64.b64encode(sdata).decode('utf-8')
+                    break
+            except Exception as err:
+                logger.error(f"Error encoding signature from {spath}: {err}")
+
     # Billing / Bank details (Quotation specific or default primary master)
     from quotation.models import BillingDetail
     billing_detail = getattr(quotation, 'billing_detail', None)
@@ -259,9 +277,10 @@ def _build_quotation_pdf_context(quotation, version):
         'total_quantity': total_quantity,
         'logo_base64': logo_base64,
         'quotation_for': getattr(quotation, 'quotation_for', 'Pune') or 'Pune',
-        'company_address': "AKSN Infotech Office No:-10B, 2nd Floor, Prestige Point Behind Telephone Exchange, Bajirao Road, 283, Shukrawar Peth, PUNE 411002 India GSTIN: 27AAXFA5487A1Z4",
+        'company_address': "AKSN Infotech Office No:105, 1st Floor, Kohinoor Plaza, Near Lokmat Bhavan, Patrakar Chowk, Savedi Rd, Ahilyanagar, Maharashtra 414003" if (getattr(quotation, 'quotation_for', '') or '').strip().lower() == 'ahilyanagar' else "AKSN Infotech Office No:-10B, 2nd Floor, Prestige Point Behind Telephone Exchange, Bajirao Road, 283, Shukrawar Peth, PUNE 411002 India GSTIN: 27AAXFA5487A1Z4",
         'billing_detail': billing_detail,
         'qr_code_base64': qr_code_base64,
+        'signature_base64': signature_base64,
     }
 
 

@@ -5,7 +5,7 @@ import axios from "axios";
 import Swal from "sweetalert2";
 import Base from "../Base";
 import TableView from "../TableView";
-import { MdAdd, MdEdit, MdDelete, MdFilterList, MdVisibility } from "react-icons/md";
+import { MdAdd, MdEdit, MdDelete, MdFilterList, MdOutlineRemoveRedEye } from "react-icons/md";
 import AdvancedTableFilter from "../AdvancedTableFilter";
 import { useUserRole } from "../../hooks/useAuth";
 
@@ -223,7 +223,7 @@ export default function TermsCategoriesList() {
   ];
 
   const actionsRenderer = useCallback((row) => (
-    <div className="flex items-center justify-center gap-1.5 py-0 whitespace-nowrap">
+    <div className="flex items-center justify-center gap-1 py-0 whitespace-nowrap">
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -235,42 +235,40 @@ export default function TermsCategoriesList() {
             }));
           }
         }}
-        className={`p-1 rounded transition-all duration-150 text-sm shadow-xs ${
+        className={`p-1 rounded transition-all duration-150 text-sm shadow-sm cursor-pointer ${
           openRow === row.id
-            ? "bg-purple-600 text-white"
-            : "bg-purple-50 hover:bg-purple-100 text-purple-600"
+            ? "bg-blue-600 text-white"
+            : "bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-700"
         }`}
-        title="View Terms"
+        title={openRow === row.id ? "Hide Terms" : "View Terms"}
       >
-        <MdVisibility size={16} />
+        <MdOutlineRemoveRedEye />
       </button>
       {canCreateTerm && (
         <button
           onClick={() => navigate(`/terms/add-term?category=${row.id}`)}
-          className="p-1 bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer"
+          className="p-1 bg-slate-100 hover:bg-teal-100 text-slate-600 hover:text-teal-700 rounded transition-all duration-150 text-sm shadow-sm cursor-pointer"
           title="Add Term"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
+          <MdAdd />
         </button>
       )}
       {canEditTerm && (
         <button
           onClick={() => navigate(`/terms/edit-category/${row.id}`)}
-          className="p-1 bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer"
+          className="p-1 bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 rounded transition-all duration-150 text-sm shadow-sm cursor-pointer"
           title="Edit Category"
         >
-          <MdEdit size={16} />
+          <MdEdit />
         </button>
       )}
       {canDeleteTerm && (
         <button
           onClick={() => handleDelete(row.id)}
-          className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer"
+          className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 rounded transition-all duration-150 text-sm shadow-sm cursor-pointer"
           title="Delete Category"
         >
-          <MdDelete size={16} />
+          <MdDelete />
         </button>
       )}
     </div>
@@ -346,14 +344,14 @@ export default function TermsCategoriesList() {
                         <div className="flex items-center justify-center gap-1">
                           <button
                             onClick={() => navigate(`/terms/edit-term/${term.id}`)}
-                            className="p-1 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded text-xs transition-colors"
+                            className="p-1 bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 rounded text-xs transition-colors cursor-pointer shadow-sm"
                             title="Edit Term"
                           >
                             <MdEdit size={14} />
                           </button>
                           <button
                             onClick={() => handleDeleteTerm(openRow, term.id)}
-                            className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded text-xs transition-colors"
+                            className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 rounded text-xs transition-colors cursor-pointer shadow-sm"
                             title="Delete Term"
                           >
                             <MdDelete size={14} />

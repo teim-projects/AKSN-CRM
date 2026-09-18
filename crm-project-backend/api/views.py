@@ -7,6 +7,7 @@ from google.oauth2 import id_token  # type: ignore
 from google.auth.transport import requests  # type: ignore
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.views import APIView 
 from rest_framework import viewsets
 from .serializers import PasswordResetRequestSerializer, PasswordResetConfirmSerializer
@@ -253,6 +254,7 @@ class MessageTemplateViewSet(viewsets.ModelViewSet):
 class SendEmailView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def post(self, request, *args, **kwargs):
         to_email = request.data.get('to_email')
@@ -262,7 +264,7 @@ class SendEmailView(APIView):
         html_message = request.data.get('html_message', None)
         category = request.data.get('category')
         record_id = request.data.get('record_id') or request.data.get('quotation_id')
-        attach_quotation_pdf = request.data.get('attach_quotation_pdf', False)
+        attach_quotation_pdf = str(request.data.get('attach_quotation_pdf', '')).lower() in ['true', '1', 'yes']
 
         if not to_email:
             return Response({"error": "Recipient email ('to_email') is required."}, status=status.HTTP_400_BAD_REQUEST)
@@ -303,6 +305,16 @@ class SendEmailView(APIView):
                 except Exception as pdf_err:
                     import logging
                     logging.getLogger(__name__).warning(f"Could not attach quotation PDF: {pdf_err}")
+
+            # Handle attached documents uploaded by user
+            uploaded_files = []
+            for key in ['documents', 'document', 'files', 'attachment']:
+                if hasattr(request, 'FILES') and key in request.FILES:
+                    uploaded_files.extend(request.FILES.getlist(key))
+
+            for uploaded_file in uploaded_files:
+                content_type = uploaded_file.content_type or 'application/octet-stream'
+                email_msg.attach(uploaded_file.name, uploaded_file.read(), content_type)
 
             email_msg.send(fail_silently=False)
             return Response({

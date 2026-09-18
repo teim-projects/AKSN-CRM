@@ -211,17 +211,24 @@ class Quotation(models.Model):
         return self.quotation_no
     
     def generate_quotation_no(self):
-        """Generate quotation number like AKSN-001"""
-        last = Quotation.objects.all().order_by('-id').first()
-        if last and last.quotation_no:
-            try:
-                last_number = int(last.quotation_no.split('-')[-1])
-                new_number = last_number + 1
-            except (ValueError, IndexError):
-                new_number = 1
+        """Generate quotation number starting from AKSN-9001"""
+        START_NUMBER = 9001
+        max_number = 0
+        for q_no in Quotation.objects.exclude(quotation_no='').values_list('quotation_no', flat=True):
+            if q_no:
+                try:
+                    num = int(q_no.split('-')[-1])
+                    if num > max_number:
+                        max_number = num
+                except (ValueError, IndexError):
+                    continue
+
+        if max_number < START_NUMBER:
+            new_number = START_NUMBER
         else:
-            new_number = 1
-        return f"AKSN-{str(new_number).zfill(3)}"
+            new_number = max_number + 1
+
+        return f"AKSN-{str(new_number).zfill(4)}"
     
     def save(self, *args, **kwargs):
         if not self.quotation_no:

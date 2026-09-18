@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { RxCross2 } from "react-icons/rx";
+import { Paperclip, UploadCloud, Trash2, FileText } from "lucide-react";
 import Swal from "sweetalert2";
+import RichVisualEditor, { htmlToWhatsAppText } from "./RichVisualEditor";
 
 export function getRecordEmail(record = {}) {
   if (!record) return "";
@@ -183,7 +185,10 @@ export default function SendMessageModal({
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [attachQuotationPdf, setAttachQuotationPdf] = useState(true);
+  const [attachedFiles, setAttachedFiles] = useState([]);
   const [sending, setSending] = useState(false);
+  const fileInputRef = useRef(null);
+  const editorRef = useRef(null);
 
   // Extract recipient details on open
   useEffect(() => {
@@ -196,6 +201,7 @@ export default function SendMessageModal({
       setSelectedTemplateId("");
       setSubject("");
       setBody("");
+      setAttachedFiles([]);
       setAttachQuotationPdf(category === "quotation");
       setChannel(initialChannel || "email");
 
@@ -304,6 +310,26 @@ export default function SendMessageModal({
     }
   };
 
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      setAttachedFiles((prev) => [...prev, ...files]);
+    }
+    if (e.target) e.target.value = "";
+  };
+
+  const handleRemoveFile = (indexToRemove) => {
+    setAttachedFiles((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes || bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+  };
+
   const handleSend = async (e) => {
     e.preventDefault();
 
@@ -337,25 +363,35 @@ export default function SendMessageModal({
         setSending(true);
         const token = localStorage.getItem("access") || localStorage.getItem("token") || "";
         const headers = {
-          "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         };
 
-        const payload = {
-          to_email: recipientEmail.trim(),
-          subject: subject.trim(),
-          body: body.trim(),
-          message: body.trim(),
-          category: category,
-          record_id: recordData?.id || null,
-          quotation_id: category === "quotation" ? recordData?.id : null,
-          attach_quotation_pdf: category === "quotation" && attachQuotationPdf,
-        };
+        const plainText = body.replace(/<[^>]*>?/gm, "").trim();
+        const formData = new FormData();
+        formData.append("to_email", recipientEmail.trim());
+        formData.append("subject", subject.trim());
+        formData.append("body", plainText || body.trim());
+        formData.append("message", plainText || body.trim());
+        formData.append("html_message", body.trim());
+
+        formData.append("category", category || "");
+        if (recordData?.id) {
+          formData.append("record_id", recordData.id);
+        }
+        if (category === "quotation") {
+          if (recordData?.id) {
+            formData.append("quotation_id", recordData.id);
+          }
+          formData.append("attach_quotation_pdf", attachQuotationPdf ? "true" : "false");
+        }
+        attachedFiles.forEach((file) => {
+          formData.append("documents", file);
+        });
 
         const res = await fetch(`${baseApi}/templates/send-email/`, {
           method: "POST",
           headers,
-          body: JSON.stringify(payload),
+          body: formData,
         });
 
         const data = await res.json();
@@ -399,7 +435,8 @@ export default function SendMessageModal({
 
       const cleanPhone = recipientMobile.replace(/[^0-9]/g, "");
       const phoneWithCountry = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-      const url = `https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(body)}`;
+      const whatsappText = htmlToWhatsAppText(body);
+      const url = `https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(whatsappText)}`;
 
       window.open(url, "_blank");
 
@@ -546,20 +583,89 @@ export default function SendMessageModal({
               </div>
             )}
 
-            {/* Message Body Field */}
-            <div className="space-y-1">
+            {/* Message Body Field with Visual Rich Editor */}
+            <div className="space-y-1.5">
               <label className="block text-xs font-semibold text-slate-600">
                 Message Body *
               </label>
-              <textarea
+              <RichVisualEditor
                 value={body}
-                onChange={(e) => setBody(e.target.value)}
-                rows={8}
+                onChange={(html) => setBody(html)}
+                channel={channel}
+                editorRef={editorRef}
                 placeholder="Compose your message or select a template above..."
-                required
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white leading-relaxed resize-y"
               />
             </div>
+
+            {/* Attach Documents (Email Only) */}
+            {channel === "email" && (
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                    <Paperclip size={14} className="text-blue-600" />
+                    Attach Documents
+                  </label>
+                  {attachedFiles.length > 0 && (
+                    <span className="text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                      {attachedFiles.length} file{attachedFiles.length > 1 ? "s" : ""} selected
+                    </span>
+                  )}
+                </div>
+
+                {/* Upload Trigger Dropzone */}
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-slate-200 hover:border-blue-400 bg-slate-50/70 hover:bg-blue-50/25 rounded-lg p-3 text-center cursor-pointer transition-all group flex items-center justify-center gap-2"
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                  <div className="p-1.5 bg-blue-100 text-blue-600 rounded-md group-hover:scale-110 transition-transform">
+                    <UploadCloud size={16} />
+                  </div>
+                  <div className="text-xs text-slate-600">
+                    <span className="font-semibold text-blue-600 hover:underline">Click to attach document</span> or browse files from device
+                  </div>
+                </div>
+
+                {/* List of Attached Documents */}
+                {attachedFiles.length > 0 && (
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                    {attachedFiles.map((file, idx) => (
+                      <div
+                        key={`${file.name}-${idx}`}
+                        className="flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs hover:bg-slate-100/70 transition-colors"
+                      >
+                        <div className="flex items-center gap-2 overflow-hidden mr-2 min-w-0">
+                          <FileText size={15} className="text-blue-600 shrink-0" />
+                          <span className="truncate font-medium text-slate-700" title={file.name}>
+                            {file.name}
+                          </span>
+                          <span className="text-[11px] text-slate-400 shrink-0">
+                            ({formatFileSize(file.size)})
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveFile(idx);
+                          }}
+                          className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded-md hover:bg-red-50 cursor-pointer shrink-0"
+                          title="Remove file"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* PDF Attachment Option (Quotation) */}
             {category === "quotation" && channel === "email" && (

@@ -5,7 +5,6 @@ import Base from "../components/Base";
 import TableView from "../components/TableView";
 import AddQuotation from "../components/quotations/AddQuotation";
 import { MdAdd, MdFilterList, MdHistory, MdEdit, MdDelete, MdRemoveRedEye, MdDownload, MdEmail, MdTaskAlt, MdBlock } from "react-icons/md";
-import { FaWhatsapp } from "react-icons/fa";
 import Swal from "sweetalert2";
 import AdvancedTableFilter from "../components/AdvancedTableFilter";
 import axios from "axios";
@@ -723,23 +722,11 @@ export default function Quotation() {
         <button
           onClick={() => {
             setSelectedMessageRecord(row);
-            setMessageChannel("whatsapp");
-            setSendMessageModalOpen(true);
-          }}
-          className="p-1 bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-700 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer"
-          title="Send via WhatsApp"
-        >
-          <FaWhatsapp />
-        </button>
-
-        <button
-          onClick={() => {
-            setSelectedMessageRecord(row);
             setMessageChannel("email");
             setSendMessageModalOpen(true);
           }}
           className="p-1 bg-slate-100 hover:bg-sky-100 text-slate-600 hover:text-sky-700 rounded transition-all duration-150 text-sm shadow-xs cursor-pointer"
-          title="Send via Email"
+          title="Send Email / WhatsApp"
         >
           <MdEmail />
         </button>
@@ -885,13 +872,6 @@ export default function Quotation() {
                             title="Download PDF"
                           >
                             <MdDownload size={14} />
-                          </button>
-
-                          <button
-                            className="p-1 bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-700 rounded text-xs transition-colors"
-                            title="WhatsApp"
-                          >
-                            <FaWhatsapp size={14} />
                           </button>
 
                           {!isActive && (

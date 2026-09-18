@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { RxCross2 } from "react-icons/rx";
+import RichVisualEditor from "./RichVisualEditor";
 
 export const CATEGORY_OPTIONS = [
   { value: "lead", label: "Leads / Enquiries" },
@@ -30,6 +31,52 @@ const AVAILABLE_TAGS = [
   { tag: "{date}", label: "Today's Date" },
 ];
 
+export function renderLivePreview(rawText, channel) {
+  if (!rawText || !rawText.trim()) {
+    return "<div class='text-slate-400 italic text-center py-8'>Type or insert content in Write mode to see live preview...</div>";
+  }
+
+  if (channel === "whatsapp") {
+    let safe = rawText
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+
+    // Replace ```code/table``` blocks
+    safe = safe.replace(/```([\s\S]*?)```/g, (match, p1) => {
+      return `<div class="my-2.5 p-3 bg-slate-900 text-emerald-300 rounded-lg font-mono text-xs overflow-x-auto whitespace-pre leading-relaxed border border-slate-700 shadow-xs">${p1}</div>`;
+    });
+
+    // Replace *bold text* with <strong>
+    safe = safe.replace(/(?<=^|[\s\W])\*([^*\n\r]+)\*(?=[\s\W]|$)/g, '<strong class="font-bold text-slate-900 bg-amber-100/60 px-0.5 rounded">$1</strong>');
+
+    // Convert newlines to <br>
+    safe = safe.replace(/\n/g, "<br>");
+    return `<div class="bg-emerald-50/40 p-3.5 rounded-xl border border-emerald-200/70 font-sans text-xs text-slate-800 leading-relaxed shadow-xs">${safe}</div>`;
+  } else {
+    // Email channel
+    let formatted = rawText;
+    if (!/<(table|div|p|tbody|tr|td|th)\b/i.test(formatted)) {
+      formatted = formatted
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\n/g, "<br>");
+    } else {
+      formatted = formatted
+        .split(/(<table[\s\S]*?<\/table>)/i)
+        .map(part => {
+          if (part.toLowerCase().startsWith("<table")) {
+            return part;
+          }
+          return part.replace(/\n/g, "<br>");
+        })
+        .join("");
+    }
+    return `<div class="bg-white p-4 rounded-xl border border-slate-200 font-sans text-xs text-slate-800 leading-relaxed shadow-xs">${formatted}</div>`;
+  }
+}
+
 export default function CreateTemplateModal({
   isOpen,
   onClose,
@@ -45,7 +92,7 @@ export default function CreateTemplateModal({
     body: "",
   });
 
-  const textareaRef = useRef(null);
+  const editorRef = useRef(null);
   const subjectInputRef = useRef(null);
   
   // Track active field and exact cursor selection
@@ -91,20 +138,9 @@ export default function CreateTemplateModal({
     setActiveField("subject");
   };
 
-  const updateBodyCursor = (e) => {
-    cursorRef.current = {
-      field: "body",
-      start: e.target.selectionStart,
-      end: e.target.selectionEnd,
-    };
-    setActiveField("body");
-  };
-
   // Insert tag at current cursor position in whichever field was last active
   const handleTagInsert = (tag) => {
-    const field = cursorRef.current.field || activeField;
-
-    if (field === "subject" && formData.channel === "email") {
+    if (activeField === "subject" && formData.channel === "email") {
       const input = subjectInputRef.current;
       const curText = formData.subject || "";
       const start = cursorRef.current.start !== null && cursorRef.current.start !== undefined
@@ -127,27 +163,24 @@ export default function CreateTemplateModal({
         }
       }, 0);
     } else {
-      const textarea = textareaRef.current;
-      const curText = formData.body || "";
-      const start = cursorRef.current.start !== null && cursorRef.current.start !== undefined
-        ? cursorRef.current.start
-        : curText.length;
-      const end = cursorRef.current.end !== null && cursorRef.current.end !== undefined
-        ? cursorRef.current.end
-        : curText.length;
+      const editor = editorRef.current;
+      if (!editor) return;
 
-      const newText = curText.substring(0, start) + tag + curText.substring(end);
-      setFormData((prev) => ({ ...prev, body: newText }));
-
-      const nextPos = start + tag.length;
-      cursorRef.current = { field: "body", start: nextPos, end: nextPos };
-
-      setTimeout(() => {
-        if (textarea) {
-          textarea.focus();
-          textarea.setSelectionRange(nextPos, nextPos);
-        }
-      }, 0);
+      editor.focus();
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && editor.contains(sel.anchorNode)) {
+        const range = sel.getRangeAt(0);
+        range.deleteContents();
+        const textNode = document.createTextNode(tag);
+        range.insertNode(textNode);
+        range.setStartAfter(textNode);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } else {
+        document.execCommand("insertText", false, tag);
+      }
+      setFormData((prev) => ({ ...prev, body: editor.innerHTML }));
     }
   };
 
@@ -157,7 +190,9 @@ export default function CreateTemplateModal({
       alert("Please enter a template name");
       return;
     }
-    if (!formData.body.trim()) {
+    const currentBody = editorRef.current ? editorRef.current.innerHTML : formData.body;
+    const stripped = currentBody ? currentBody.replace(/<[^>]*>?/gm, "").trim() : "";
+    if (!stripped) {
       alert("Please enter message body");
       return;
     }
@@ -166,7 +201,7 @@ export default function CreateTemplateModal({
       return;
     }
 
-    onSave(formData);
+    onSave({ ...formData, body: currentBody });
   };
 
   return (
@@ -310,31 +345,24 @@ export default function CreateTemplateModal({
               </div>
             )}
 
-            {/* Message Body */}
-            <div className="space-y-1">
+            {/* Message Body with Visual Rich Editor */}
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="block text-xs font-semibold text-slate-600">
                   Message Body *
                 </label>
-                {activeField === "body" && (
-                  <span className="text-[11px] text-blue-600 font-semibold">● Cursor active in Body</span>
-                )}
+                <span className="text-[11px] text-slate-400 font-normal">
+                  Visual editor: Click Bold or Insert Table to create directly
+                </span>
               </div>
-              <textarea
-                ref={textareaRef}
-                name="body"
+
+              <RichVisualEditor
                 value={formData.body}
-                onChange={handleChange}
-                onFocus={updateBodyCursor}
-                onClick={updateBodyCursor}
-                onKeyUp={updateBodyCursor}
-                onSelect={updateBodyCursor}
-                rows={8}
-                placeholder="Dear {contact_person},&#10;&#10;Thank you for reaching out to AKSN Infotech. Please find the quotation details below...&#10;&#10;Best regards,&#10;{executive_name}&#10;AKSN Infotech"
-                required
-                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-hidden transition-all bg-white leading-relaxed resize-y ${
-                  activeField === "body" ? "border-blue-500 ring-1 ring-blue-500" : "border-slate-200"
-                }`}
+                onChange={(html) => setFormData((prev) => ({ ...prev, body: html }))}
+                channel={formData.channel}
+                editorRef={editorRef}
+                onFocus={() => setActiveField("body")}
+                placeholder="Dear {contact_person},&#10;&#10;Thank you for reaching out to AKSN Infotech. Please find the quotation details below...&#10;&#10;Best regards,&#10;{executive_name}"
               />
             </div>
 

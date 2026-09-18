@@ -251,49 +251,75 @@ export default function BillingDetailsList() {
       {
         key: "sr_no",
         label: "Sr No",
-        className: "w-12 text-center text-xs text-slate-500",
-        render: (_row, idx) => (currentPage - 1) * itemsPerPage + idx + 1,
+        className: "w-12 text-center text-xs text-slate-500 whitespace-nowrap",
+        render: (_row, idx) => (
+          <span className="whitespace-nowrap text-xs text-slate-500 font-medium">
+            {(currentPage - 1) * itemsPerPage + idx + 1}
+          </span>
+        ),
       },
       {
         key: "bank_name",
         label: "Bank Name",
-        className: "text-left min-w-[170px]",
-        render: (row) => (
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
-              <Landmark className="w-3.5 h-3.5" />
-            </div>
-            <div>
-              <div className="font-semibold text-slate-900 text-xs flex items-center gap-1.5">
-                <span>{row.bank_name}</span>
-                {row.is_default && (
-                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                    <MdStar className="w-2.5 h-2.5 text-amber-500" /> Primary
+        className: "text-left min-w-[160px] max-w-[240px] whitespace-nowrap",
+        render: (row) => {
+          const branchText = row.branch_name ? ` • ${row.branch_name}` : "";
+          const fullTitle = `${row.bank_name || ""}${row.branch_name ? ` (${row.branch_name} Branch)` : ""}${row.is_default ? " - Primary Account" : ""}`;
+          return (
+            <div
+              className="flex items-center gap-2 cursor-default whitespace-nowrap min-w-0"
+              title={fullTitle}
+            >
+              <div className="w-6 h-6 rounded bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <Landmark className="w-3.5 h-3.5" />
+              </div>
+              <div className="flex items-center gap-1 min-w-0 truncate">
+                <span className="font-semibold text-slate-900 text-xs truncate max-w-[130px] inline-block whitespace-nowrap">
+                  {row.bank_name || "-"}
+                </span>
+                {row.branch_name && (
+                  <span className="text-[11px] text-slate-400 truncate max-w-[100px] inline-block whitespace-nowrap">
+                    {branchText}
                   </span>
                 )}
               </div>
-              <p className="text-[10px] text-slate-400">
-                {row.branch_name ? `${row.branch_name} Branch` : "Main Branch"}
-              </p>
+              {row.is_default && (
+                <span
+                  className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200 shrink-0 whitespace-nowrap"
+                  title="Primary Account"
+                >
+                  <MdStar className="w-2.5 h-2.5 text-amber-500" /> Primary
+                </span>
+              )}
             </div>
-          </div>
-        ),
+          );
+        },
       },
       {
         key: "account_holder_name",
         label: "Beneficiary / A/C Name",
-        className: "text-left text-xs font-medium text-slate-800 min-w-[160px]",
-        render: (row) => row.account_holder_name || "-",
+        className: "text-left text-xs font-medium text-slate-800 min-w-[140px] max-w-[180px] whitespace-nowrap",
+        render: (row) => (
+          <span
+            className="text-slate-800 font-medium text-xs block max-w-[160px] truncate cursor-default whitespace-nowrap"
+            title={row.account_holder_name || ""}
+          >
+            {row.account_holder_name || "-"}
+          </span>
+        ),
       },
       {
         key: "account_number",
         label: "Account Number",
-        className: "text-center min-w-[150px]",
+        className: "text-center min-w-[160px] whitespace-nowrap",
         render: (row) => {
           const isRevealed = Boolean(revealedNumbers[row.id]);
           return (
-            <div className="inline-flex items-center gap-1 font-mono text-xs font-semibold text-slate-800">
-              <span>{maskAccountNumber(row.account_number, isRevealed)}</span>
+            <div
+              className="inline-flex items-center gap-1 font-mono text-xs font-semibold text-slate-800 whitespace-nowrap"
+              title={row.account_number ? `A/C: ${row.account_number}` : ""}
+            >
+              <span className="whitespace-nowrap">{maskAccountNumber(row.account_number, isRevealed)}</span>
               <button
                 type="button"
                 onClick={() => toggleMask(row.id)}
@@ -321,9 +347,12 @@ export default function BillingDetailsList() {
       {
         key: "account_type",
         label: "Type",
-        className: "text-center text-xs",
+        className: "text-center text-xs whitespace-nowrap",
         render: (row) => (
-          <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-700">
+          <span
+            className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-700 whitespace-nowrap inline-block"
+            title={`Account Type: ${row.account_type || "Current"}`}
+          >
             {row.account_type || "Current"}
           </span>
         ),
@@ -331,10 +360,13 @@ export default function BillingDetailsList() {
       {
         key: "ifsc_code",
         label: "IFSC Code",
-        className: "text-center min-w-[110px]",
+        className: "text-center min-w-[120px] whitespace-nowrap",
         render: (row) => (
-          <div className="inline-flex items-center gap-1 font-mono text-xs font-semibold text-slate-800">
-            <span>{row.ifsc_code || "-"}</span>
+          <div
+            className="inline-flex items-center gap-1 font-mono text-xs font-semibold text-slate-800 whitespace-nowrap"
+            title={row.ifsc_code ? `IFSC: ${row.ifsc_code}` : ""}
+          >
+            <span className="whitespace-nowrap">{row.ifsc_code || "-"}</span>
             {row.ifsc_code && (
               <button
                 type="button"
@@ -355,15 +387,18 @@ export default function BillingDetailsList() {
       {
         key: "upi_id",
         label: "UPI ID",
-        className: "text-center min-w-[140px]",
+        className: "text-center min-w-[140px] max-w-[180px] whitespace-nowrap",
         render: (row) =>
           row.upi_id ? (
-            <div className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600">
-              <span className="truncate max-w-[140px]">{row.upi_id}</span>
+            <div
+              className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 whitespace-nowrap min-w-0"
+              title={`UPI ID: ${row.upi_id}`}
+            >
+              <span className="truncate max-w-[120px] inline-block">{row.upi_id}</span>
               <button
                 type="button"
                 onClick={() => copyToClipboard(row.upi_id, `upi_${row.id}`)}
-                className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600 transition-colors cursor-pointer"
+                className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600 transition-colors cursor-pointer shrink-0"
                 title="Copy UPI ID"
               >
                 {copiedKey === `upi_${row.id}` ? (
@@ -374,13 +409,13 @@ export default function BillingDetailsList() {
               </button>
             </div>
           ) : (
-            <span className="text-slate-400 text-xs">-</span>
+            <span className="text-slate-400 text-xs whitespace-nowrap">-</span>
           ),
       },
       {
         key: "qr_code",
         label: "QR Code",
-        className: "text-center w-16",
+        className: "text-center w-16 whitespace-nowrap",
         render: (row) => {
           const qrSrc = row.qr_code_url || row.qr_code;
           return qrSrc ? (
@@ -390,26 +425,26 @@ export default function BillingDetailsList() {
                 setPreviewAccount(row);
                 setShowPreviewModal(true);
               }}
-              className="p-1 rounded-lg border border-slate-200 hover:border-blue-400 bg-slate-50 transition-all cursor-pointer inline-flex items-center justify-center shadow-2xs"
+              className="p-0.5 rounded-md border border-slate-200 hover:border-blue-400 bg-slate-50 transition-all cursor-pointer inline-flex items-center justify-center shadow-2xs"
               title="Click to view Card & QR Code"
             >
-              <img src={qrSrc} alt="QR" className="w-6 h-6 object-contain rounded" />
+              <img src={qrSrc} alt="QR" className="w-5 h-5 object-contain rounded" />
             </button>
           ) : (
-            <span className="text-slate-300 text-[10px]">No QR</span>
+            <span className="text-slate-300 text-[10px] whitespace-nowrap">No QR</span>
           );
         },
       },
       {
         key: "is_active",
         label: "Status",
-        className: "text-center w-20",
+        className: "text-center w-20 whitespace-nowrap",
         render: (row) => (
           <button
             type="button"
             onClick={() => handleToggleStatus(row)}
             disabled={!canEdit}
-            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold transition-colors cursor-pointer disabled:cursor-default ${
+            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold transition-colors cursor-pointer disabled:cursor-default whitespace-nowrap ${
               row.is_active
                 ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
                 : "bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200"
@@ -427,7 +462,7 @@ export default function BillingDetailsList() {
   // Table Action Column Renderer (View Card & QR, Make Primary, Edit, Delete)
   const actionsRenderer = useCallback(
     (row) => (
-      <div className="flex items-center justify-center gap-1.5">
+      <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
         {/* OPTION TO VIEW CARD AND QR CODE PREVIEW */}
         <button
           type="button"
