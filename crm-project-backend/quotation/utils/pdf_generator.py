@@ -246,7 +246,11 @@ def _build_quotation_pdf_context(quotation, version):
     q_date = quotation.quotation_date or (version.created_at.date() if hasattr(version.created_at, 'date') else version.created_at)
 
     raw_thank_you = (quotation.thank_you_note or '').strip()
-    thank_you_lines = parse_term_bullets(raw_thank_you)
+    thank_you_lines = [
+        re.sub(r'^[•\-\*\u2022\u2023\u25E6\u2043\u2219]\s*', '', line).strip()
+        for line in re.split(r'[\r\n]+', raw_thank_you)
+        if line.strip()
+    ]
 
     return {
         'quotation': quotation,

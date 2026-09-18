@@ -397,6 +397,22 @@ export default function Quotation() {
   };
 
   const handleViewPDF = async (quotationId, versionId = null) => {
+    Swal.fire({
+      title: "Opening Quotation PDF...",
+      html: `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px 0;">
+          <div style="width: 44px; height: 44px; border: 4px solid #e2e8f0; border-top: 4px solid #2563eb; border-radius: 50%; animation: spinPdf 0.9s linear infinite; margin-bottom: 12px;"></div>
+          <p style="font-size: 13px; color: #475569; margin: 0; font-weight: 500;">Generating document, please wait...</p>
+        </div>
+        <style>
+          @keyframes spinPdf { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        </style>
+      `,
+      showConfirmButton: false,
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+    });
+
     try {
       const query = versionId ? `version_id=${versionId}&disposition=inline` : `disposition=inline`;
       const url = `quotation/quotation/${quotationId}/pdf/?${query}`;
@@ -404,7 +420,19 @@ export default function Quotation() {
       const response = await api.get(url, { responseType: "blob" });
       const file = new Blob([response.data], { type: "application/pdf" });
       const fileURL = URL.createObjectURL(file);
-      window.open(fileURL, "_blank");
+
+      Swal.close();
+
+      const newWindow = window.open(fileURL, "_blank");
+      if (!newWindow || newWindow.closed || typeof newWindow.closed === "undefined") {
+        // Fallback if browser popup blocker prevented window.open
+        const link = document.createElement("a");
+        link.href = fileURL;
+        link.target = "_blank";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     } catch (err) {
       console.error(err);
       Swal.fire({ icon: "error", title: "Error", text: "Failed to open PDF" });
@@ -412,6 +440,22 @@ export default function Quotation() {
   };
 
   const handleDownloadPDF = async (quotationId, versionId = null) => {
+    Swal.fire({
+      title: "Downloading PDF...",
+      html: `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px 0;">
+          <div style="width: 44px; height: 44px; border: 4px solid #e2e8f0; border-top: 4px solid #16a34a; border-radius: 50%; animation: spinPdfDown 0.9s linear infinite; margin-bottom: 12px;"></div>
+          <p style="font-size: 13px; color: #475569; margin: 0; font-weight: 500;">Generating PDF file, please wait...</p>
+        </div>
+        <style>
+          @keyframes spinPdfDown { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        </style>
+      `,
+      showConfirmButton: false,
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+    });
+
     try {
       const query = versionId ? `version_id=${versionId}&disposition=attachment` : `disposition=attachment`;
       const url = `quotation/quotation/${quotationId}/pdf/?${query}`;
@@ -425,6 +469,8 @@ export default function Quotation() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(link.href);
+
+      Swal.close();
     } catch (err) {
       console.error(err);
       Swal.fire({ icon: "error", title: "Error", text: "Failed to download PDF" });
