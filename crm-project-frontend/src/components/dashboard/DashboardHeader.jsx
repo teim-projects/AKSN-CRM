@@ -73,7 +73,7 @@ export default function DashboardHeader({
     },
   ];
 
-  const currentTabObj = tabs.find((t) => t.id === activeTab) || tabs[1];
+  const currentTabObj = tabs.find((t) => t.id === activeTab) || tabs[0];
 
   const formatBadge = (num) => {
     if (num === null || num === undefined) return "0";

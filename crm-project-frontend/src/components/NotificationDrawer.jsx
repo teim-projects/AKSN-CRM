@@ -521,9 +521,9 @@ export default function NotificationDrawer({ isOpen, onClose, onUnreadCountChang
 
     let targetUrl = item.targetUrl;
 
-    if (!targetUrl || targetUrl === "/quotation") {
+    if (!targetUrl || targetUrl === "/quotation" || targetUrl === "/quotations") {
       if (item.quotationId) {
-        targetUrl = `/quotation?quotationId=${item.quotationId}`;
+        targetUrl = `/quotations?quotationId=${item.quotationId}`;
       } else if (item.leadId) {
         targetUrl = `/leads?leadId=${item.leadId}`;
       } else if (item.customerId) {

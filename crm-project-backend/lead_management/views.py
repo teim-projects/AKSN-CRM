@@ -264,6 +264,7 @@ class LeadViewSet(viewsets.ModelViewSet):
 
     ordering_fields = [
         "created_at",
+        "enquiry_date",
         "followup_date",
         "company_name",
         "status",

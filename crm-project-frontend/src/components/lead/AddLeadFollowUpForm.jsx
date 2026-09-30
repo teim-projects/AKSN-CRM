@@ -605,6 +605,11 @@ export default function AddLeadFollowUpForm({
       return false;
     }
 
+    if (!formData.next_followup_date) {
+      Swal.fire({ icon: "error", title: "Validation", text: "Next follow-up date is required" });
+      return false;
+    }
+
     return true;
   };
 
@@ -734,7 +739,7 @@ export default function AddLeadFollowUpForm({
 
           {/* Form Body */}
           <div className="px-6 py-5 overflow-y-auto flex-1 bg-white text-slate-800 scrollbar-thin">
-            <form className="space-y-6" onSubmit={handleSubmit}>
+            <form noValidate className="space-y-6" onSubmit={handleSubmit}>
 
               {/* FOLLOW-UP DETAILS */}
               <div>
@@ -1134,7 +1139,7 @@ export default function AddLeadFollowUpForm({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs font-semibold text-slate-600 mb-1.5 block">
-                      Next Follow-up Date
+                      Next Follow-up Date <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="date"

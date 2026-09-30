@@ -175,13 +175,14 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/quotation"
+        path="/quotations"
         element={
           <ModuleProtectedRoute module="quotations">
             <Quotation />
           </ModuleProtectedRoute>
         }
       />
+      <Route path="/quotation" element={<Navigate to="/quotations" replace />} />
 
       {/* Product Routes */}
       <Route
@@ -289,22 +290,27 @@ function AppRoutes() {
 
       {/* Message Templates Routes */}
       <Route
-        path="/templates"
+        path="/message-templates"
         element={
           <ModuleProtectedRoute module="templates">
             <TemplatesPage />
           </ModuleProtectedRoute>
         }
       />
+      <Route path="/templates" element={<Navigate to="/message-templates" replace />} />
 
       {/* Tally Integration Route */}
       <Route
-        path="/tally"
+        path="/tally-integration"
         element={
           <ModuleProtectedRoute module="tally">
             <TallyIntegrationPage />
           </ModuleProtectedRoute>
         }
+      />
+      <Route
+        path="/tally"
+        element={<Navigate to="/tally-integration" replace />}
       />
 
       {/* Billing Details Master Routes */}

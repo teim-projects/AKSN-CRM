@@ -257,6 +257,32 @@ export default function Lead() {
         };
       });
 
+      // Sort leads by lead date (enquiry_date or created_at) descending (latest on top)
+      normalized.sort((a, b) => {
+        const getLeadDateVal = (item) => {
+          if (item.enquiry_date) {
+            const t = new Date(item.enquiry_date).getTime();
+            if (!isNaN(t)) return t;
+          }
+          if (item.created_at) {
+            const t = new Date(item.created_at).getTime();
+            if (!isNaN(t)) return t;
+          }
+          return 0;
+        };
+
+        const timeDiff = getLeadDateVal(b) - getLeadDateVal(a);
+        if (timeDiff !== 0) return timeDiff;
+
+        const createdA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const createdB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        if (!isNaN(createdA) && !isNaN(createdB) && createdB !== createdA) {
+          return createdB - createdA;
+        }
+
+        return (b.id || 0) - (a.id || 0);
+      });
+
       setAllRows(normalized);
       setFilteredData(normalized);
       setRows(normalized);

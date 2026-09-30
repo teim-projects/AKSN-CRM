@@ -13,8 +13,11 @@ import ProjectReportDashboard from "../components/dashboard/ProjectReportDashboa
 
 export default function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = searchParams.get("tab") || "leads";
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "summary");
+
+  useEffect(() => {
+    setActiveTab(searchParams.get("tab") || "summary");
+  }, [searchParams]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);

@@ -340,7 +340,7 @@ export default function QuotationDashboard({ quotations = [], isLoading = false 
 
           <div className="mt-5 pt-3 border-t border-slate-100 flex justify-end">
             <Link
-              to="/quotation"
+              to="/quotations"
               className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
             >
               Open Quotation Master <ArrowUpRight className="w-3.5 h-3.5" />
@@ -359,7 +359,7 @@ export default function QuotationDashboard({ quotations = [], isLoading = false 
             <p className="text-[11px] text-slate-400 mt-0.5">Latest quotations sent to prospective clients</p>
           </div>
           <Link
-            to="/quotation"
+            to="/quotations"
             className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
           >
             View All Quotations ({totalQuotations}) <ArrowUpRight className="w-3.5 h-3.5" />

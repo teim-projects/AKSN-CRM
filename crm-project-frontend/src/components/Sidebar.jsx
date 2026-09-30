@@ -82,7 +82,7 @@ const allSidebarItems = [
   // SALES (Pre-Sales & Deal Pipeline)
   { key: "leads", label: "Lead Management", icon: TargetIcon, path: "/leads", section: "SALES" },
   { key: "followups", label: "Follow-up Management", icon: FollowUpIcon, path: "/follow-up", section: "SALES" },
-  { key: "quotes", label: "Quotations", icon: QuoteIcon, path: "/quotation", section: "SALES" },
+  { key: "quotes", label: "Quotations", icon: QuoteIcon, path: "/quotations", section: "SALES" },
 
   // OPERATIONS (Post-Sales Delivery & Service)
   { key: "contacts", label: "Customers", icon: UserIcon, path: "/customer", section: "OPERATIONS" },
@@ -92,11 +92,11 @@ const allSidebarItems = [
   // MASTER DATA (Catalog & Master Configurations)
   { key: "products", label: "Product Master", icon: BoxIcon, path: "/products", section: "MASTER DATA" },
   { key: "terms", label: "Terms & Conditions", icon: TermsIcon, path: "/terms", section: "MASTER DATA" },
-  { key: "templates", label: "Message Templates", icon: TemplateIcon, path: "/templates", section: "MASTER DATA" },
+  { key: "templates", label: "Message Templates", icon: TemplateIcon, path: "/message-templates", section: "MASTER DATA" },
   { key: "billing", label: "Billing Details", icon: BillingIcon, path: "/billing-details", section: "MASTER DATA" },
 
   // INTEGRATIONS (External Systems & Accounting)
-  { key: "tally", label: "Tally Integration", icon: TallyIcon, path: "/tally", section: "INTEGRATIONS" },
+  { key: "tally", label: "Tally Integration", icon: TallyIcon, path: "/tally-integration", section: "INTEGRATIONS" },
 
   // ADMINISTRATION (System & Role Management)
   { key: "accounts", label: "Accounts", icon: BuildingIcon, path: "/accounts", section: "ADMINISTRATION" },
@@ -236,11 +236,10 @@ export default function Sidebar({ children }) {
 
       {/* SIDEBAR CONTAINER */}
       <aside
-        className={`bg-[#12192c] text-slate-300 h-full flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out fixed lg:relative inset-y-0 left-0 z-50 ${
-          isOpen
+        className={`bg-[#12192c] text-slate-300 h-full flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out fixed lg:relative inset-y-0 left-0 z-50 ${isOpen
             ? "w-64 translate-x-0 opacity-100 shadow-2xl lg:shadow-none"
             : "-translate-x-full lg:translate-x-0 lg:w-0 lg:opacity-0 pointer-events-none"
-        }`}
+          }`}
       >
         <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-800/60 min-w-[256px]">
           <button
@@ -335,12 +334,12 @@ export default function Sidebar({ children }) {
   );
 }
 
-const Navbar = ({ 
-  onMenuClick, 
-  pageTitle, 
-  isSidebarOpen, 
-  onNotificationClick, 
-  unreadCount, 
+const Navbar = ({
+  onMenuClick,
+  pageTitle,
+  isSidebarOpen,
+  onNotificationClick,
+  unreadCount,
   modules = [],
   onChatbotClick,
   isChatbotOpen
@@ -464,9 +463,8 @@ const Navbar = ({
       <div className="flex items-center gap-2 sm:gap-3">
         <button
           onClick={onMenuClick}
-          className={`w-9 h-9 rounded-xl bg-blue-600 flex flex-col items-center justify-center gap-1 text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 transition-colors mr-1 cursor-pointer ${
-            isSidebarOpen ? "lg:hidden" : "block"
-          }`}
+          className={`w-9 h-9 rounded-xl bg-blue-600 flex flex-col items-center justify-center gap-1 text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 transition-colors mr-1 cursor-pointer ${isSidebarOpen ? "lg:hidden" : "block"
+            }`}
           title="Toggle Sidebar"
         >
           <span className="block w-4 h-0.5 bg-white rounded-full"></span>
@@ -552,17 +550,15 @@ const Navbar = ({
                         key={item.key}
                         onClick={() => handleSelectModule(item)}
                         onMouseEnter={() => setSelectedIndex(idx)}
-                        className={`px-3.5 py-2.5 flex items-center justify-between cursor-pointer transition-colors ${
-                          isSelected
+                        className={`px-3.5 py-2.5 flex items-center justify-between cursor-pointer transition-colors ${isSelected
                             ? "bg-blue-50/90 text-blue-900 font-semibold border-l-4 border-blue-600 pl-2.5"
                             : "text-slate-700 hover:bg-slate-50"
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <span
-                            className={`p-1.5 rounded-lg flex-shrink-0 transition-colors ${
-                              isSelected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"
-                            }`}
+                            className={`p-1.5 rounded-lg flex-shrink-0 transition-colors ${isSelected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"
+                              }`}
                           >
                             {IconComponent && <IconComponent className="w-3.5 h-3.5" />}
                           </span>
@@ -577,11 +573,10 @@ const Navbar = ({
                         </div>
 
                         <span
-                          className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider flex-shrink-0 ml-2 ${
-                            isSelected
+                          className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider flex-shrink-0 ml-2 ${isSelected
                               ? "bg-blue-200/60 text-blue-800"
                               : "bg-slate-100 text-slate-500"
-                          }`}
+                            }`}
                         >
                           {item.section}
                         </span>
@@ -666,11 +661,10 @@ const Navbar = ({
         {/* AI CHATBOT BUTTON (Beside notification bell) */}
         <button
           onClick={onChatbotClick}
-          className={`p-1.5 sm:p-2 rounded-xl relative transition-all cursor-pointer flex items-center justify-center ${
-            isChatbotOpen
+          className={`p-1.5 sm:p-2 rounded-xl relative transition-all cursor-pointer flex items-center justify-center ${isChatbotOpen
               ? "bg-blue-50 text-blue-600 shadow-xs"
               : "text-gray-400 hover:text-blue-600 hover:bg-gray-50"
-          }`}
+            }`}
           title="AKSN AI Assistant (Ask any Lead or CRM doubt)"
         >
           <Sparkles className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-indigo-500 hover:text-blue-600 transition-transform hover:scale-110" />

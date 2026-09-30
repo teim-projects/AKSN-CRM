@@ -270,6 +270,13 @@ class LeadFollowUpSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "followup_number", "created_by", "created_at"]
 
+    def validate(self, attrs):
+        if self.instance is None and not attrs.get("next_followup_date"):
+            raise serializers.ValidationError({"next_followup_date": "Next follow-up date is required."})
+        if "next_followup_date" in attrs and not attrs.get("next_followup_date"):
+            raise serializers.ValidationError({"next_followup_date": "Next follow-up date is required."})
+        return super().validate(attrs)
+
     @transaction.atomic
     def create(self, validated_data):
         request = self.context.get("request")
