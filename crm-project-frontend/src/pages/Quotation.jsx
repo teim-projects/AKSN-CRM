@@ -1018,7 +1018,7 @@ export default function Quotation() {
       <div className="w-full space-y-4 font-sans antialiased text-slate-800 pt-1 sm:pt-2 px-1">
 
         {/* HEADER BLOCK WITH THE BLUE VERTICAL ACCENT LINE */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-1 pt-1">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1 pt-1">
           <div className="flex items-center gap-3">
             <span className="w-1.5 h-10 bg-blue-600 rounded-full block"></span>
             <div>
@@ -1029,44 +1029,50 @@ export default function Quotation() {
             </div>
           </div>
 
-          <div className="mt-3 md:mt-0 flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
             {/* Quick Filter Dropdown */}
             <div className="relative">
               <button
                 onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                className="px-2.5 sm:px-3 py-1.5 text-xs font-semibold bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer"
               >
                 <MdFilterList className="text-slate-400" />
                 {currentFilterLabel}
               </button>
 
               {showFilterDropdown && (
-                <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-30">
-                  {filterOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => {
-                        setFilterType(option.value);
-                        setShowFilterDropdown(false);
-                        setCurrentPage(1);
-                      }}
-                      className={`w-full text-left px-4 py-2 text-xs hover:bg-slate-50 transition-colors ${filterType === option.value ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-700'
-                        }`}
-                    >
-                      {option.label}
-                      {filterType === option.value && (
-                        <span className="float-right text-blue-600">✓</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
+                <>
+                  <div
+                    className="fixed inset-0 z-20 cursor-default"
+                    onClick={() => setShowFilterDropdown(false)}
+                  />
+                  <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-30">
+                    {filterOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setFilterType(option.value);
+                          setShowFilterDropdown(false);
+                          setCurrentPage(1);
+                        }}
+                        className={`w-full text-left px-4 py-2 text-xs hover:bg-slate-50 transition-colors ${filterType === option.value ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-700'
+                          }`}
+                      >
+                        {option.label}
+                        {filterType === option.value && (
+                          <span className="float-right text-blue-600">✓</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
 
             {/* Advanced Filter Button */}
             <button
               onClick={() => setIsFilterOpen(true)}
-              className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+              className="px-2.5 sm:px-3 py-1.5 text-xs font-semibold bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer"
             >
               <MdFilterList className="text-slate-400" />
               Filter
@@ -1075,7 +1081,7 @@ export default function Quotation() {
             {/* Export to Excel Button */}
             <button
               onClick={handleExportExcel}
-              className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+              className="px-2.5 sm:px-3 py-1.5 text-xs font-semibold bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer"
               title="Export Quotations to Excel"
             >
               <MdDownload className="text-emerald-600 text-sm" />
@@ -1085,7 +1091,7 @@ export default function Quotation() {
             {canCreateQuotation && (
               <button
                 onClick={() => { setEditingQuotation(null); setShowQuotationForm(true); }}
-                className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-xs flex items-center gap-1 cursor-pointer"
+                className="px-3 sm:px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-xs shadow-blue-500/10 flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0"
               >
                 <MdAdd className="text-sm" />
                 Add Quotation

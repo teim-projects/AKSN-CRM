@@ -350,8 +350,8 @@ export default function QuotationDashboard({ quotations = [], isLoading = false 
       </div>
 
       {/* 3. RECENT QUOTATIONS TABLE */}
-      <div className="bg-white rounded-xl border border-slate-200/70 shadow-sm p-5">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-white rounded-xl border border-slate-200/70 shadow-sm p-4 sm:p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
           <div>
             <h3 className="text-xs font-bold text-slate-900 tracking-wide uppercase">
               Recent Quotations & Proposals
@@ -360,26 +360,26 @@ export default function QuotationDashboard({ quotations = [], isLoading = false 
           </div>
           <Link
             to="/quotations"
-            className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+            className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 shrink-0 self-start sm:self-auto"
           >
             View All Quotations ({totalQuotations}) <ArrowUpRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto -mx-1 sm:mx-0">
+          <table className="min-w-[720px] w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-                <th className="pb-2.5 pl-1">Quote No</th>
-                <th className="pb-2.5">Client / Company</th>
-                <th className="pb-2.5">Branch</th>
-                <th className="pb-2.5">GST</th>
-                <th className="pb-2.5">Status</th>
-                <th className="pb-2.5">Date</th>
-                <th className="pb-2.5 text-right pr-1">Amount</th>
+              <tr className="border-b border-slate-200 text-slate-400 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+                <th className="pb-2.5 pl-2 pr-3">Quote No</th>
+                <th className="pb-2.5 px-3">Client / Company</th>
+                <th className="pb-2.5 px-3">Branch</th>
+                <th className="pb-2.5 px-3">GST</th>
+                <th className="pb-2.5 px-3">Status</th>
+                <th className="pb-2.5 px-3">Date</th>
+                <th className="pb-2.5 pl-3 pr-2 text-right">Amount</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-600">
+            <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-600 whitespace-nowrap">
               {recentQuotations.length > 0 ? (
                 recentQuotations.map((row, idx) => {
                   const versions = row.versions || [];
@@ -388,10 +388,10 @@ export default function QuotationDashboard({ quotations = [], isLoading = false 
 
                   return (
                     <tr key={row.id || idx} className="hover:bg-slate-50/40 transition">
-                      <td className="py-2.5 pl-1 text-slate-900 font-bold">
+                      <td className="py-2.5 pl-2 pr-3 text-slate-900 font-bold">
                         {row.quotation_no || `AKSN-${row.id}`}
                       </td>
-                      <td className="py-2.5">
+                      <td className="py-2.5 px-3">
                         <span className="font-semibold text-slate-800 block">
                           {row.company_name || row.contact_person || "-"}
                         </span>
@@ -399,15 +399,15 @@ export default function QuotationDashboard({ quotations = [], isLoading = false 
                           <span className="text-[10px] text-slate-400 block">{row.contact_person}</span>
                         )}
                       </td>
-                      <td className="py-2.5">
+                      <td className="py-2.5 px-3">
                         <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px]">
                           {row.quotation_for || "Pune"}
                         </span>
                       </td>
-                      <td className="py-2.5 text-[11px] text-slate-500">
+                      <td className="py-2.5 px-3 text-[11px] text-slate-500">
                         {row.gst_type || "CGST_SGST"}
                       </td>
-                      <td className="py-2.5">
+                      <td className="py-2.5 px-3">
                         {row.is_dropped ? (
                           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase bg-rose-100 text-rose-700">
                             Dropped
@@ -422,10 +422,10 @@ export default function QuotationDashboard({ quotations = [], isLoading = false 
                           </span>
                         )}
                       </td>
-                      <td className="py-2.5 text-slate-400 text-[11px]">
+                      <td className="py-2.5 px-3 text-slate-400 text-[11px]">
                         {formatDate(row.quotation_date || row.created_at)}
                       </td>
-                      <td className="py-2.5 text-right pr-1 font-bold text-slate-900">
+                      <td className="py-2.5 pl-3 pr-2 text-right font-bold text-slate-900">
                         {formatCurrency(amount)}
                       </td>
                     </tr>

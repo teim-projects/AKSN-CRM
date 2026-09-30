@@ -181,6 +181,7 @@ export default function SendMessageModal({
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [channel, setChannel] = useState(initialChannel || "email");
   const [recipientEmail, setRecipientEmail] = useState("");
+  const [ccEmail, setCcEmail] = useState("");
   const [recipientMobile, setRecipientMobile] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -197,6 +198,7 @@ export default function SendMessageModal({
       let mobile = getRecordPhone(recordData);
 
       setRecipientEmail(email);
+      setCcEmail("");
       setRecipientMobile(mobile);
       setSelectedTemplateId("");
       setSubject("");
@@ -359,6 +361,23 @@ export default function SendMessageModal({
         return;
       }
 
+      if (ccEmail.trim()) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const invalidEmails = ccEmail
+          .split(",")
+          .map((e) => e.trim())
+          .filter((e) => e.length > 0 && !emailRegex.test(e));
+
+        if (invalidEmails.length > 0) {
+          Swal.fire({
+            icon: "warning",
+            title: "Invalid CC Email",
+            text: `Please enter valid email address(es) in CC: ${invalidEmails.join(", ")}`,
+          });
+          return;
+        }
+      }
+
       try {
         setSending(true);
         const token = localStorage.getItem("access") || localStorage.getItem("token") || "";
@@ -369,6 +388,9 @@ export default function SendMessageModal({
         const plainText = body.replace(/<[^>]*>?/gm, "").trim();
         const formData = new FormData();
         formData.append("to_email", recipientEmail.trim());
+        if (ccEmail.trim()) {
+          formData.append("cc_email", ccEmail.trim());
+        }
         formData.append("subject", subject.trim());
         formData.append("body", plainText || body.trim());
         formData.append("message", plainText || body.trim());
@@ -397,10 +419,11 @@ export default function SendMessageModal({
         const data = await res.json();
 
         if (res.ok && (data.success || data.status === "success")) {
+          const ccNotice = ccEmail.trim() ? ` (CC: ${ccEmail.trim()})` : "";
           Swal.fire({
             icon: "success",
             title: "Email Sent Successfully",
-            text: `Dispatched to ${recipientEmail}`,
+            text: `Dispatched to ${recipientEmail}${ccNotice}`,
             timer: 2000,
             showConfirmButton: false,
           });
@@ -535,20 +558,37 @@ export default function SendMessageModal({
               </select>
             </div>
 
-            {/* Recipient Field */}
+            {/* Recipient & CC Fields */}
             {channel === "email" ? (
-              <div className="space-y-1">
-                <label className="block text-xs font-semibold text-slate-600">
-                  Recipient Email *
-                </label>
-                <input
-                  type="email"
-                  value={recipientEmail}
-                  onChange={(e) => setRecipientEmail(e.target.value)}
-                  placeholder="e.g. customer@example.com"
-                  required
-                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-slate-600">
+                    Recipient Email *
+                  </label>
+                  <input
+                    type="email"
+                    value={recipientEmail}
+                    onChange={(e) => setRecipientEmail(e.target.value)}
+                    placeholder="e.g. customer@example.com"
+                    required
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-semibold text-slate-600">
+                      CC (Optional)
+                    </label>
+                    <span className="text-[10px] text-slate-400">Comma-separated</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={ccEmail}
+                    onChange={(e) => setCcEmail(e.target.value)}
+                    placeholder="e.g. colleague@example.com, manager@example.com"
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                  />
+                </div>
               </div>
             ) : (
               <div className="space-y-1">

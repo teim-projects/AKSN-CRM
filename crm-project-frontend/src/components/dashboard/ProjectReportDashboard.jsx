@@ -357,10 +357,10 @@ export default function ProjectReportDashboard({
           </Link>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+        <div className="overflow-x-auto -mx-1 sm:mx-0">
+          <table className="min-w-[680px] w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="border-b border-slate-200/80 bg-slate-50/70 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              <tr className="border-b border-slate-200/80 bg-slate-50/70 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
                 <th className="py-2.5 px-3">Project Code</th>
                 <th className="py-2.5 px-3">Customer / Client</th>
                 <th className="py-2.5 px-3">Stage</th>
@@ -369,7 +369,7 @@ export default function ProjectReportDashboard({
                 <th className="py-2.5 px-3 text-right">Project Value</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 font-medium">
+            <tbody className="divide-y divide-slate-100 font-medium whitespace-nowrap">
               {recentProjects.map((p) => {
                 const stageKey = (p.project_stage || "").toLowerCase();
                 const stageObj = stageCounts[stageKey] || stageCounts.other;

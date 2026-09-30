@@ -229,14 +229,14 @@ export default function Sidebar({ children }) {
       {/* MOBILE BACKDROP OVERLAY */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-40 lg:hidden transition-opacity duration-300"
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[90] lg:hidden transition-opacity duration-300"
           onClick={() => setIsOpen(false)}
         />
       )}
 
       {/* SIDEBAR CONTAINER */}
       <aside
-        className={`bg-[#12192c] text-slate-300 h-full flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out fixed lg:relative inset-y-0 left-0 z-50 ${isOpen
+        className={`bg-[#12192c] text-slate-300 h-full flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out fixed lg:relative inset-y-0 left-0 z-[100] ${isOpen
             ? "w-64 translate-x-0 opacity-100 shadow-2xl lg:shadow-none"
             : "-translate-x-full lg:translate-x-0 lg:w-0 lg:opacity-0 pointer-events-none"
           }`}
@@ -244,12 +244,13 @@ export default function Sidebar({ children }) {
         <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-800/60 min-w-[256px]">
           <button
             onClick={() => setIsOpen(false)}
-            className="w-9 h-9 rounded-xl bg-blue-600 flex flex-col items-center justify-center gap-1 text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 transition-colors cursor-pointer"
+            className="w-9 h-9 min-w-[36px] min-h-[36px] shrink-0 aspect-square rounded-xl bg-blue-600 flex flex-col items-center justify-center gap-1 text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 transition-colors cursor-pointer"
             title="Close Sidebar"
+            aria-label="Close Sidebar"
           >
-            <span className="block w-4 h-0.5 bg-white rounded-full"></span>
-            <span className="block w-4 h-0.5 bg-white rounded-full"></span>
-            <span className="block w-4 h-0.5 bg-white rounded-full"></span>
+            <span className="block w-4 h-0.5 bg-white rounded-full shrink-0"></span>
+            <span className="block w-4 h-0.5 bg-white rounded-full shrink-0"></span>
+            <span className="block w-4 h-0.5 bg-white rounded-full shrink-0"></span>
           </button>
 
           <Link to="/dashboard" className="text-base font-bold text-white tracking-wide">
@@ -463,13 +464,14 @@ const Navbar = ({
       <div className="flex items-center gap-2 sm:gap-3">
         <button
           onClick={onMenuClick}
-          className={`w-9 h-9 rounded-xl bg-blue-600 flex flex-col items-center justify-center gap-1 text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 transition-colors mr-1 cursor-pointer ${isSidebarOpen ? "lg:hidden" : "block"
+          className={`w-9 h-9 min-w-[36px] min-h-[36px] shrink-0 aspect-square rounded-xl bg-blue-600 flex flex-col items-center justify-center gap-1 text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 transition-colors mr-1 cursor-pointer ${isSidebarOpen ? "lg:hidden" : "block"
             }`}
           title="Toggle Sidebar"
+          aria-label="Toggle Sidebar"
         >
-          <span className="block w-4 h-0.5 bg-white rounded-full"></span>
-          <span className="block w-4 h-0.5 bg-white rounded-full"></span>
-          <span className="block w-4 h-0.5 bg-white rounded-full"></span>
+          <span className="block w-4 h-0.5 bg-white rounded-full shrink-0"></span>
+          <span className="block w-4 h-0.5 bg-white rounded-full shrink-0"></span>
+          <span className="block w-4 h-0.5 bg-white rounded-full shrink-0"></span>
         </button>
 
         <button

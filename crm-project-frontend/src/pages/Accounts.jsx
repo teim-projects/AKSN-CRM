@@ -389,10 +389,10 @@ export default function Accounts() {
             </div>
           </div>
 
-          <div className="mt-3 md:mt-0 flex items-center gap-3">
+          <div className="mt-3 md:mt-0 flex flex-wrap items-center gap-2 sm:gap-2.5">
             <button
               onClick={() => setIsFilterOpen(true)}
-              className="px-3.5 py-1.5 border border-slate-200 bg-white text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+              className="px-2.5 sm:px-3.5 py-1.5 border border-slate-200 bg-white text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
             >
               <MdFilterList className="text-slate-400" />
               Filter
@@ -400,7 +400,7 @@ export default function Accounts() {
 
             <button
               onClick={handleExportExcel}
-              className="px-3.5 py-1.5 border border-slate-200 bg-white text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+              className="px-2.5 sm:px-3.5 py-1.5 border border-slate-200 bg-white text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
               title="Export Staff Accounts to Excel"
             >
               <MdDownload className="text-emerald-600 text-sm" />
@@ -409,7 +409,7 @@ export default function Accounts() {
 
             <button
               onClick={() => navigate("/roles")}
-              className="px-3.5 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-xs cursor-pointer"
+              className="px-2.5 sm:px-3.5 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-xs cursor-pointer whitespace-nowrap shrink-0"
             >
               Manage Roles & Permissions
             </button>
@@ -417,7 +417,7 @@ export default function Accounts() {
             {canCreateAccount && (
               <button
                 onClick={() => { setEditingStaff(null); setShowStaffForm(true); }}
-                className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10 flex items-center gap-1 cursor-pointer"
+                className="px-3 sm:px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-xs shadow-blue-500/10 flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0"
               >
                 <span>+</span> Add Staff
               </button>

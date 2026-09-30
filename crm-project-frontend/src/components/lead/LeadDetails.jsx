@@ -125,7 +125,7 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 relative border border-slate-100 my-auto"
+        className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 relative border border-slate-100 my-auto"
       >
         <button
           onClick={onClose}
@@ -339,45 +339,55 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
 
             {/* Follow-up History */}
             {lead.followups && lead.followups.length > 0 && (
-              <div className="border border-slate-200/80 rounded-lg p-4 bg-white">
-                <h3 className="font-semibold mb-3 text-slate-700">Follow-up History</h3>
-                <table className="w-full text-sm border border-slate-200 rounded-md overflow-hidden">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <th className="p-2 text-left">#</th>
-                      <th className="p-2 text-left">Followup Date</th>
-                      <th className="p-2 text-left">Next Followup</th>
-                      <th className="p-2 text-left">Status</th>
-                      <th className="p-2 text-left">Remarks</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lead.followups.map((fu, idx) => (
-                      <tr key={fu.id || idx} className="border-t align-top">
-                        <td className="p-2">{idx + 1}</td>
-                        <td className="p-2">{fu.followup_date || "—"}</td>
-                        <td className="p-2">{fu.next_followup_date || "—"}</td>
-                        <td className="p-2">{fu.status || "—"}</td>
-                        <td className="p-2">
-                          <div>{fu.remarks || "—"}</div>
-                          {fu.faq_answers && fu.faq_answers.length > 0 && (
-                            <div className="mt-2 text-xs text-slate-600">
-                              <div className="font-semibold mb-1">FAQs:</div>
-                              <ul className="list-disc list-inside space-y-1">
-                                {fu.faq_answers.map((faq) => (
-                                  <li key={faq.id}>
-                                    <span className="font-medium">{faq.faq_question}:</span>{" "}
-                                    {faq.answer || "—"}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </td>
+              <div className="border border-slate-200/80 rounded-lg p-3 sm:p-4 bg-white overflow-hidden">
+                <h3 className="font-semibold mb-3 text-slate-700 text-sm">Follow-up History</h3>
+                <div className="overflow-x-auto -mx-1 sm:mx-0">
+                  <table className="min-w-[500px] w-full text-xs sm:text-sm border border-slate-200 rounded-md overflow-hidden">
+                    <thead className="bg-slate-50 text-slate-700 text-xs font-semibold whitespace-nowrap">
+                      <tr>
+                        <th className="p-2 sm:p-2.5 text-left w-10">#</th>
+                        <th className="p-2 sm:p-2.5 text-left whitespace-nowrap">Followup Date</th>
+                        <th className="p-2 sm:p-2.5 text-left whitespace-nowrap">Next Followup</th>
+                        <th className="p-2 sm:p-2.5 text-left whitespace-nowrap">Status</th>
+                        <th className="p-2 sm:p-2.5 text-left min-w-[140px]">Remarks</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-600">
+                      {lead.followups.map((fu, idx) => (
+                        <tr key={fu.id || idx} className="border-t align-top hover:bg-slate-50/50 transition">
+                          <td className="p-2 sm:p-2.5 font-medium">{idx + 1}</td>
+                          <td className="p-2 sm:p-2.5 whitespace-nowrap">{fu.followup_date || "—"}</td>
+                          <td className="p-2 sm:p-2.5 whitespace-nowrap">{fu.next_followup_date || "—"}</td>
+                          <td className="p-2 sm:p-2.5 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium ${
+                              fu.status === "open" ? "bg-green-100 text-green-800" :
+                              fu.status === "closed" ? "bg-red-100 text-red-800" :
+                              "bg-yellow-100 text-yellow-800"
+                            }`}>
+                              {fu.status || "—"}
+                            </span>
+                          </td>
+                          <td className="p-2 sm:p-2.5">
+                            <div className="whitespace-normal break-words max-w-[220px] sm:max-w-none">{fu.remarks || "—"}</div>
+                            {fu.faq_answers && fu.faq_answers.length > 0 && (
+                              <div className="mt-2 text-xs text-slate-600 bg-slate-50 p-2 rounded border border-slate-100">
+                                <div className="font-semibold mb-1 text-slate-700">FAQs:</div>
+                                <ul className="list-disc list-inside space-y-1">
+                                  {fu.faq_answers.map((faq) => (
+                                    <li key={faq.id}>
+                                      <span className="font-medium text-slate-700">{faq.faq_question}:</span>{" "}
+                                      {faq.answer || "—"}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>

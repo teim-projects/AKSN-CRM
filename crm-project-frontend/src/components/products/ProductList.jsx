@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import Base from '../Base';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom'; 
-import { MdEdit, MdDelete, MdFilterList, MdZoomIn, MdOutlineNavigateNext, MdOutlineNavigateBefore, MdDownload } from 'react-icons/md';
+import { MdEdit, MdDelete, MdFilterList, MdZoomIn, MdOutlineNavigateNext, MdOutlineNavigateBefore, MdDownload, MdAdd } from 'react-icons/md';
 import { Package } from 'lucide-react'; 
 import Swal from 'sweetalert2';
 import ProductForm from './ProductForm'; 
@@ -242,17 +242,17 @@ const ProductList = () => {
                             </p>
                         </div>
                     </div>
-                    <div className="mt-3 md:mt-0 flex items-center gap-2.5">
+                    <div className="mt-3 md:mt-0 flex flex-wrap items-center gap-2 sm:gap-2.5">
                         <button
                             onClick={() => setIsFilterOpen(true)}
-                            className="px-3.5 py-1.5 border border-slate-200 bg-white text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+                            className="px-2.5 sm:px-3.5 py-1.5 border border-slate-200 bg-white text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
                         >
                             <MdFilterList className="text-slate-400" />
                             Filter
                         </button>
                         <button
                             onClick={handleExportExcel}
-                            className="px-3.5 py-1.5 border border-slate-200 bg-white text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+                            className="px-2.5 sm:px-3.5 py-1.5 border border-slate-200 bg-white text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
                             title="Export Products to Excel"
                         >
                             <MdDownload className="text-emerald-600 text-sm" />
@@ -260,7 +260,7 @@ const ProductList = () => {
                         </button>
                         <button 
                             onClick={() => navigate('/categories')}
-                            className="px-3.5 py-1.5 border border-slate-200 bg-white text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-xs cursor-pointer"
+                            className="px-2.5 sm:px-3.5 py-1.5 border border-slate-200 bg-white text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-xs cursor-pointer whitespace-nowrap shrink-0"
                         >
                             Manage Categories
                         </button>
@@ -270,9 +270,10 @@ const ProductList = () => {
                                     setSelectedProductId(null);
                                     setShowProductForm(true);
                                     }}
-                                className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10 cursor-pointer"
+                                className="px-3 sm:px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-xs shadow-blue-500/10 cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1"
                             >
-                                + Add Product
+                                <MdAdd className="text-sm" />
+                                <span>Add Product</span>
                             </button>
                         )}
                     </div>

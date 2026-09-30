@@ -567,8 +567,8 @@ export default function RoleManagementDashboard({
       </div>
 
       {/* 3. STAFF DIRECTORY HIGHLIGHTS TABLE */}
-      <div className="bg-white rounded-xl border border-slate-200/70 shadow-sm p-5">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-white rounded-xl border border-slate-200/70 shadow-sm p-4 sm:p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
           <div>
             <h3 className="text-xs font-bold text-slate-900 tracking-wide uppercase">
               Staff & User Directory
@@ -577,16 +577,16 @@ export default function RoleManagementDashboard({
           </div>
           <Link
             to="/accounts"
-            className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+            className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 shrink-0 self-start sm:self-auto"
           >
             View All Staff ({totalStaff}) <ArrowUpRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto -mx-1 sm:mx-0">
+          <table className="min-w-[620px] w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+              <tr className="border-b border-slate-200 text-slate-400 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
                 <th className="pb-2.5 pl-1">Staff Member</th>
                 <th className="pb-2.5">Role</th>
                 <th className="pb-2.5">Mobile</th>
@@ -594,7 +594,7 @@ export default function RoleManagementDashboard({
                 <th className="pb-2.5 text-right pr-1">Account Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-600">
+            <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-600 whitespace-nowrap">
               {recentStaff.length > 0 ? (
                 recentStaff.map((row, idx) => {
                   const roleName =

@@ -662,10 +662,10 @@ export default function LeadDashboard({
 
       {/* RECENT ACTIVITIES LOG */}
       <div className="bg-white rounded-xl border border-slate-200/70 shadow-sm p-5">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
           <div>
             <h3 className="text-xs font-bold text-slate-900 tracking-wide uppercase">
-              Recent Lead Activity
+              Recent Lead Activities
             </h3>
             <p className="text-[11px] text-slate-400 mt-0.5">
               Latest leads and pipeline updates
@@ -673,16 +673,16 @@ export default function LeadDashboard({
           </div>
           <Link
             to="/leads"
-            className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+            className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 shrink-0 self-start sm:self-auto"
           >
             View All Leads ({stats.totalLeads || 0}) <ArrowUpRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto -mx-1 sm:mx-0">
+          <table className="min-w-[580px] w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+              <tr className="border-b border-slate-200 text-slate-400 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
                 <th className="pb-2.5 pl-1">Lead Name</th>
                 <th className="pb-2.5">Source</th>
                 <th className="pb-2.5">Assigned Agent</th>
@@ -690,7 +690,7 @@ export default function LeadDashboard({
                 <th className="pb-2.5 text-right pr-1">Timestamp</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-600">
+            <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-600 whitespace-nowrap">
               {stats.recentActivities && stats.recentActivities.length > 0 ? (
                 stats.recentActivities.slice(0, 5).map((row, idx) => (
                   <tr key={idx} className="hover:bg-slate-50/40 transition">
@@ -703,12 +703,10 @@ export default function LeadDashboard({
                       </span>
                     </td>
                     <td className="py-2.5">
-                      {row.agent === "Unassigned" ? (
-                        <span className="text-rose-600 bg-rose-50 px-2 py-0.5 rounded text-[10px] border border-rose-200 font-bold">
-                          ⚠️ Assign Now
-                        </span>
+                      {row.agent && row.agent !== "Unassigned" ? (
+                        <span className="text-slate-700">{row.agent}</span>
                       ) : (
-                        row.agent
+                        <span className="text-slate-400 font-normal">Unassigned</span>
                       )}
                     </td>
                     <td className="py-2.5">

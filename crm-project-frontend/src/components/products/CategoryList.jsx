@@ -204,10 +204,10 @@ const CategoryList = () => {
                             </p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
                         <button
                             onClick={() => navigate('/products')}
-                            className="px-3 py-1.5 border border-slate-200 bg-white text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+                            className="px-3 py-1.5 border border-slate-200 bg-white text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
                         >
                             <FaArrowLeft className="text-slate-500 text-xs" />
                             <span>Back to Products</span>
@@ -220,9 +220,10 @@ const CategoryList = () => {
                                     setFormData({ name: '', description: '', is_active: true });
                                     setShowModal(true);
                                 }}
-                                className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10 flex items-center gap-1 flex-shrink-0 cursor-pointer"
+                                className="px-3 sm:px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-xs shadow-blue-500/10 flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0"
                             >
-                                <span>+</span> Add Category
+                                <span className="text-sm">+</span>
+                                <span>Add Category</span>
                             </button>
                         )}
                     </div>

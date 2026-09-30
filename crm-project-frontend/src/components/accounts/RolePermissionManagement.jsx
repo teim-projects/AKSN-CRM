@@ -319,10 +319,10 @@ export default function RolePermissionManagement({ baseApi }) {
           </div>
         </div>
 
-        <div className="mt-3 md:mt-0 flex items-center gap-3">
+        <div className="mt-3 md:mt-0 flex flex-wrap items-center gap-2 sm:gap-2.5">
           <button
             onClick={() => setShowAddRoleModal(true)}
-            className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10 flex items-center gap-1.5 cursor-pointer"
+            className="px-3 sm:px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-xs shadow-blue-500/10 flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
           >
             <MdAdd className="text-base" />
             <span>Create New Role</span>
@@ -378,21 +378,21 @@ export default function RolePermissionManagement({ baseApi }) {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={handleGrantFullAccess}
-                className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+                className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer whitespace-nowrap shrink-0"
               >
                 Grant Full Access
               </button>
 
               <button
                 onClick={handleReadOnlyAccess}
-                className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+                className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer whitespace-nowrap shrink-0"
               >
                 Read Only Access
               </button>
 
               <button
                 onClick={handleClearAllAccess}
-                className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+                className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer whitespace-nowrap shrink-0"
               >
                 Clear All Access
               </button>
@@ -400,7 +400,7 @@ export default function RolePermissionManagement({ baseApi }) {
               <button
                 onClick={handleSavePermissions}
                 disabled={saving}
-                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm shadow-blue-500/10 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 ml-1"
+                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm shadow-blue-500/10 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 whitespace-nowrap shrink-0"
               >
                 <MdCheck className="text-base" />
                 <span>{saving ? "Saving..." : "Save Permissions"}</span>

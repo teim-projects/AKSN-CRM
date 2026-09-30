@@ -750,8 +750,8 @@ export default function ProductDashboard({
         </div>
 
         {/* 3. PRODUCT MASTER CATALOG HIGHLIGHTS */}
-        <div className="bg-white rounded-xl border border-slate-200/70 shadow-sm p-5">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-white rounded-xl border border-slate-200/70 shadow-sm p-4 sm:p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
             <div>
               <h3 className="text-xs font-bold text-slate-900 tracking-wide uppercase">
                 Product Master Catalog Highlights
@@ -762,25 +762,25 @@ export default function ProductDashboard({
             </div>
             <Link
               to="/products"
-              className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+              className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 shrink-0 self-start sm:self-auto"
             >
               View All Products ({totalProducts}) <ArrowUpRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto -mx-1 sm:mx-0">
+            <table className="min-w-[650px] w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-                  <th className="pb-2.5 pl-1">Product Name</th>
-                  <th className="pb-2.5">Code</th>
-                  <th className="pb-2.5">Category</th>
-                  <th className="pb-2.5">HSN/SAC</th>
-                  <th className="pb-2.5">Status</th>
-                  <th className="pb-2.5 text-right pr-1">Unit Price</th>
+                <tr className="border-b border-slate-200 text-slate-400 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+                  <th className="pb-2.5 pl-2 pr-3">Product Name</th>
+                  <th className="pb-2.5 px-3">Code</th>
+                  <th className="pb-2.5 px-3">Category</th>
+                  <th className="pb-2.5 px-3">HSN/SAC</th>
+                  <th className="pb-2.5 px-3">Status</th>
+                  <th className="pb-2.5 pl-3 pr-2 text-right">Unit Price</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-600">
+              <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-600 whitespace-nowrap">
                 {products.slice(0, 5).map((row, idx) => {
                   const catName =
                     row.category?.name ||
@@ -790,21 +790,21 @@ export default function ProductDashboard({
 
                   return (
                     <tr key={row.id || idx} className="hover:bg-slate-50/40 transition">
-                      <td className="py-2.5 pl-1 text-slate-900 font-bold">
+                      <td className="py-2.5 pl-2 pr-3 text-slate-900 font-bold">
                         {row.name}
                       </td>
-                      <td className="py-2.5 text-slate-500 font-mono text-[11px]">
+                      <td className="py-2.5 px-3 text-slate-500 font-mono text-[11px]">
                         {row.product_code || "-"}
                       </td>
-                      <td className="py-2.5">
+                      <td className="py-2.5 px-3">
                         <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px]">
                           {catName}
                         </span>
                       </td>
-                      <td className="py-2.5 text-slate-500 text-[11px]">
+                      <td className="py-2.5 px-3 text-slate-500 text-[11px]">
                         {row.hsn_sac_code || "-"}
                       </td>
-                      <td className="py-2.5">
+                      <td className="py-2.5 px-3">
                         <span
                           className={`text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider ${st === "ACTIVE"
                               ? "bg-emerald-100 text-emerald-700"
@@ -818,7 +818,7 @@ export default function ProductDashboard({
                           {st}
                         </span>
                       </td>
-                      <td className="py-2.5 text-right pr-1 font-bold text-slate-900">
+                      <td className="py-2.5 pl-3 pr-2 text-right font-bold text-slate-900">
                         {formatCurrency(row.unit_price)}
                       </td>
                     </tr>

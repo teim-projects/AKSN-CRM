@@ -258,6 +258,7 @@ class SendEmailView(APIView):
 
     def post(self, request, *args, **kwargs):
         to_email = request.data.get('to_email')
+        cc_email = request.data.get('cc_email') or request.data.get('cc')
         subject = (request.data.get('subject') or '').strip()
         # Accept both 'body' and 'message' parameter
         message = (request.data.get('body') or request.data.get('message') or '').strip()
@@ -278,6 +279,15 @@ class SendEmailView(APIView):
         if not recipients:
             return Response({"error": "Invalid recipient email address."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Parse CC list
+        cc_recipients = []
+        if cc_email:
+            if isinstance(cc_email, list):
+                raw_cc = cc_email
+            else:
+                raw_cc = str(cc_email).split(',')
+            cc_recipients = [e.strip() for e in raw_cc if e.strip()]
+
         from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'info@aksninfotech.com')
 
         try:
@@ -285,7 +295,8 @@ class SendEmailView(APIView):
                 subject=subject,
                 body=message,
                 from_email=from_email,
-                to=recipients
+                to=recipients,
+                cc=cc_recipients if cc_recipients else None
             )
             if html_message:
                 email_msg.attach_alternative(html_message, "text/html")
@@ -317,11 +328,15 @@ class SendEmailView(APIView):
                 email_msg.attach(uploaded_file.name, uploaded_file.read(), content_type)
 
             email_msg.send(fail_silently=False)
+            resp_message = f"Email successfully sent to {', '.join(recipients)}"
+            if cc_recipients:
+                resp_message += f" (CC: {', '.join(cc_recipients)})"
             return Response({
                 "status": "success",
                 "success": True,
-                "message": f"Email successfully sent to {', '.join(recipients)}",
+                "message": resp_message,
                 "to": recipients,
+                "cc": cc_recipients,
             }, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({

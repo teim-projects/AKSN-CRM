@@ -637,12 +637,12 @@ export default function TallyIntegrationPage() {
           </div>
 
           {/* Action Buttons in Header - Formatted identically to Lead.jsx */}
-          <div className="mt-3 md:mt-0 flex items-center gap-2 sm:gap-3">
+          <div className="mt-3 md:mt-0 flex flex-wrap items-center gap-2 sm:gap-2.5">
             {/* Sync Now Button */}
             <button
               onClick={() => setIsSyncModalOpen(true)}
               disabled={isSyncing}
-              className="px-4 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className="px-3 sm:px-3.5 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 whitespace-nowrap shrink-0"
               title="Synchronize invoices from Tally (All or Date Range)"
             >
               <MdSync className={`text-slate-500 text-sm ${isSyncing ? "animate-spin text-blue-600" : ""}`} />
@@ -653,14 +653,14 @@ export default function TallyIntegrationPage() {
             {isDisconnected ? (
               <button
                 onClick={() => setIsPairingModalOpen(true)}
-                className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/10 flex items-center gap-1 cursor-pointer"
+                className="px-3 sm:px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-xs shadow-blue-500/10 flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0"
               >
                 <span>+</span> Connect Tally
               </button>
             ) : (
               <button
                 onClick={handleDisconnect}
-                className="px-3.5 py-1.5 bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold rounded-lg transition-colors shadow-sm flex items-center gap-1 cursor-pointer"
+                className="px-3 sm:px-3.5 py-1.5 bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold rounded-lg transition-colors shadow-xs flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0"
                 title="Disconnect Tally connector"
               >
                 <MdLinkOff className="text-sm" />
@@ -671,15 +671,16 @@ export default function TallyIntegrationPage() {
         </div>
 
         {/* ========================================================================= */}
-        {/* SUB-NAVIGATION TABS (MATCHING FILTER BUTTONS STYLE) */}
+        {/* SUB-NAVIGATION TABS & SEARCH FILTERS */}
         {/* ========================================================================= */}
-        <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 border-b border-slate-200/80 pb-2">
+          {/* TABS BAR */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
             <button
               onClick={() => setActiveTab("invoices")}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+              className={`px-3 sm:px-4 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 activeTab === "invoices"
-                  ? "bg-blue-600 text-white shadow-sm shadow-blue-500/10"
+                  ? "bg-blue-600 text-white shadow-xs shadow-blue-500/10"
                   : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
               }`}
             >
@@ -688,9 +689,9 @@ export default function TallyIntegrationPage() {
 
             <button
               onClick={() => setActiveTab("connection")}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+              className={`px-3 sm:px-4 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 activeTab === "connection"
-                  ? "bg-blue-600 text-white shadow-sm shadow-blue-500/10"
+                  ? "bg-blue-600 text-white shadow-xs shadow-blue-500/10"
                   : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
               }`}
             >
@@ -699,9 +700,9 @@ export default function TallyIntegrationPage() {
 
             <button
               onClick={() => setActiveTab("history")}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+              className={`px-3 sm:px-4 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 activeTab === "history"
-                  ? "bg-blue-600 text-white shadow-sm shadow-blue-500/10"
+                  ? "bg-blue-600 text-white shadow-xs shadow-blue-500/10"
                   : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
               }`}
             >
@@ -711,14 +712,14 @@ export default function TallyIntegrationPage() {
 
           {/* Quick Search & Filter when on Invoices Tab */}
           {activeTab === "invoices" && (
-            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <div className="flex flex-wrap items-center gap-2">
               <input
                 type="text"
                 placeholder="Search invoice or party..."
                 value={invoiceSearch}
                 onChange={(e) => setInvoiceSearch(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && fetchInvoices()}
-                className="w-44 sm:w-48 px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                className="flex-1 sm:flex-initial sm:w-48 min-w-[150px] px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
               />
               <select
                 value={voucherTypeFilter}
@@ -726,12 +727,12 @@ export default function TallyIntegrationPage() {
                   setVoucherTypeFilter(e.target.value);
                   setInvoicePage(1);
                 }}
-                className="px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white text-slate-700"
+                className="px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white text-slate-700 shrink-0"
               >
                 <option value="">All Types</option>
                 <option value="Sales">Sales</option>
               </select>
-              <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-600">
+              <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-600 shrink-0">
                 <span className="text-[10.5px] text-slate-400 font-medium">From:</span>
                 <input
                   type="date"
