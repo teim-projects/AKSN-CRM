@@ -15,13 +15,12 @@ logger = logging.getLogger(__name__)
 def get_user_display_name(user_obj):
     if not user_obj:
         return "-"
-    fname = getattr(user_obj, 'first_name', '') or ''
-    lname = getattr(user_obj, 'last_name', '') or ''
-    full_name = f"{fname} {lname}".strip() or getattr(user_obj, 'username', '') or getattr(user_obj, 'email', '')
+    first_name = (getattr(user_obj, 'first_name', '') or '').strip()
+    name = first_name or getattr(user_obj, 'username', '') or getattr(user_obj, 'email', '') or "-"
     mobile = getattr(user_obj, 'mobile_no', '') or getattr(user_obj, 'mobile_number', '') or getattr(user_obj, 'phone', '')
     if mobile:
-        return f"{full_name} ({mobile})"
-    return full_name
+        return f"{name} ({mobile})"
+    return name
 
 
 import re
@@ -70,17 +69,35 @@ def _build_quotation_pdf_context(quotation, version):
     total_quantity = Decimal('0')
     subtotal = Decimal('0')
     gst_total = Decimal('0')
+    total_extra_discount = Decimal('0')
+    has_extra_discount = False
 
     for idx, item in enumerate(items, 1):
         qty = Decimal(str(item.quantity or 0))
         rate = Decimal(str(item.unit_price or 0))
         base = Decimal(str(item.base_amount or (qty * rate)))
         gst_amt = Decimal(str(item.gst_amount or 0))
-        total_item = Decimal(str(item.total_with_gst or (base + gst_amt)))
+        if not gst_amt and getattr(item, 'gst_percentage', None):
+            gst_amt = (base * Decimal(str(item.gst_percentage))) / Decimal('100')
+        
+        gross_total = base + gst_amt
+        extra_disc = Decimal(str(getattr(item, 'extra_discount', 0) or 0))
+        extra_disc_amt = Decimal(str(getattr(item, 'extra_discount_amount', 0) or 0))
+        if extra_disc > Decimal('0'):
+            has_extra_discount = True
+            if not extra_disc_amt:
+                extra_disc_amt = (gross_total * extra_disc) / Decimal('100')
+        else:
+            extra_disc_amt = Decimal('0')
+
+        total_item = gross_total - extra_disc_amt
+        if getattr(item, 'total_with_gst', None) and not extra_disc:
+            total_item = Decimal(str(item.total_with_gst))
 
         total_quantity += qty
         subtotal += base
         gst_total += gst_amt
+        total_extra_discount += extra_disc_amt
 
         item_desc = (item.description or '').strip()
         if not item_desc and item.product_id:
@@ -105,6 +122,8 @@ def _build_quotation_pdf_context(quotation, version):
             'unit': item.unit or 'NOS',
             'unit_price': rate,
             'gst_percentage': item.gst_percentage,
+            'extra_discount': extra_disc,
+            'extra_discount_amount': extra_disc_amt,
             'base_amount': base,
             'gst_amount': gst_amt,
             'total_with_gst': total_item,
@@ -112,7 +131,7 @@ def _build_quotation_pdf_context(quotation, version):
 
     gst_amount = version.gst_amount or gst_total
     subtotal = version.subtotal or subtotal
-    grand_total = version.grand_total or (subtotal + gst_amount)
+    grand_total = version.grand_total or ((subtotal + gst_amount) - total_extra_discount)
 
     if subtotal and gst_amount:
         gst_percentage = (gst_amount / subtotal) * Decimal('100')
@@ -175,7 +194,7 @@ def _build_quotation_pdf_context(quotation, version):
     state = quotation.state or (lead.state if lead else '')
     gst_number = quotation.gst_number or (lead.gst_number if lead else '')
 
-    # Assigned Executive from Lead (First Name, Last Name, Number)
+    # Assigned Executive from Lead (First Name, Number)
     assigned_executive_str = "-"
     if lead and getattr(lead, 'assigned_executive', None):
         exec_obj = lead.assigned_executive
@@ -252,6 +271,26 @@ def _build_quotation_pdf_context(quotation, version):
         if line.strip()
     ]
 
+    gst_type = getattr(version, 'gst_type', None) or getattr(quotation, 'gst_type', 'CGST_SGST') or 'CGST_SGST'
+    gst_type = str(gst_type).strip().upper()
+
+    if gst_type == 'IGST':
+        igst_amount = getattr(version, 'igst_amount', None)
+        if not igst_amount:
+            igst_amount = gst_amount or Decimal('0')
+        cgst_amount = Decimal('0')
+        sgst_amount = Decimal('0')
+    else:
+        igst_amount = Decimal('0')
+        cgst_amount = getattr(version, 'cgst_amount', None)
+        sgst_amount = getattr(version, 'sgst_amount', None)
+        if (not cgst_amount or cgst_amount == Decimal('0')) and (not sgst_amount or sgst_amount == Decimal('0')) and gst_amount:
+            cgst_amount = gst_amount / Decimal('2')
+            sgst_amount = gst_amount / Decimal('2')
+        else:
+            cgst_amount = cgst_amount or Decimal('0')
+            sgst_amount = sgst_amount or Decimal('0')
+
     return {
         'quotation': quotation,
         'version': version,
@@ -272,12 +311,16 @@ def _build_quotation_pdf_context(quotation, version):
         'thank_you_lines': thank_you_lines,
         'quotation_items': formatted_items,
         'terms_list': formatted_terms,
+        'gst_type': gst_type,
         'subtotal': subtotal,
         'gst_amount': gst_amount,
-        'sgst_amount': (gst_amount / Decimal('2')) if gst_amount else Decimal('0'),
-        'cgst_amount': (gst_amount / Decimal('2')) if gst_amount else Decimal('0'),
+        'igst_amount': igst_amount,
+        'sgst_amount': sgst_amount,
+        'cgst_amount': cgst_amount,
         'gst_percentage': gst_percentage,
         'grand_total': grand_total,
+        'has_extra_discount': has_extra_discount,
+        'total_extra_discount': total_extra_discount,
         'total_quantity': total_quantity,
         'logo_base64': logo_base64,
         'quotation_for': getattr(quotation, 'quotation_for', 'Pune') or 'Pune',

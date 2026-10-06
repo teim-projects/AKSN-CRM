@@ -266,6 +266,7 @@ class QuotationVersion(models.Model):
     sgst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     igst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     gst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    extra_discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Extra Discount Amount")
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     grand_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     terms_and_conditions = models.JSONField(blank=True, null=True, default=list, verbose_name="Terms & Conditions")
@@ -338,6 +339,19 @@ class QuotationItem(models.Model):
         validators=[MinValueValidator(0), MaxValueValidator(100)],
         verbose_name="GST %"
     )
+    extra_discount = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        verbose_name="Extra Discount %"
+    )
+    extra_discount_amount = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        default=0,
+        verbose_name="Extra Discount Amount"
+    )
     
     # Calculated fields
     base_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -349,7 +363,12 @@ class QuotationItem(models.Model):
     def save(self, *args, **kwargs):
         self.base_amount = self.quantity * self.unit_price
         self.gst_amount = (self.base_amount * self.gst_percentage) / 100
-        self.total_with_gst = self.base_amount + self.gst_amount
+        gross_total = self.base_amount + self.gst_amount
+        if self.extra_discount:
+            self.extra_discount_amount = (gross_total * Decimal(str(self.extra_discount))) / Decimal('100')
+        else:
+            self.extra_discount_amount = Decimal('0')
+        self.total_with_gst = gross_total - self.extra_discount_amount
         super().save(*args, **kwargs)
     
     def __str__(self):

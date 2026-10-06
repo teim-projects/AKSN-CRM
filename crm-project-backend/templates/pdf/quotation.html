@@ -10,7 +10,7 @@
         @page {
             size: A4 portrait;
             margin-top: 150px;
-            margin-bottom: 55px;
+            margin-bottom: 65px;
             margin-left: 0;
             margin-right: 0;
 
@@ -131,24 +131,34 @@
         .footer-body {
             background-color: #eef2f4;
             text-align: center;
-            padding: 4px 0 16px 0;
+            padding: 3px 0 12px 0;
             margin: 0;
             box-sizing: border-box;
             width: 100%;
         }
 
         .footer-contact {
-            font-size: 10px;
+            font-size: 9.5px;
             font-weight: bold;
             color: #3b7b99;
             letter-spacing: 0.2px;
             margin: 0;
             padding: 0;
+            line-height: 1.35;
         }
 
         .footer-contact a {
             color: #3b7b99;
             text-decoration: none;
+        }
+
+        .footer-timing {
+            font-size: 9px;
+            font-weight: bold;
+            color: #3b7b99;
+            letter-spacing: 0.2px;
+            margin-top: 2px;
+            line-height: 1.35;
         }
 
         /* MAIN CONTENT AREA */
@@ -500,7 +510,7 @@
                     <td style="width: 50%;">
                         <div class="logo-container">
                             {% if logo_base64 %}
-                            <img src="{{ logo_base64 }}" style="max-height: 55px; max-width: 220px; object-fit: contain; display: block;" alt="AKSN Logo" />
+                            <img src="{{ logo_base64 }}" style="max-height: 70px; max-width: 250px; object-fit: contain; display: block;" alt="AKSN Logo" />
                             {% else %}
                             <table style="border-collapse: collapse;">
                                 <tr>
@@ -557,6 +567,9 @@
             <div class="footer-contact">
                 Phone: 020-2449 9991 &nbsp;|&nbsp; Email: info@aksninfotech.com &nbsp;|&nbsp; <a href="https://www.aksninfotech.com/" target="_blank">www.aksninfotech.com</a>
             </div>
+            <div class="footer-timing">
+                Office Time: 10:00AM to 7:00 PM &nbsp;|&nbsp; Working Days: Monday to Saturday
+            </div>
         </div>
     </div>
 
@@ -608,11 +621,20 @@
                 <table class="items-table">
                     <thead>
                         <tr>
-                            <th style="width: 44%; text-align: left;" class="text-left">Description</th>
-                            <th style="width: 14%; text-align: center;" class="text-center">Quantity</th>
+                            {% if has_extra_discount %}
+                            <th style="width: 32%; text-align: left;" class="text-left">Products / Services</th>
+                            <th style="width: 10%; text-align: center;" class="text-center">Quantity</th>
+                            <th style="width: 12%; text-align: right;" class="text-right">Unit Price</th>
+                            <th style="width: 16%; text-align: right;" class="text-right">GST %</th>
+                            <th style="width: 16%; text-align: right;" class="text-right">Extra Discount %</th>
+                            <th style="width: 14%; text-align: right;" class="text-right">Amount</th>
+                            {% else %}
+                            <th style="width: 42%; text-align: left;" class="text-left">Products / Services</th>
+                            <th style="width: 12%; text-align: center;" class="text-center">Quantity</th>
                             <th style="width: 14%; text-align: right;" class="text-right">Unit Price</th>
-                            <th style="width: 13%; text-align: right;" class="text-right">Taxes</th>
+                            <th style="width: 17%; text-align: right;" class="text-right">GST %</th>
                             <th style="width: 15%; text-align: right;" class="text-right">Amount</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -638,12 +660,25 @@
                             </td>
                             <td class="text-center" style="text-align: center; color: #0f172a; font-weight: 500;">{{ item.quantity|floatformat:2 }} {{ item.unit }}</td>
                             <td class="text-right" style="text-align: right; color: #0f172a; font-weight: 500;">{{ item.unit_price|floatformat:2|intcomma }}</td>
-                            <td class="text-right" style="text-align: right; color: #0f172a; font-weight: 500;">GST {{ item.gst_percentage|default:"18"|floatformat:0 }}%</td>
+                            <td class="text-right" style="text-align: right; color: #0f172a; font-weight: 500; white-space: nowrap;">
+                                {% if item.gst_percentage is not None %}{{ item.gst_percentage|floatformat:"-2" }}%{% else %}18%{% endif %}
+                                <span style="font-size: 8.5px; color: #475569;">(₹ {{ item.gst_amount|floatformat:2|intcomma }})</span>
+                            </td>
+                            {% if has_extra_discount %}
+                            <td class="text-right" style="text-align: right; color: #0f172a; font-weight: 500; white-space: nowrap;">
+                                {% if item.extra_discount and item.extra_discount > 0 %}
+                                {{ item.extra_discount|floatformat:"-2" }}%
+                                <span style="font-size: 8.5px; color: #475569;">(₹ {{ item.extra_discount_amount|floatformat:2|intcomma }})</span>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            {% endif %}
                             <td class="amount-col" style="text-align: right;">₹ {{ item.total_with_gst|floatformat:2|intcomma }}</td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="5" class="text-center" style="color: #64748b; padding: 16px;">No quotation items found.</td>
+                            <td colspan="{% if has_extra_discount %}6{% else %}5{% endif %}" class="text-center" style="color: #64748b; padding: 16px;">No quotation items found.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -656,11 +691,16 @@
                     <thead>
                         <tr>
                             <th>Untaxed Amount</th>
-                            {% if cgst_amount and sgst_amount %}
+                            {% if gst_type == "IGST" %}
+                            <th>IGST</th>
+                            {% elif cgst_amount and sgst_amount %}
                             <th>SGST</th>
                             <th>CGST</th>
                             {% else %}
                             <th>GST ({{ gst_percentage|default:"18"|floatformat:0 }}%)</th>
+                            {% endif %}
+                            {% if total_extra_discount and total_extra_discount > 0 %}
+                            <th>Extra Discount</th>
                             {% endif %}
                             <th class="grand-header">Total</th>
                         </tr>
@@ -668,11 +708,16 @@
                     <tbody>
                         <tr>
                             <td>₹ {{ subtotal|floatformat:2|intcomma }}</td>
-                            {% if cgst_amount and sgst_amount %}
+                            {% if gst_type == "IGST" %}
+                            <td>₹ {{ igst_amount|floatformat:2|intcomma }}</td>
+                            {% elif cgst_amount and sgst_amount %}
                             <td>₹ {{ sgst_amount|floatformat:2|intcomma }}</td>
                             <td>₹ {{ cgst_amount|floatformat:2|intcomma }}</td>
                             {% else %}
                             <td>₹ {{ gst_amount|floatformat:2|intcomma }}</td>
+                            {% endif %}
+                            {% if total_extra_discount and total_extra_discount > 0 %}
+                            <td style="color: #dc2626;">- ₹ {{ total_extra_discount|floatformat:2|intcomma }}</td>
                             {% endif %}
                             <td class="grand-val">₹ {{ grand_total|floatformat:2|intcomma }}</td>
                         </tr>

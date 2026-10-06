@@ -128,7 +128,7 @@ class QuotationItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuotationItem
         fields = "__all__"
-        read_only_fields = ("quotation_version", "base_amount", "gst_amount", "total_with_gst")
+        read_only_fields = ("quotation_version", "base_amount", "gst_amount", "extra_discount_amount", "total_with_gst")
 
 
 class QuotationVersionSerializer(serializers.ModelSerializer):
@@ -149,6 +149,7 @@ class QuotationVersionSerializer(serializers.ModelSerializer):
             "sgst_amount",
             "igst_amount",
             "gst_amount",
+            "extra_discount_amount",
             "total_amount",
             "grand_total",
         )
@@ -197,43 +198,56 @@ class QuotationSerializer(serializers.ModelSerializer):
 
     def calculate_totals(self, version, items_data):
         """Calculate all totals for the version"""
-        version_subtotal = 0
-        version_gst_total = 0
+        version_subtotal = Decimal('0')
+        version_gst_total = Decimal('0')
+        version_discount_total = Decimal('0')
 
         for item_data in items_data:
             qty = Decimal(str(item_data.get("quantity", 1)))
             price = Decimal(str(item_data.get("unit_price", 0)))
             gst_percent = Decimal(str(item_data.get("gst_percentage", 18)))
+            extra_disc = Decimal(str(item_data.get("extra_discount", 0) or 0))
 
             base_amount = qty * price
-            gst_value = (base_amount * gst_percent) / 100
-            total_with_gst = base_amount + gst_value
+            gst_value = (base_amount * gst_percent) / Decimal('100')
+            gross_total = base_amount + gst_value
+            extra_disc_amt = (gross_total * extra_disc) / Decimal('100') if extra_disc else Decimal('0')
+            total_with_gst = gross_total - extra_disc_amt
 
             version_subtotal += base_amount
             version_gst_total += gst_value
+            version_discount_total += extra_disc_amt
+
+            # Prepare item kwargs without duplicates
+            create_data = dict(item_data)
+            create_data.pop('extra_discount', None)
+            create_data.pop('extra_discount_amount', None)
 
             # Create the item with calculated values
             QuotationItem.objects.create(
                 quotation_version=version,
                 base_amount=base_amount,
                 gst_amount=gst_value,
+                extra_discount=extra_disc,
+                extra_discount_amount=extra_disc_amt,
                 total_with_gst=total_with_gst,
-                **item_data
+                **create_data
             )
 
         # GST Split
         if version.gst_type == "CGST_SGST":
-            version.cgst_amount = version_gst_total / 2
-            version.sgst_amount = version_gst_total / 2
-            version.igst_amount = 0
+            version.cgst_amount = version_gst_total / Decimal('2')
+            version.sgst_amount = version_gst_total / Decimal('2')
+            version.igst_amount = Decimal('0')
         else:
             version.igst_amount = version_gst_total
-            version.cgst_amount = 0
-            version.sgst_amount = 0
+            version.cgst_amount = Decimal('0')
+            version.sgst_amount = Decimal('0')
 
         version.subtotal = version_subtotal
         version.gst_amount = version_gst_total
-        version.total_amount = version_subtotal + version_gst_total
+        version.extra_discount_amount = version_discount_total
+        version.total_amount = (version_subtotal + version_gst_total) - version_discount_total
         version.grand_total = version.total_amount
         version.save()
 
@@ -406,42 +420,55 @@ class QuotationCreateSerializer(serializers.ModelSerializer):
 
     def calculate_totals(self, version, items_data):
         """Calculate all totals for the version"""
-        version_subtotal = 0
-        version_gst_total = 0
+        version_subtotal = Decimal('0')
+        version_gst_total = Decimal('0')
+        version_discount_total = Decimal('0')
 
         for item_data in items_data:
             qty = Decimal(str(item_data.get("quantity", 1)))
             price = Decimal(str(item_data.get("unit_price", 0)))
             gst_percent = Decimal(str(item_data.get("gst_percentage", 18)))
+            extra_disc = Decimal(str(item_data.get("extra_discount", 0) or 0))
 
             base_amount = qty * price
-            gst_value = (base_amount * gst_percent) / 100
-            total_with_gst = base_amount + gst_value
+            gst_value = (base_amount * gst_percent) / Decimal('100')
+            gross_total = base_amount + gst_value
+            extra_disc_amt = (gross_total * extra_disc) / Decimal('100') if extra_disc else Decimal('0')
+            total_with_gst = gross_total - extra_disc_amt
 
             version_subtotal += base_amount
             version_gst_total += gst_value
+            version_discount_total += extra_disc_amt
+
+            # Prepare item kwargs without duplicates
+            create_data = dict(item_data)
+            create_data.pop('extra_discount', None)
+            create_data.pop('extra_discount_amount', None)
 
             # Create the item with calculated values
             QuotationItem.objects.create(
                 quotation_version=version,
                 base_amount=base_amount,
                 gst_amount=gst_value,
+                extra_discount=extra_disc,
+                extra_discount_amount=extra_disc_amt,
                 total_with_gst=total_with_gst,
-                **item_data
+                **create_data
             )
 
         # GST Split
         if version.gst_type == "CGST_SGST":
-            version.cgst_amount = version_gst_total / 2
-            version.sgst_amount = version_gst_total / 2
-            version.igst_amount = 0
+            version.cgst_amount = version_gst_total / Decimal('2')
+            version.sgst_amount = version_gst_total / Decimal('2')
+            version.igst_amount = Decimal('0')
         else:
             version.igst_amount = version_gst_total
-            version.cgst_amount = 0
-            version.sgst_amount = 0
+            version.cgst_amount = Decimal('0')
+            version.sgst_amount = Decimal('0')
 
         version.subtotal = version_subtotal
         version.gst_amount = version_gst_total
-        version.total_amount = version_subtotal + version_gst_total
+        version.extra_discount_amount = version_discount_total
+        version.total_amount = (version_subtotal + version_gst_total) - version_discount_total
         version.grand_total = version.total_amount
         version.save()

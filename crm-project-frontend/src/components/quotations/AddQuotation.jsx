@@ -111,6 +111,7 @@ function mapLeadProductsToItems(rawProds, catalog = []) {
         unit: itemUnit,
         unit_price: itemUnitPrice,
         gst_percentage: itemGst,
+        extra_discount: 0,
       };
     })
     .filter(Boolean);
@@ -161,6 +162,12 @@ export default function AddQuotation({ id, leadData, onBack }) {
   const [searchingLead, setSearchingLead] = useState(false);
   const [leadFound, setLeadFound] = useState(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // Field lead search & duplicate selection states (company_name, contact_person, email_address)
+  const [searchField, setSearchField] = useState(null);
+  const [searchingFieldLead, setSearchingFieldLead] = useState(false);
+  const [duplicateLeads, setDuplicateLeads] = useState([]);
+  const [showDuplicateDropdown, setShowDuplicateDropdown] = useState(false);
 
   // Terms & Conditions states
   const [termCategories, setTermCategories] = useState([]);
@@ -342,6 +349,7 @@ export default function AddQuotation({ id, leadData, onBack }) {
               unit: item.unit || "NOS",
               unit_price: parseFloat(item.unit_price) || 0,
               gst_percentage: parseFloat(item.gst_percentage) || 18,
+              extra_discount: parseFloat(item.extra_discount) || 0,
             }))
           );
         }
@@ -425,7 +433,55 @@ export default function AddQuotation({ id, leadData, onBack }) {
     populateLeadItems();
   }, [isEdit, leadData, fetchProducts]);
 
-  // Search lead by mobile number
+  // Centralized helper to map lead details into quotation form & items
+  const applyLeadData = useCallback(
+    async (lead, overrideMobile = null) => {
+      if (!lead) return;
+      setLeadFound(lead);
+      setFormData((prev) => ({
+        ...prev,
+        lead: lead.id || prev.lead || "",
+        company_name: lead.company_name || "",
+        contact_person: lead.contact_person || "",
+        mobile_number: lead.mobile_number || overrideMobile || prev.mobile_number || "",
+        email_address: lead.email_address || "",
+        linkedin_profile_url: lead.linkedin_profile_url || "",
+        gst_number: lead.gst_number || "",
+        pan_number: lead.pan_number || "",
+        msme_number: lead.msme_number || "",
+        state: lead.state || "",
+        city: lead.city || "",
+        address: lead.address || "",
+        industry_type: lead.industry_type || "",
+        subject: lead.company_name ? `Quotation for ${lead.company_name}` : prev.subject,
+      }));
+
+      // Automatically populate quotation items with product details from lead
+      if (!isEdit) {
+        let catalog = availableProductsRef.current;
+        if (!catalog || catalog.length === 0) {
+          catalog = await fetchProducts();
+        }
+        const prods = lead.product_interested || lead.product_interested_list || lead.product_purchased || [];
+        const mapped = mapLeadProductsToItems(prods, catalog);
+        if (mapped.length > 0) {
+          setItems((prev) => {
+            if (!prev || prev.length === 0) return mapped;
+            const existingNames = new Set(
+              prev.map((it) => (it.product_name || "").toLowerCase().trim())
+            );
+            const newItems = mapped.filter(
+              (it) => !existingNames.has((it.product_name || "").toLowerCase().trim())
+            );
+            return [...prev, ...newItems];
+          });
+        }
+      }
+    },
+    [isEdit, fetchProducts]
+  );
+
+  // Search lead by mobile number (kept untouched & unique)
   const searchLeadByMobile = useCallback(
     async (mobile) => {
       const cleanMobile = String(mobile || "").replace(/\D/g, "");
@@ -485,46 +541,7 @@ export default function AddQuotation({ id, leadData, onBack }) {
         }
 
         if (lead) {
-          setLeadFound(lead);
-          setFormData((prev) => ({
-            ...prev,
-            lead: lead.id || "",
-            company_name: lead.company_name || "",
-            contact_person: lead.contact_person || "",
-            mobile_number: lead.mobile_number || mobile,
-            email_address: lead.email_address || "",
-            linkedin_profile_url: lead.linkedin_profile_url || "",
-            gst_number: lead.gst_number || "",
-            pan_number: lead.pan_number || "",
-            msme_number: lead.msme_number || "",
-            state: lead.state || "",
-            city: lead.city || "",
-            address: lead.address || "",
-            industry_type: lead.industry_type || "",
-            subject: lead.company_name ? `Quotation for ${lead.company_name}` : prev.subject,
-          }));
-
-          // Automatically populate quotation items with product details from lead
-          if (!isEdit) {
-            let catalog = availableProductsRef.current;
-            if (!catalog || catalog.length === 0) {
-              catalog = await fetchProducts();
-            }
-            const prods = lead.product_interested || lead.product_interested_list || lead.product_purchased || [];
-            const mapped = mapLeadProductsToItems(prods, catalog);
-            if (mapped.length > 0) {
-              setItems((prev) => {
-                if (!prev || prev.length === 0) return mapped;
-                const existingNames = new Set(
-                  prev.map((it) => (it.product_name || "").toLowerCase().trim())
-                );
-                const newItems = mapped.filter(
-                  (it) => !existingNames.has((it.product_name || "").toLowerCase().trim())
-                );
-                return [...prev, ...newItems];
-              });
-            }
-          }
+          await applyLeadData(lead, mobile);
         } else {
           setLeadFound(null);
           if (!isEdit) {
@@ -549,7 +566,100 @@ export default function AddQuotation({ id, leadData, onBack }) {
         setSearchingLead(false);
       }
     },
-    [isEdit, fetchProducts]
+    [isEdit, applyLeadData]
+  );
+
+  // Search lead by company_name, contact_person, or email_address
+  const searchLeadByField = useCallback(
+    async (field, query) => {
+      const q = String(query || "").trim();
+      if (!q || q.length < 3) {
+        setDuplicateLeads([]);
+        setShowDuplicateDropdown(false);
+        return;
+      }
+
+      setSearchingFieldLead(true);
+      setSearchField(field);
+
+      try {
+        const res = await api.get(`lead/lead/?search=${encodeURIComponent(q)}`);
+        const leadData = Array.isArray(res.data) ? res.data : res.data?.results || [];
+
+        let custData = [];
+        try {
+          const custRes = await api.get(`lead/customers/?search=${encodeURIComponent(q)}`);
+          custData = Array.isArray(custRes.data) ? custRes.data : custRes.data?.results || [];
+        } catch (e) {
+          // ignore customer search error
+        }
+
+        const formattedCusts = custData.map((c) => ({
+          id: c.lead || null,
+          company_name: c.name || "",
+          contact_person: c.contact_person || "",
+          mobile_number: c.contact_number || "",
+          email_address: c.email || "",
+          linkedin_profile_url: "",
+          gst_number: c.gst_number || "",
+          pan_number: c.pan_number || "",
+          msme_number: c.msme_number || "",
+          state: c.state || "",
+          city: c.city || "",
+          address: c.billing_address || "",
+          industry_type: c.industry_category || "",
+          product_interested: c.product_purchased || (c.lead_details?.product_interested || []),
+        }));
+
+        const allCandidates = [...leadData, ...formattedCusts];
+        const lowerQ = q.toLowerCase();
+
+        const matched = allCandidates.filter((item) => {
+          if (field === "company_name") {
+            return (item.company_name || "").toLowerCase().includes(lowerQ);
+          }
+          if (field === "contact_person") {
+            return (item.contact_person || "").toLowerCase().includes(lowerQ);
+          }
+          if (field === "email_address") {
+            return (item.email_address || "").toLowerCase().includes(lowerQ);
+          }
+          return false;
+        });
+
+        // Deduplicate candidates
+        const uniqueMatches = [];
+        const seen = new Set();
+        for (const m of matched) {
+          const key = `${m.id || ""}_${String(m.mobile_number || "").replace(/\D/g, "")}_${(m.company_name || "").toLowerCase().trim()}_${(m.contact_person || "").toLowerCase().trim()}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            uniqueMatches.push(m);
+          }
+        }
+
+        if (uniqueMatches.length === 1) {
+          // Exactly 1 lead found (no duplicates) -> directly fetch!
+          setDuplicateLeads([]);
+          setShowDuplicateDropdown(false);
+          await applyLeadData(uniqueMatches[0]);
+        } else if (uniqueMatches.length > 1) {
+          // Multiple leads found (duplicates) -> show dropdown to pick
+          setDuplicateLeads(uniqueMatches);
+          setShowDuplicateDropdown(true);
+        } else {
+          setDuplicateLeads([]);
+          setShowDuplicateDropdown(false);
+        }
+      } catch (err) {
+        console.error("Error searching lead by field:", err);
+        setDuplicateLeads([]);
+        setShowDuplicateDropdown(false);
+      } finally {
+        setSearchingFieldLead(false);
+      }
+    },
+    [applyLeadData]
   );
 
   function debounce(fn, delay) {
@@ -560,11 +670,30 @@ export default function AddQuotation({ id, leadData, onBack }) {
     };
   }
 
-  const debouncedMobileSearch = useCallback(
-    debounce((mobile) => {
-      searchLeadByMobile(mobile);
-    }, 500),
-    [searchLeadByMobile]
+  const searchLeadByMobileRef = useRef();
+  searchLeadByMobileRef.current = searchLeadByMobile;
+
+  const debouncedMobileSearch = useMemo(
+    () =>
+      debounce((mobile) => {
+        if (searchLeadByMobileRef.current) {
+          searchLeadByMobileRef.current(mobile);
+        }
+      }, 500),
+    []
+  );
+
+  const searchLeadByFieldRef = useRef();
+  searchLeadByFieldRef.current = searchLeadByField;
+
+  const debouncedFieldSearch = useMemo(
+    () =>
+      debounce((field, query) => {
+        if (searchLeadByFieldRef.current) {
+          searchLeadByFieldRef.current(field, query);
+        }
+      }, 400),
+    []
   );
 
   const handleMobileChange = (e) => {
@@ -574,6 +703,39 @@ export default function AddQuotation({ id, leadData, onBack }) {
       debouncedMobileSearch(value);
     } else if (value.length < 10 && value.length > 0) {
       setLeadFound(null);
+    }
+  };
+
+  const handleCompanyNameChange = (e) => {
+    const val = e.target.value;
+    setFormData((prev) => ({ ...prev, company_name: val }));
+    if (val.trim().length >= 3) {
+      debouncedFieldSearch("company_name", val);
+    } else {
+      setDuplicateLeads([]);
+      setShowDuplicateDropdown(false);
+    }
+  };
+
+  const handleContactPersonChange = (e) => {
+    const val = e.target.value;
+    setFormData((prev) => ({ ...prev, contact_person: val }));
+    if (val.trim().length >= 3) {
+      debouncedFieldSearch("contact_person", val);
+    } else {
+      setDuplicateLeads([]);
+      setShowDuplicateDropdown(false);
+    }
+  };
+
+  const handleEmailChange = (e) => {
+    const val = e.target.value;
+    setFormData((prev) => ({ ...prev, email_address: val }));
+    if (val.trim().length >= 3) {
+      debouncedFieldSearch("email_address", val);
+    } else {
+      setDuplicateLeads([]);
+      setShowDuplicateDropdown(false);
     }
   };
 
@@ -603,6 +765,7 @@ export default function AddQuotation({ id, leadData, onBack }) {
         unit: product.unit || "NOS",
         unit_price: parseFloat(product.unit_price) || 0,
         gst_percentage: parseFloat(product.gst_percentage) || 18,
+        extra_discount: 0,
       },
     ]);
   };
@@ -690,23 +853,28 @@ export default function AddQuotation({ id, leadData, onBack }) {
   const calculateTotals = useMemo(() => {
     let subtotal = 0;
     let totalGst = 0;
+    let totalExtraDiscount = 0;
     let grandTotal = 0;
 
     items.forEach((item) => {
       const qty = parseFloat(item.quantity) || 0;
       const price = parseFloat(item.unit_price) || 0;
       const gst = parseFloat(item.gst_percentage) || 18;
+      const extraDisc = parseFloat(item.extra_discount) || 0;
 
       const base = qty * price;
       const gstAmount = (base * gst) / 100;
-      const total = base + gstAmount;
+      const grossTotal = base + gstAmount;
+      const discountAmount = (grossTotal * extraDisc) / 100;
+      const total = grossTotal - discountAmount;
 
       subtotal += base;
       totalGst += gstAmount;
+      totalExtraDiscount += discountAmount;
       grandTotal += total;
     });
 
-    return { subtotal, totalGst, grandTotal };
+    return { subtotal, totalGst, totalExtraDiscount, grandTotal };
   }, [items]);
 
   // Next step validation
@@ -785,6 +953,7 @@ export default function AddQuotation({ id, leadData, onBack }) {
         unit: item.unit || "NOS",
         unit_price: parseFloat(item.unit_price) || 0,
         gst_percentage: parseFloat(item.gst_percentage) || 18,
+        extra_discount: parseFloat(item.extra_discount) || 0,
       })),
     };
 
@@ -947,49 +1116,184 @@ export default function AddQuotation({ id, leadData, onBack }) {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1">
+                      <div className="space-y-1 relative">
                         <label className="block text-xs font-semibold text-slate-600">
                           Company Name *
                         </label>
-                        <input
-                          type="text"
-                          value={formData.company_name}
-                          onChange={(e) =>
-                            setFormData((prev) => ({ ...prev, company_name: e.target.value }))
-                          }
-                          className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
-                          placeholder="Company Name"
-                          required
-                        />
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={formData.company_name}
+                            onChange={handleCompanyNameChange}
+                            onFocus={() => {
+                              if (duplicateLeads.length > 1 && searchField === "company_name") {
+                                setShowDuplicateDropdown(true);
+                              }
+                            }}
+                            onBlur={() => setTimeout(() => setShowDuplicateDropdown(false), 250)}
+                            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                            placeholder="Company Name"
+                            required
+                          />
+                          {searchingFieldLead && searchField === "company_name" && (
+                            <div className="absolute right-3 top-2.5">
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                            </div>
+                          )}
+                        </div>
+                        {showDuplicateDropdown && searchField === "company_name" && duplicateLeads.length > 1 && (
+                          <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto divide-y divide-slate-100">
+                            <div className="px-3 py-1.5 bg-slate-50 text-[11px] font-semibold text-slate-600 uppercase tracking-wider sticky top-0 flex items-center justify-between">
+                              <span>Multiple leads found ({duplicateLeads.length}) - Select client:</span>
+                              <button
+                                type="button"
+                                onClick={() => setShowDuplicateDropdown(false)}
+                                className="text-slate-400 hover:text-slate-600 text-xs px-1"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                            {duplicateLeads.map((item, idx) => (
+                              <div
+                                key={item.id || idx}
+                                onMouseDown={() => {
+                                  applyLeadData(item);
+                                  setShowDuplicateDropdown(false);
+                                }}
+                                className="px-3 py-2 text-xs hover:bg-blue-50 cursor-pointer transition-colors group"
+                              >
+                                <div className="font-semibold text-slate-800 group-hover:text-blue-700 flex items-center justify-between">
+                                  <span>{item.company_name || "No Company"}</span>
+                                  {item.city && <span className="text-[10px] font-normal text-slate-400">{item.city}</span>}
+                                </div>
+                                <div className="text-[11px] text-slate-500 mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                                  {item.contact_person && <span>👤 {item.contact_person}</span>}
+                                  {item.mobile_number && <span>📞 {item.mobile_number}</span>}
+                                  {item.email_address && <span>✉️ {item.email_address}</span>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
-                      <div className="space-y-1">
+                      <div className="space-y-1 relative">
                         <label className="block text-xs font-semibold text-slate-600">
                           Contact Person *
                         </label>
-                        <input
-                          type="text"
-                          value={formData.contact_person}
-                          onChange={(e) =>
-                            setFormData((prev) => ({ ...prev, contact_person: e.target.value }))
-                          }
-                          className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
-                          placeholder="Contact Person"
-                          required
-                        />
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={formData.contact_person}
+                            onChange={handleContactPersonChange}
+                            onFocus={() => {
+                              if (duplicateLeads.length > 1 && searchField === "contact_person") {
+                                setShowDuplicateDropdown(true);
+                              }
+                            }}
+                            onBlur={() => setTimeout(() => setShowDuplicateDropdown(false), 250)}
+                            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                            placeholder="Contact Person"
+                            required
+                          />
+                          {searchingFieldLead && searchField === "contact_person" && (
+                            <div className="absolute right-3 top-2.5">
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                            </div>
+                          )}
+                        </div>
+                        {showDuplicateDropdown && searchField === "contact_person" && duplicateLeads.length > 1 && (
+                          <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto divide-y divide-slate-100">
+                            <div className="px-3 py-1.5 bg-slate-50 text-[11px] font-semibold text-slate-600 uppercase tracking-wider sticky top-0 flex items-center justify-between">
+                              <span>Multiple leads found ({duplicateLeads.length}) - Select client:</span>
+                              <button
+                                type="button"
+                                onClick={() => setShowDuplicateDropdown(false)}
+                                className="text-slate-400 hover:text-slate-600 text-xs px-1"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                            {duplicateLeads.map((item, idx) => (
+                              <div
+                                key={item.id || idx}
+                                onMouseDown={() => {
+                                  applyLeadData(item);
+                                  setShowDuplicateDropdown(false);
+                                }}
+                                className="px-3 py-2 text-xs hover:bg-blue-50 cursor-pointer transition-colors group"
+                              >
+                                <div className="font-semibold text-slate-800 group-hover:text-blue-700 flex items-center justify-between">
+                                  <span>{item.contact_person || "No Name"}</span>
+                                  {item.company_name && <span className="text-[10px] font-normal text-slate-500">{item.company_name}</span>}
+                                </div>
+                                <div className="text-[11px] text-slate-500 mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                                  {item.mobile_number && <span>📞 {item.mobile_number}</span>}
+                                  {item.email_address && <span>✉️ {item.email_address}</span>}
+                                  {item.city && <span>📍 {item.city}</span>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
-                      <div className="space-y-1">
+                      <div className="space-y-1 relative">
                         <label className="block text-xs font-semibold text-slate-600">Email Address</label>
-                        <input
-                          type="email"
-                          value={formData.email_address}
-                          onChange={(e) =>
-                            setFormData((prev) => ({ ...prev, email_address: e.target.value }))
-                          }
-                          className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
-                          placeholder="contact@company.com"
-                        />
+                        <div className="relative">
+                          <input
+                            type="email"
+                            value={formData.email_address}
+                            onChange={handleEmailChange}
+                            onFocus={() => {
+                              if (duplicateLeads.length > 1 && searchField === "email_address") {
+                                setShowDuplicateDropdown(true);
+                              }
+                            }}
+                            onBlur={() => setTimeout(() => setShowDuplicateDropdown(false), 250)}
+                            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white"
+                            placeholder="contact@company.com"
+                          />
+                          {searchingFieldLead && searchField === "email_address" && (
+                            <div className="absolute right-3 top-2.5">
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                            </div>
+                          )}
+                        </div>
+                        {showDuplicateDropdown && searchField === "email_address" && duplicateLeads.length > 1 && (
+                          <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto divide-y divide-slate-100">
+                            <div className="px-3 py-1.5 bg-slate-50 text-[11px] font-semibold text-slate-600 uppercase tracking-wider sticky top-0 flex items-center justify-between">
+                              <span>Multiple leads found ({duplicateLeads.length}) - Select client:</span>
+                              <button
+                                type="button"
+                                onClick={() => setShowDuplicateDropdown(false)}
+                                className="text-slate-400 hover:text-slate-600 text-xs px-1"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                            {duplicateLeads.map((item, idx) => (
+                              <div
+                                key={item.id || idx}
+                                onMouseDown={() => {
+                                  applyLeadData(item);
+                                  setShowDuplicateDropdown(false);
+                                }}
+                                className="px-3 py-2 text-xs hover:bg-blue-50 cursor-pointer transition-colors group"
+                              >
+                                <div className="font-semibold text-slate-800 group-hover:text-blue-700 flex items-center justify-between">
+                                  <span>{item.email_address}</span>
+                                  {item.company_name && <span className="text-[10px] font-normal text-slate-500">{item.company_name}</span>}
+                                </div>
+                                <div className="text-[11px] text-slate-500 mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                                  {item.contact_person && <span>👤 {item.contact_person}</span>}
+                                  {item.mobile_number && <span>📞 {item.mobile_number}</span>}
+                                  {item.city && <span>📍 {item.city}</span>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       <div className="space-y-1">
@@ -1273,6 +1577,7 @@ export default function AddQuotation({ id, leadData, onBack }) {
                               <th className="px-3 py-2 text-center">Qty</th>
                               <th className="px-3 py-2 text-right">Unit Price</th>
                               <th className="px-3 py-2 text-center">GST %</th>
+                              <th className="px-3 py-2 text-center">Extra Disc %</th>
                               <th className="px-3 py-2 text-right">Total</th>
                               <th className="px-3 py-2 text-center">Action</th>
                             </tr>
@@ -1281,7 +1586,10 @@ export default function AddQuotation({ id, leadData, onBack }) {
                             {items.map((item, index) => {
                               const baseAmount = (item.quantity || 0) * (item.unit_price || 0);
                               const gstAmount = (baseAmount * (item.gst_percentage || 18)) / 100;
-                              const total = baseAmount + gstAmount;
+                              const grossTotal = baseAmount + gstAmount;
+                              const extraDiscPercent = parseFloat(item.extra_discount) || 0;
+                              const discountAmount = (grossTotal * extraDiscPercent) / 100;
+                              const total = grossTotal - discountAmount;
 
                               return (
                                 <tr key={index} className="hover:bg-slate-50/50">
@@ -1361,6 +1669,20 @@ export default function AddQuotation({ id, leadData, onBack }) {
                                       step="0.01"
                                     />
                                   </td>
+                                  <td className="px-3 py-2 text-center">
+                                    <input
+                                      type="number"
+                                      value={item.extra_discount ?? 0}
+                                      onChange={(e) =>
+                                        updateItem(index, "extra_discount", parseFloat(e.target.value) || 0)
+                                      }
+                                      className="w-16 px-2 py-1 border border-slate-200 rounded text-center bg-white"
+                                      min="0"
+                                      max="100"
+                                      step="0.01"
+                                      placeholder="0"
+                                    />
+                                  </td>
                                   <td className="px-3 py-2 text-right font-semibold text-slate-900">
                                     ₹{total.toFixed(2)}
                                   </td>
@@ -1379,14 +1701,14 @@ export default function AddQuotation({ id, leadData, onBack }) {
                           </tbody>
                           <tfoot className="bg-slate-50 border-t border-slate-200 font-medium">
                             <tr>
-                              <td colSpan="6" className="px-3 py-1.5 text-right text-slate-600">Subtotal:</td>
+                              <td colSpan="7" className="px-3 py-1.5 text-right text-slate-600">Subtotal:</td>
                               <td className="px-3 py-1.5 text-right font-semibold text-slate-900">
                                 ₹{calculateTotals.subtotal.toFixed(2)}
                               </td>
                               <td></td>
                             </tr>
                             <tr>
-                              <td colSpan="6" className="px-3 py-1.5 text-right text-slate-600">
+                              <td colSpan="7" className="px-3 py-1.5 text-right text-slate-600">
                                 GST ({formData.gst_type === "CGST_SGST" ? "CGST + SGST" : "IGST"}):
                               </td>
                               <td className="px-3 py-1.5 text-right font-semibold text-slate-900">
@@ -1394,8 +1716,19 @@ export default function AddQuotation({ id, leadData, onBack }) {
                               </td>
                               <td></td>
                             </tr>
+                            {calculateTotals.totalExtraDiscount > 0 && (
+                              <tr>
+                                <td colSpan="7" className="px-3 py-1.5 text-right text-rose-600">
+                                  Extra Discount:
+                                </td>
+                                <td className="px-3 py-1.5 text-right font-semibold text-rose-600">
+                                  - ₹{calculateTotals.totalExtraDiscount.toFixed(2)}
+                                </td>
+                                <td></td>
+                              </tr>
+                            )}
                             <tr className="border-t border-slate-200 font-bold text-slate-900">
-                              <td colSpan="6" className="px-3 py-2 text-right">Grand Total:</td>
+                              <td colSpan="7" className="px-3 py-2 text-right">Grand Total:</td>
                               <td className="px-3 py-2 text-right text-blue-600 text-sm">
                                 ₹{calculateTotals.grandTotal.toFixed(2)}
                               </td>
