@@ -358,52 +358,6 @@
             margin-bottom: 2px;
         }
 
-        /* TOTALS CONTAINER (HORIZONTAL SUMMARY TABLE WITH HEADER & ROWS) */
-        .totals-container {
-            width: 100%;
-            margin-bottom: 15px;
-            clear: both;
-        }
-
-        .totals-table {
-            width: 100%;
-            border-collapse: collapse;
-            border: 1px solid #cbd5e1;
-        }
-
-        .totals-table th {
-            background-color: #e8eff4;
-            color: #0f172a;
-            font-weight: 700;
-            font-size: 10.5px;
-            padding: 7px 10px;
-            border: 1px solid #cbd5e1;
-            text-align: center;
-        }
-
-        .totals-table th.grand-header {
-            background-color: #e1ebf2;
-            color: #3b7b99;
-            font-weight: bold;
-            font-size: 11px;
-        }
-
-        .totals-table td {
-            background-color: #ffffff;
-            color: #0f172a;
-            font-weight: 600;
-            font-size: 10.5px;
-            padding: 8px 10px;
-            border: 1px solid #cbd5e1;
-            text-align: center;
-        }
-
-        .totals-table td.grand-val {
-            background-color: #f0f6fa;
-            color: #3b7b99;
-            font-weight: bold;
-            font-size: 11.5px;
-        }
 
         .clearfix::after {
             content: "";
@@ -661,8 +615,13 @@
                             <td class="text-center" style="text-align: center; color: #0f172a; font-weight: 500;">{{ item.quantity|floatformat:2 }} {{ item.unit }}</td>
                             <td class="text-right" style="text-align: right; color: #0f172a; font-weight: 500;">{{ item.unit_price|floatformat:2|intcomma }}</td>
                             <td class="text-right" style="text-align: right; color: #0f172a; font-weight: 500; white-space: nowrap;">
-                                {% if item.gst_percentage is not None %}{{ item.gst_percentage|floatformat:"-2" }}%{% else %}18%{% endif %}
-                                <span style="font-size: 8.5px; color: #475569;">(₹ {{ item.gst_amount|floatformat:2|intcomma }})</span>
+                                <div>
+                                    {% if item.gst_percentage is not None %}{{ item.gst_percentage|floatformat:"-2" }}%{% else %}18%{% endif %}
+                                    <span style="font-size: 8.5px; color: #475569;">(₹ {{ item.gst_amount|floatformat:2|intcomma }})</span>
+                                </div>
+                                <div style="font-size: 8.5px; color: #475569; margin-top: 1px;">
+                                    ({% if gst_type == "IGST" %}IGST{% else %}CGST/SGST{% endif %})
+                                </div>
                             </td>
                             {% if has_extra_discount %}
                             <td class="text-right" style="text-align: right; color: #0f172a; font-weight: 500; white-space: nowrap;">
@@ -685,45 +644,6 @@
                 </table>
             </div>
 
-            <!-- TOTALS SECTION (HORIZONTAL SUMMARY TABLE WITH HEADER & ROWS) -->
-            <div class="totals-container">
-                <table class="totals-table">
-                    <thead>
-                        <tr>
-                            <th>Untaxed Amount</th>
-                            {% if gst_type == "IGST" %}
-                            <th>IGST</th>
-                            {% elif cgst_amount and sgst_amount %}
-                            <th>SGST</th>
-                            <th>CGST</th>
-                            {% else %}
-                            <th>GST ({{ gst_percentage|default:"18"|floatformat:0 }}%)</th>
-                            {% endif %}
-                            {% if total_extra_discount and total_extra_discount > 0 %}
-                            <th>Extra Discount</th>
-                            {% endif %}
-                            <th class="grand-header">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>₹ {{ subtotal|floatformat:2|intcomma }}</td>
-                            {% if gst_type == "IGST" %}
-                            <td>₹ {{ igst_amount|floatformat:2|intcomma }}</td>
-                            {% elif cgst_amount and sgst_amount %}
-                            <td>₹ {{ sgst_amount|floatformat:2|intcomma }}</td>
-                            <td>₹ {{ cgst_amount|floatformat:2|intcomma }}</td>
-                            {% else %}
-                            <td>₹ {{ gst_amount|floatformat:2|intcomma }}</td>
-                            {% endif %}
-                            {% if total_extra_discount and total_extra_discount > 0 %}
-                            <td style="color: #dc2626;">- ₹ {{ total_extra_discount|floatformat:2|intcomma }}</td>
-                            {% endif %}
-                            <td class="grand-val">₹ {{ grand_total|floatformat:2|intcomma }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
 
             <!-- TERMS & CONDITIONS SECTION (STARTS BELOW TOTALS, USES FULL 100% PAGE WIDTH) -->
             {% if terms_list %}
