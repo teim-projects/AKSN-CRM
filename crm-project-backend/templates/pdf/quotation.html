@@ -9,7 +9,7 @@
     <style>
         @page {
             size: A4 portrait;
-            margin-top: 150px;
+            margin-top: 188px; /* Content on page 2 and subsequent pages starts 1cm (38px) lower */
             margin-bottom: 65px;
             margin-left: 0;
             margin-right: 0;
@@ -29,6 +29,10 @@
                 padding: 0;
                 margin: 0;
             }
+        }
+
+        @page :first {
+            margin-top: 150px;
         }
 
         body {
@@ -381,6 +385,8 @@
             text-decoration: underline;
             margin-bottom: 6px;
             font-weight: bold;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
         }
 
         .terms-content {
@@ -393,6 +399,13 @@
 
         .term-item {
             margin-bottom: 5px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .term-item:first-child {
+            page-break-before: avoid !important;
+            break-before: avoid !important;
         }
 
         .term-sub-bullets {
@@ -657,10 +670,10 @@
             <!-- TERMS & CONDITIONS SECTION (STARTS BELOW TOTALS, USES FULL 100% PAGE WIDTH) -->
             {% if terms_list %}
             <div class="terms-section">
-                <div class="terms-title">Terms Condition</div>
+                <div class="terms-title" style="page-break-after: avoid !important; break-after: avoid !important;">Terms Condition</div>
                 <div class="terms-content">
                     {% for term in terms_list %}
-                    <div class="term-item">
+                    <div class="term-item" style="page-break-inside: avoid; break-inside: avoid; {% if forloop.first %}page-break-before: avoid !important; break-before: avoid !important;{% endif %}">
                         {% if term.bullets %}
                             {% for b in term.bullets %}
                             <div class="term-bullet-line">&bull; {{ b }}</div>
