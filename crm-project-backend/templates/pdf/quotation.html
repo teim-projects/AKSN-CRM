@@ -273,12 +273,13 @@
 
         .items-table th {
             color: #0f172a;
-            padding: 9px 10px;
+            padding: 9px 8px;
             font-weight: 700;
             font-size: 11px;
             background-color: #e8eff4;
             border: 1px solid #cbd5e1;
             text-align: left;
+            white-space: nowrap;
         }
 
         .items-table th.text-right,
@@ -425,6 +426,19 @@
         .thank-you-line {
             font-weight: bold;
             margin-bottom: 2px;
+        }
+
+        .billing-section {
+            clear: both;
+            margin-top: 15px;
+            margin-bottom: 15px;
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            padding: 8px 12px;
+            background-color: #f8fafc;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
         }
 
         /* SIGNATURES SECTION */
@@ -576,24 +590,27 @@
                     <thead>
                         <tr>
                             {% if has_extra_discount %}
-                            <th style="width: 32%; text-align: left;" class="text-left">Products / Services</th>
+                            <th style="width: 7%; text-align: center;" class="text-center">Sr. No.</th>
+                            <th style="width: 28%; text-align: left;" class="text-left">Products / Services</th>
                             <th style="width: 10%; text-align: center;" class="text-center">Quantity</th>
                             <th style="width: 12%; text-align: right;" class="text-right">Unit Price</th>
-                            <th style="width: 16%; text-align: right;" class="text-right">GST %</th>
-                            <th style="width: 16%; text-align: right;" class="text-right">Extra Discount %</th>
-                            <th style="width: 14%; text-align: right;" class="text-right">Amount</th>
+                            <th style="width: 12%; text-align: right;" class="text-right">GST 18%</th>
+                            <th style="width: 14%; text-align: right;" class="text-right">Discount %</th>
+                            <th style="width: 17%; text-align: right;" class="text-right">Amount</th>
                             {% else %}
-                            <th style="width: 42%; text-align: left;" class="text-left">Products / Services</th>
-                            <th style="width: 12%; text-align: center;" class="text-center">Quantity</th>
+                            <th style="width: 7%; text-align: center;" class="text-center">Sr. No.</th>
+                            <th style="width: 36%; text-align: left;" class="text-left">Products / Services</th>
+                            <th style="width: 11%; text-align: center;" class="text-center">Quantity</th>
                             <th style="width: 14%; text-align: right;" class="text-right">Unit Price</th>
-                            <th style="width: 17%; text-align: right;" class="text-right">GST %</th>
-                            <th style="width: 15%; text-align: right;" class="text-right">Amount</th>
+                            <th style="width: 14%; text-align: right;" class="text-right">GST 18%</th>
+                            <th style="width: 18%; text-align: right;" class="text-right">Amount</th>
                             {% endif %}
                         </tr>
                     </thead>
                     <tbody>
                         {% for item in quotation_items %}
                         <tr>
+                            <td class="text-center" style="text-align: center; color: #0f172a; font-weight: 500;">{{ forloop.counter }}</td>
                             <td style="text-align: left;">
                                 <div class="product-name">{{ item.product_name }}</div>
                                 {% if item.product_code %}
@@ -614,15 +631,7 @@
                             </td>
                             <td class="text-center" style="text-align: center; color: #0f172a; font-weight: 500;">{{ item.quantity|floatformat:2 }} {{ item.unit }}</td>
                             <td class="text-right" style="text-align: right; color: #0f172a; font-weight: 500;">{{ item.unit_price|floatformat:2|intcomma }}</td>
-                            <td class="text-right" style="text-align: right; color: #0f172a; font-weight: 500; white-space: nowrap;">
-                                <div>
-                                    {% if item.gst_percentage is not None %}{{ item.gst_percentage|floatformat:"-2" }}%{% else %}18%{% endif %}
-                                    <span style="font-size: 8.5px; color: #475569;">(₹ {{ item.gst_amount|floatformat:2|intcomma }})</span>
-                                </div>
-                                <div style="font-size: 8.5px; color: #475569; margin-top: 1px;">
-                                    ({% if gst_type == "IGST" %}IGST{% else %}CGST/SGST{% endif %})
-                                </div>
-                            </td>
+                            <td class="text-right" style="text-align: right; color: #0f172a; font-weight: 500; white-space: nowrap;">₹ {{ item.gst_amount|floatformat:2|intcomma }}</td>
                             {% if has_extra_discount %}
                             <td class="text-right" style="text-align: right; color: #0f172a; font-weight: 500; white-space: nowrap;">
                                 {% if item.extra_discount and item.extra_discount > 0 %}
@@ -637,7 +646,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="{% if has_extra_discount %}6{% else %}5{% endif %}" class="text-center" style="color: #64748b; padding: 16px;">No quotation items found.</td>
+                            <td colspan="{% if has_extra_discount %}7{% else %}6{% endif %}" class="text-center" style="color: #64748b; padding: 16px;">No quotation items found.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -667,8 +676,8 @@
 
             <!-- BANK & BILLING DETAILS SECTION -->
             {% if billing_detail %}
-            <div style="clear: both; margin-top: 15px; margin-bottom: 15px; width: 100%; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px 12px; background-color: #f8fafc;">
-                <table style="width: 100%; border-collapse: collapse;">
+            <div class="billing-section" style="clear: both; margin-top: 15px; margin-bottom: 15px; width: 100%; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px 12px; background-color: #f8fafc; page-break-inside: avoid !important; break-inside: avoid !important;">
+                <table style="width: 100%; border-collapse: collapse; page-break-inside: avoid !important; break-inside: avoid !important;">
                     <tr>
                         <td style="vertical-align: top; font-size: 9.5px; line-height: 1.5; color: #1e293b;">
                             <div style="font-weight: bold; color: #3b7b99; font-size: 10.5px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Bank &amp; Payment Details</div>
