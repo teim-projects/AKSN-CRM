@@ -87,7 +87,6 @@ export default function ProductDashboard({
       productMap[normKey] = {
         id: p.id,
         name: p.name,
-        code: p.product_code || "-",
         category:
           p.category?.name ||
           p.category_name ||
@@ -773,7 +772,6 @@ export default function ProductDashboard({
               <thead>
                 <tr className="border-b border-slate-200 text-slate-400 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
                   <th className="pb-2.5 pl-2 pr-3">Product Name</th>
-                  <th className="pb-2.5 px-3">Code</th>
                   <th className="pb-2.5 px-3">Category</th>
                   <th className="pb-2.5 px-3">HSN/SAC</th>
                   <th className="pb-2.5 px-3">Status</th>
@@ -792,9 +790,6 @@ export default function ProductDashboard({
                     <tr key={row.id || idx} className="hover:bg-slate-50/40 transition">
                       <td className="py-2.5 pl-2 pr-3 text-slate-900 font-bold">
                         {row.name}
-                      </td>
-                      <td className="py-2.5 px-3 text-slate-500 font-mono text-[11px]">
-                        {row.product_code || "-"}
                       </td>
                       <td className="py-2.5 px-3">
                         <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px]">

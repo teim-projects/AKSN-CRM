@@ -122,7 +122,7 @@ Your role is to guide and assist users on how to use this CRM platform, its form
 
 ##### Product Catalog:
 - Categories and Products
-- Product Name, Product Code, Unit Price, HSN/SAC Code, Status (Active, Inactive, Draft, Discontinued), Description
+- Product Name, Unit Price, HSN/SAC Code, Status (Active, Inactive, Draft, Discontinued), Description
 
 ##### Message Templates:
 - Channels: Email, WhatsApp

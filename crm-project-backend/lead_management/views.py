@@ -558,11 +558,10 @@ class LeadViewSet(viewsets.ModelViewSet):
         ws_prods = wb.create_sheet(title="Available Products")
         ws_prods.views.sheetView[0].showGridLines = True
         ws_prods.column_dimensions['A'].width = 8
-        ws_prods.column_dimensions['B'].width = 38
-        ws_prods.column_dimensions['C'].width = 22
-        ws_prods.column_dimensions['D'].width = 18
+        ws_prods.column_dimensions['B'].width = 45
+        ws_prods.column_dimensions['C'].width = 18
 
-        prod_headers = ["Sr.No", "Product / Service Name", "Product Code", "Unit Price (₹)"]
+        prod_headers = ["Sr.No", "Product / Service Name", "Unit Price (₹)"]
         for c_idx, h in enumerate(prod_headers, 1):
             c = ws_prods.cell(row=1, column=c_idx, value=h)
             c.font = header_font
@@ -585,12 +584,7 @@ class LeadViewSet(viewsets.ModelViewSet):
             c_name.font = Font(name="Calibri", size=10, bold=True, color="1E293B")
             c_name.border = thin_border
 
-            c_code = ws_prods.cell(row=r_num, column=3, value=prod_obj.product_code or "-")
-            c_code.alignment = Alignment(horizontal="left", vertical="center")
-            c_code.font = sample_font
-            c_code.border = thin_border
-
-            c_price = ws_prods.cell(row=r_num, column=4, value=float(prod_obj.unit_price) if prod_obj.unit_price else 0.0)
+            c_price = ws_prods.cell(row=r_num, column=3, value=float(prod_obj.unit_price) if prod_obj.unit_price else 0.0)
             c_price.alignment = Alignment(horizontal="right", vertical="center")
             c_price.font = sample_font
             c_price.border = thin_border
@@ -780,10 +774,6 @@ class LeadViewSet(viewsets.ModelViewSet):
                 p_name_clean = p.name.strip()
                 prod_lookup[p_name_clean] = p
                 prod_lookup[p_name_clean.lower()] = p
-            if p.product_code:
-                p_code_clean = p.product_code.strip()
-                prod_lookup[p_code_clean] = p
-                prod_lookup[p_code_clean.lower()] = p
 
         # Pre-fetch existing mobile numbers in database for fast duplicate lookup
         existing_leads = (

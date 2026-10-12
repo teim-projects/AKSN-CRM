@@ -191,7 +191,6 @@ const ProductList = () => {
     // Columns for the filter (using product fields)
     const filterColumns = [
         { key: "name", label: "Product Name" },
-        { key: "product_code", label: "Product Code" },
         { key: "category_name", label: "Category" },
         { key: "unit_price", label: "Unit Price" },
         { key: "hsn_sac_code", label: "HSN Code" },
@@ -205,7 +204,6 @@ const ProductList = () => {
         const formatted = dataToExport.map((p, idx) => ({
             "Sr No": idx + 1,
             "Product Name": p.name || "-",
-            "Product Code": p.product_code || "-",
             "Category": p.category_name || (p.is_service ? "Service" : "Product"),
             "Type": p.is_service ? "Service" : "Product",
             "Unit Price (₹)": p.unit_price ? parseFloat(p.unit_price) : 0,
@@ -358,10 +356,6 @@ const ProductList = () => {
                                                     {product.is_service ? "Service" : product.category_name || "Product"}
                                                 </span>
                                             </div>
-                                        </div>
-                                        
-                                        <div className="text-xs text-blue-600 font-semibold tracking-wide uppercase">
-                                            {product.product_code || "—"}
                                         </div>
 
                                         <p className="text-xs text-slate-600 font-medium bg-slate-50 border border-slate-200/60 px-2.5 py-1.5 rounded-lg line-clamp-3 leading-relaxed mt-1">

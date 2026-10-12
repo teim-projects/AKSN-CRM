@@ -29,7 +29,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'product_code', 'hsn_sac_code']
+    search_fields = ['name', 'hsn_sac_code']
     filterset_fields = ['is_active', 'is_service', 'status', 'category']
     ordering_fields = ['name', 'unit_price', 'created_at']
     ordering = ['name']
@@ -85,7 +85,6 @@ def product_search_all(request):
     if search_query:
         queryset = queryset.filter(
             Q(name__icontains=search_query) |
-            Q(product_code__icontains=search_query) |
             Q(category__name__icontains=search_query)
         )
     
@@ -93,8 +92,7 @@ def product_search_all(request):
     
     results = [{
         'id': product.id,
-        'product_code': product.product_code,
-        'display_text': f"{product.name} - {product.product_code}",
+        'display_text': product.name,
         'name': product.name,
         'category': product.category.name if product.category else None,
         'unit_price': product.unit_price,

@@ -126,7 +126,6 @@ export default function RecordViewer({
       'additional_remarks': 'Additional Remarks',
       'ready_to_send_quotation': 'Ready to Send Quotation',
       'followup_number': 'Follow-up Number',
-      'product_code': 'Product Code',
       'unit_price': 'Unit Price',
       'hsn_sac_code': 'HSN / SAC Code',
       'gst_percentage': 'GST Percentage',

@@ -19,7 +19,6 @@ class Category(models.Model):
 class Product(models.Model):
     # Fields from screenshot
     name = models.CharField(max_length=255, verbose_name="Product / Service Name")
-    product_code = models.CharField(max_length=50, unique=True, blank=True, verbose_name="Product Code")
     category = models.ForeignKey(
         Category, 
         on_delete=models.SET_NULL, 
@@ -82,28 +81,13 @@ class Product(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    def save(self, *args, **kwargs):
-        if not self.product_code or not str(self.product_code).strip():
-            self.product_code = self.generate_product_code()
-        else:
-            self.product_code = str(self.product_code).strip()
-        super().save(*args, **kwargs)
-    
-    def generate_product_code(self):
-        """Generate unique product code fallback from name"""
-        base = (self.name[:3] if self.name else "PRD").upper().strip() or "PRD"
-        import uuid
-        code = f"{base}-{uuid.uuid4().hex[:6].upper()}"
-        while Product.objects.filter(product_code=code).exists():
-            code = f"{base}-{uuid.uuid4().hex[:6].upper()}"
-        return code
     
     def get_price_with_gst(self):
         """Calculate price including GST"""
         return self.unit_price + (self.unit_price * self.gst_percentage / 100)
     
     def __str__(self):
-        return f"{self.name} ({self.product_code})"
+        return self.name
     
     class Meta:
         ordering = ['name']

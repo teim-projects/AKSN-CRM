@@ -328,12 +328,6 @@
             margin-bottom: 3px;
         }
 
-        .product-code {
-            font-size: 9.5px;
-            color: #3b7b99;
-            font-weight: bold;
-            margin-bottom: 3px;
-        }
 
         .product-desc-title {
             font-size: 10px;
@@ -626,9 +620,6 @@
                             <td class="text-center" style="text-align: center; color: #0f172a; font-weight: 500;">{{ forloop.counter }}</td>
                             <td style="text-align: left;">
                                 <div class="product-name">{{ item.product_name }}</div>
-                                {% if item.product_code %}
-                                <div class="product-code">Product Code: {{ item.product_code }}</div>
-                                {% endif %}
                                 {% if item.description_bullets or item.description %}
                                 <div class="product-desc-title">Description:</div>
                                 {% if item.description_bullets %}

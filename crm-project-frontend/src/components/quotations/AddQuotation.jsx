@@ -1596,9 +1596,6 @@ export default function AddQuotation({ id, leadData, onBack }) {
                                   <td className="px-3 py-2 text-slate-400 font-medium">{index + 1}</td>
                                   <td className="px-3 py-2">
                                     <div className="font-semibold text-slate-900">{item.product_name}</div>
-                                    {item.product_code && (
-                                      <div className="text-[10px] text-slate-400">{item.product_code}</div>
-                                    )}
                                     <textarea
                                       rows={2}
                                       value={item.description || ""}

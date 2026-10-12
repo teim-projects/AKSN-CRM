@@ -11,7 +11,6 @@ const ProductForm = ({ open, onClose, productId, baseApi, token, onSuccess }) =>
     
     const [formData, setFormData] = useState({
         name: '',
-        product_code: '',
         category: '',
         unit_price: '0',
         hsn_sac_code: '',
@@ -41,7 +40,6 @@ const ProductForm = ({ open, onClose, productId, baseApi, token, onSuccess }) =>
         
         setFormData({
             name: '',
-            product_code: '',
             category: '',
             unit_price: '0',
             hsn_sac_code: '',
@@ -209,22 +207,6 @@ const ProductForm = ({ open, onClose, productId, baseApi, token, onSuccess }) =>
                                     placeholder="e.g. ERP Suite — Enterprise"
                                     className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 text-slate-800 bg-white"
                                 />
-                            </div>
-
-                            {/* Product Code */}
-                            <div className="space-y-1">
-                                <label className="block text-xs font-semibold text-slate-600">
-                                    Product Code
-                                </label>
-                                <input
-                                    type="text"
-                                    name="product_code"
-                                    value={formData.product_code}
-                                    onChange={handleChange}
-                                    placeholder="Enter custom product code (e.g. PRD-001)"
-                                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 text-slate-800 bg-white"
-                                />
-                                <p className="text-[10px] text-slate-400">Enter custom code manually, or leave blank to auto-generate.</p>
                             </div>
 
                             {/* Category */}

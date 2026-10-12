@@ -208,7 +208,7 @@ export default function AddProjectForm({
     () =>
       products.map((p) => ({
         value: p.name || p.product_name || String(p.id),
-        label: `${p.name || p.product_name || "Product"} ${p.product_code ? `(${p.product_code})` : ""}`,
+        label: p.name || p.product_name || "Product",
         productObj: p,
       })),
     [products]
