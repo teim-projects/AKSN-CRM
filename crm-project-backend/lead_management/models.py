@@ -501,6 +501,10 @@ class LeadFollowUp(models.Model):
 
         lead.save(update_fields=update_fields)
 
+        if lead.status == LeadStatus.CLOSE_WIN:
+            from .services import auto_convert_lead_to_customer
+            auto_convert_lead_to_customer(lead)
+
     def __str__(self):
         return f"{self.followup_number} - {self.lead.company_name} - {self.followup_date}"
 

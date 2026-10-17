@@ -271,10 +271,12 @@ class LeadFollowUpSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "followup_number", "created_by", "created_at"]
 
     def validate(self, attrs):
-        if self.instance is None and not attrs.get("next_followup_date"):
-            raise serializers.ValidationError({"next_followup_date": "Next follow-up date is required."})
-        if "next_followup_date" in attrs and not attrs.get("next_followup_date"):
-            raise serializers.ValidationError({"next_followup_date": "Next follow-up date is required."})
+        status_val = attrs.get("status") or (self.instance.status if self.instance else LeadStatus.OPEN)
+        if status_val not in [LeadStatus.CLOSE_WIN, LeadStatus.CLOSE_LOSS, "closed"]:
+            if self.instance is None and not attrs.get("next_followup_date"):
+                raise serializers.ValidationError({"next_followup_date": "Next follow-up date is required."})
+            if "next_followup_date" in attrs and not attrs.get("next_followup_date"):
+                raise serializers.ValidationError({"next_followup_date": "Next follow-up date is required."})
         return super().validate(attrs)
 
     @transaction.atomic

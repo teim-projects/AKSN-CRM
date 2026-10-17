@@ -169,15 +169,17 @@ export default function FollowUp() {
     const today = getTodayString();
     let filtered = allRows;
 
+    const isNotClosed = (status) => status !== "close_win" && status !== "close_loss" && status !== "closed";
+
     switch(filterType) {
       case "today":
-        filtered = allRows.filter((l) => l.effective_followup_date === today && l.status !== "closed");
+        filtered = allRows.filter((l) => l.effective_followup_date === today && isNotClosed(l.status));
         break;
       case "overdue":
-        filtered = allRows.filter((l) => l.effective_followup_date && l.effective_followup_date < today && l.status !== "closed");
+        filtered = allRows.filter((l) => l.effective_followup_date && l.effective_followup_date < today && isNotClosed(l.status));
         break;
       case "completed":
-        filtered = allRows.filter((l) => l.status === "closed");
+        filtered = allRows.filter((l) => !isNotClosed(l.status));
         break;
       default:
         filtered = allRows;
@@ -362,13 +364,25 @@ export default function FollowUp() {
       key: "status", 
       label: "Status", 
       render: (r) => {
-        const s = r.status || "open";
-        const label = s === 'close_win' ? 'Close Win' : s === 'close_loss' ? 'Close Loss' : s === 'closed' ? 'Closed' : s === 'in_process' ? 'In Process' : 'Open';
-        const colorClass = s === 'close_win' || s === 'closed' ? 'bg-emerald-100 text-emerald-700' : s === 'close_loss' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700';
+        const val = r.status || "";
+        const isWin = val === "close_win" || val === "closed";
+        const isLoss = val === "close_loss";
+        const label = r.status_display || (val === 'close_win' ? 'Close Win' : val === 'close_loss' ? 'Close Loss' : val === 'closed' ? 'Closed' : val === 'in_process' ? 'In Process' : (val === 'open' ? 'Open' : val || "-"));
+        const colorClass = isWin
+          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+          : isLoss
+          ? "bg-rose-50 text-rose-700 border border-rose-200"
+          : "bg-blue-50 text-blue-700 border border-blue-200";
+
         return (
-          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider whitespace-nowrap inline-block ${colorClass}`} title={label}>
-            {label}
-          </span>
+          <div>
+            <span
+              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider whitespace-nowrap inline-block ${colorClass}`}
+              title={label}
+            >
+              {label}
+            </span>
+          </div>
         );
       },
       className: "w-24 whitespace-nowrap"

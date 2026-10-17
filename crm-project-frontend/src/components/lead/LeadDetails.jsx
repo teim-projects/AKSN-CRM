@@ -327,11 +327,12 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
                 <div>
                   <span className="font-medium text-slate-600">Status:</span>{" "}
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    lead.status === "open" ? "bg-green-100 text-green-800" :
+                    lead.status === "close_win" ? "bg-emerald-100 text-emerald-800" :
+                    lead.status === "close_loss" ? "bg-rose-100 text-rose-800" :
                     lead.status === "closed" ? "bg-red-100 text-red-800" :
-                    "bg-yellow-100 text-yellow-800"
+                    "bg-blue-100 text-blue-800"
                   }`}>
-                    {lead.status || "—"}
+                    {lead.status === "close_win" ? "Close Win" : lead.status === "close_loss" ? "Close Loss" : lead.status === "closed" ? "Closed" : lead.status === "open" ? "Open" : (lead.status || "—")}
                   </span>
                 </div>
               </div>
@@ -360,11 +361,12 @@ const LeadDetails = ({ open, onClose, leadId, baseApi, token }) => {
                           <td className="p-2 sm:p-2.5 whitespace-nowrap">{fu.next_followup_date || "—"}</td>
                           <td className="p-2 sm:p-2.5 whitespace-nowrap">
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium ${
-                              fu.status === "open" ? "bg-green-100 text-green-800" :
+                              fu.status === "close_win" ? "bg-emerald-100 text-emerald-800" :
+                              fu.status === "close_loss" ? "bg-rose-100 text-rose-800" :
                               fu.status === "closed" ? "bg-red-100 text-red-800" :
-                              "bg-yellow-100 text-yellow-800"
+                              "bg-blue-100 text-blue-800"
                             }`}>
-                              {fu.status || "—"}
+                              {fu.status === "close_win" ? "Close Win" : fu.status === "close_loss" ? "Close Loss" : fu.status === "closed" ? "Closed" : fu.status === "open" ? "Open" : (fu.status || "—")}
                             </span>
                           </td>
                           <td className="p-2 sm:p-2.5">

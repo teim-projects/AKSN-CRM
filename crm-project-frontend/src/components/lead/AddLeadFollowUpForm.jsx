@@ -210,10 +210,12 @@ export default function AddLeadFollowUpForm({
   const [isEditMode, setIsEditMode] = useState(false);
   const [amountTouched, setAmountTouched] = useState(false);
 
-  // Product related state - same as AddLeadForm
   const [productInterested, setProductInterested] = useState([]);
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [showNextFollowupFields, setShowNextFollowupFields] = useState(false);
+
+  const isClosedStatus = formData.status === "close_win" || formData.status === "close_loss" || formData.status === "closed";
 
   const token = useMemo(
     () =>
@@ -298,6 +300,7 @@ export default function AddLeadFollowUpForm({
     setShowHistory(false);
     setProductInterested([]);
     setAmountTouched(false);
+    setShowNextFollowupFields(false);
   };
 
   const handleChange = (e) => {
@@ -444,6 +447,7 @@ export default function AddLeadFollowUpForm({
           setFormData((prev) => ({
             ...prev,
             current_stage: data.pipeline_stage || prev.current_stage,
+            status: data.status || prev.status || "open",
           }));
         }
       } catch (err) {
@@ -502,6 +506,12 @@ export default function AddLeadFollowUpForm({
         status: followup.status || "open",
         amount: followup.amount !== undefined && followup.amount !== null ? String(followup.amount) : "",
       });
+
+      if (followup.next_followup_date) {
+        setShowNextFollowupFields(true);
+      } else {
+        setShowNextFollowupFields(false);
+      }
 
       // Load products from followup
       if (followup.products_interested && Array.isArray(followup.products_interested)) {
@@ -605,7 +615,7 @@ export default function AddLeadFollowUpForm({
       return false;
     }
 
-    if (!formData.next_followup_date) {
+    if (!isClosedStatus && !formData.next_followup_date) {
       Swal.fire({ icon: "error", title: "Validation", text: "Next follow-up date is required" });
       return false;
     }
@@ -626,6 +636,9 @@ export default function AddLeadFollowUpForm({
           answer: ans.toString().trim(),
         }));
 
+      const nextDate = (isClosedStatus && !showNextFollowupFields) ? null : (formData.next_followup_date || null);
+      const nextMode = (isClosedStatus && !showNextFollowupFields) ? null : (formData.next_followup_mode || null);
+
       const payload = {
         lead: leadId,
         ...formData,
@@ -635,8 +648,8 @@ export default function AddLeadFollowUpForm({
         timeline_urgency: formData.timeline_urgency || null,
         pain_point_urgency: formData.pain_point_urgency || null,
         budget_status: formData.budget_status || null,
-        next_followup_date: formData.next_followup_date || null,
-        next_followup_mode: formData.next_followup_mode || null,
+        next_followup_date: nextDate,
+        next_followup_mode: nextMode,
         discussion_summary: formData.discussion_summary.trim(),
         commitment_client: formData.commitment_client.trim(),
         commitment_us: formData.commitment_us.trim(),
@@ -1131,59 +1144,6 @@ export default function AddLeadFollowUpForm({
                 </div>
               </div>
 
-              {/* NEXT FOLLOW-UP PLANNING */}
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 pb-1 border-b border-slate-200">
-                  NEXT FOLLOW-UP PLANNING
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600 mb-1.5 block">
-                      Next Follow-up Date <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      name="next_followup_date"
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white text-sm"
-                      value={formData.next_followup_date}
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600 mb-1.5 block">
-                      Next Follow-up Mode
-                    </label>
-                    <select
-                      name="next_followup_mode"
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white text-sm h-[38px]"
-                      value={formData.next_followup_mode}
-                      onChange={handleChange}
-                    >
-                      <option value="">Select Mode</option>
-                      {followupModeOptions.map((mode) => (
-                        <option key={mode.value} value={mode.value}>
-                          {mode.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <label className="text-xs font-semibold text-slate-600 mb-1.5 block">
-                    Additional Remarks
-                  </label>
-                  <textarea
-                    name="additional_remarks"
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white text-sm"
-                    rows={2}
-                    value={formData.additional_remarks}
-                    onChange={handleChange}
-                    placeholder="Any other notes for next executive or management..."
-                  />
-                </div>
-              </div>
-
               {/* Quotation & Status */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                 <div className="flex items-center gap-2 pt-2">
@@ -1214,6 +1174,102 @@ export default function AddLeadFollowUpForm({
                       </option>
                     ))}
                   </select>
+                </div>
+              </div>
+
+              {/* NEXT FOLLOW-UP PLANNING */}
+              <div>
+                <div className="flex items-center justify-between mb-4 pb-1 border-b border-slate-200">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    NEXT FOLLOW-UP PLANNING
+                  </h3>
+                  {isClosedStatus && !showNextFollowupFields && (
+                    <button
+                      type="button"
+                      onClick={() => setShowNextFollowupFields(true)}
+                      className="text-xs text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 rounded-md transition cursor-pointer"
+                    >
+                      + Add Next Follow-up Date
+                    </button>
+                  )}
+                  {isClosedStatus && showNextFollowupFields && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowNextFollowupFields(false);
+                        setFormData((prev) => ({ ...prev, next_followup_date: "", next_followup_mode: "" }));
+                      }}
+                      className="text-xs text-rose-600 hover:text-rose-700 font-medium flex items-center gap-1 px-2 py-0.5 rounded transition cursor-pointer"
+                    >
+                      ✕ Remove Next Follow-up
+                    </button>
+                  )}
+                </div>
+
+                {(!isClosedStatus || showNextFollowupFields) ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-semibold text-slate-600 mb-1.5 block">
+                        Next Follow-up Date {!isClosedStatus && <span className="text-red-500">*</span>}
+                      </label>
+                      <input
+                        type="date"
+                        name="next_followup_date"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white text-sm"
+                        value={formData.next_followup_date}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-600 mb-1.5 block">
+                        Next Follow-up Mode
+                      </label>
+                      <select
+                        name="next_followup_mode"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white text-sm h-[38px]"
+                        value={formData.next_followup_mode}
+                        onChange={handleChange}
+                      >
+                        <option value="">Select Mode</option>
+                        {followupModeOptions.map((mode) => (
+                          <option key={mode.value} value={mode.value}>
+                            {mode.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-3 px-4 bg-slate-50 border border-dashed border-slate-200 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-slate-600">
+                    <div>
+                      Status is set to{" "}
+                      <span className="font-semibold text-slate-800 uppercase tracking-wide">
+                        {formData.status === "close_win" ? "Close Win" : formData.status === "close_loss" ? "Close Loss" : formData.status}
+                      </span>{" "}
+                      — Next follow-up is optional.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowNextFollowupFields(true)}
+                      className="text-xs text-blue-600 hover:text-blue-700 font-semibold px-2.5 py-1 bg-white border border-slate-200 hover:border-blue-300 rounded shadow-xs transition cursor-pointer"
+                    >
+                      + Add Next Follow-up Date
+                    </button>
+                  </div>
+                )}
+
+                <div className="mt-4">
+                  <label className="text-xs font-semibold text-slate-600 mb-1.5 block">
+                    Additional Remarks
+                  </label>
+                  <textarea
+                    name="additional_remarks"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-hidden focus:ring-1 focus:ring-blue-500 bg-white text-sm"
+                    rows={2}
+                    value={formData.additional_remarks}
+                    onChange={handleChange}
+                    placeholder="Any other notes for next executive or management..."
+                  />
                 </div>
               </div>
 

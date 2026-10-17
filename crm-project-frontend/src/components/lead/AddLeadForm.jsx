@@ -533,7 +533,7 @@ export default function AddLeadForm({
         tally_number: formData.is_tally_user === "yes" ? (formData.tally_number || "") : "",
         requirement_details: formData.requirement_details || "",
         remarks: formData.remarks || "",
-        status: "open",
+        status: formData.status || "open",
         // ✅ NEW FIELDS
         gst_number: formData.gst_number || "",
         pan_number: formData.pan_number || "",

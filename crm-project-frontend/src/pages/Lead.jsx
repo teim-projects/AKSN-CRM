@@ -545,16 +545,28 @@ export default function Lead() {
     {
       key: "status",
       label: "Status",
-      render: (r) => (
-        <div>
-          <span
-            className="px-2 py-0.5 rounded bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap inline-block"
-            title={r.status || ""}
-          >
-            {r.status || "-"}
-          </span>
-        </div>
-      ),
+      render: (r) => {
+        const val = r.status || "";
+        const isWin = val === "close_win";
+        const isLoss = val === "close_loss";
+        const label = r.status_display || (isWin ? "Close Win" : isLoss ? "Close Loss" : (val === "open" ? "Open" : val || "-"));
+        const colorClass = isWin
+          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+          : isLoss
+          ? "bg-rose-50 text-rose-700 border border-rose-200"
+          : "bg-blue-50 text-blue-700 border border-blue-200";
+
+        return (
+          <div>
+            <span
+              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider whitespace-nowrap inline-block ${colorClass}`}
+              title={label}
+            >
+              {label}
+            </span>
+          </div>
+        );
+      },
       className: "whitespace-nowrap"
     },
     {

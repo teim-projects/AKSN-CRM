@@ -14,6 +14,8 @@ from .filters import LeadFilter
 from rest_framework.decorators import action
 from django.db import transaction
 from api.permissions import is_admin_or_subadmin
+from .services import auto_convert_lead_to_customer
+
 
 
 class CustomerViewsets(viewsets.ModelViewSet):
@@ -286,7 +288,19 @@ class LeadViewSet(viewsets.ModelViewSet):
         kwargs = {'created_by': user}
         if not is_admin_or_subadmin(user) and not serializer.validated_data.get('assigned_executive'):
             kwargs['assigned_executive'] = user
-        serializer.save(**kwargs)
+        lead = serializer.save(**kwargs)
+        if lead.status == LeadStatus.CLOSE_WIN:
+            auto_convert_lead_to_customer(lead)
+        else:
+            lead.followups.all().update(status=lead.status)
+
+    def perform_update(self, serializer):
+        lead = serializer.save()
+        if lead.status == LeadStatus.CLOSE_WIN:
+            auto_convert_lead_to_customer(lead)
+        else:
+            lead.followups.all().update(status=lead.status)
+
 
     def get_queryset(self):
         user = self.request.user
@@ -985,145 +999,26 @@ class LeadViewSet(viewsets.ModelViewSet):
     def convert_to_customer(self, request, pk=None):
         lead = self.get_object()
         
-        if lead.is_converted:
+        if lead.is_converted and lead.converted_to_customer:
             return Response(
                 {"error": "This lead has already been converted to a customer"},
                 status=status.HTTP_400_BAD_REQUEST
             )
     
-        # Check if customer already exists with this mobile number
-        existing_customer = None
-        if lead.mobile_number:
-            existing_customer = Customer.objects.filter(
-                contact_number=lead.mobile_number
-            ).first()
-    
-        # Resolve product_interested IDs to actual Product names
-        from product_management.models import Product
-
-        resolved_products = []
-        raw_lead_prods = lead.product_interested or []
-        if not isinstance(raw_lead_prods, list):
-            raw_lead_prods = [raw_lead_prods]
-
-        for p_item in raw_lead_prods:
-            if isinstance(p_item, dict):
-                p_name = p_item.get("product") or p_item.get("name") or p_item.get("product_name") or ""
-                if str(p_name).strip().isdigit():
-                    p_obj = Product.objects.filter(id=int(str(p_name).strip())).first()
-                    if p_obj:
-                        p_name = p_obj.name
-                if p_name and not str(p_name).strip().isdigit():
-                    p_copy = dict(p_item)
-                    p_copy["product"] = p_name
-                    resolved_products.append(p_copy)
-            elif isinstance(p_item, (int, float)) or (isinstance(p_item, str) and p_item.strip().isdigit()):
-                p_obj = Product.objects.filter(id=int(str(p_item).strip())).first()
-                if p_obj:
-                    resolved_products.append({
-                        "product": p_obj.name,
-                        "value": float(lead.amount) if lead.amount else None
-                    })
-            elif isinstance(p_item, str) and p_item.strip() and not p_item.strip().isdigit():
-                resolved_products.append({
-                    "product": p_item.strip(),
-                    "value": float(lead.amount) if lead.amount else None
-                })
-
-        if existing_customer:
-            updated_fields = ["lead"]
-            existing_customer.lead = lead
-            if not existing_customer.sales_executive and lead.assigned_executive:
-                existing_customer.sales_executive = lead.assigned_executive
-                updated_fields.append("sales_executive")
-            if (not existing_customer.project_value or existing_customer.project_value == 0) and lead.amount:
-                existing_customer.project_value = lead.amount
-                updated_fields.append("project_value")
-            if not existing_customer.billing_address and lead.address:
-                existing_customer.billing_address = lead.address
-                updated_fields.append("billing_address")
-            if not existing_customer.industry_category and lead.industry_type:
-                existing_customer.industry_category = lead.industry_type
-                updated_fields.append("industry_category")
-            if not getattr(existing_customer, "lead_source", None) and lead.lead_source:
-                existing_customer.lead_source = lead.lead_source
-                updated_fields.append("lead_source")
-            if resolved_products and (not existing_customer.product_purchased or len(existing_customer.product_purchased) == 0):
-                existing_customer.product_purchased = resolved_products
-                updated_fields.append("product_purchased")
-            existing_customer.save(update_fields=updated_fields)
-            
-            lead.converted_to_customer = existing_customer
-            lead.is_converted = True
-            lead.status = LeadStatus.CLOSE_WIN
-            lead.save(update_fields=["converted_to_customer", "is_converted", "status", "updated_at"])
-            
-            return Response({
-                "message": "Lead linked to existing customer successfully",
-                "customer_id": existing_customer.id,
-                "customer_code": existing_customer.customer_code,
-                "customer_name": existing_customer.name
-            }, status=status.HTTP_200_OK)
-    
-        # Create new customer from lead data - map all fields
-        customer_data = {
-            "lead": lead.id,
-            "name": lead.company_name or lead.contact_person or "Unknown",
-            "contact_person": lead.contact_person or "",
-            "contact_number": lead.mobile_number or "",
-            "email": lead.email_address or None,
-            "city": lead.city or "",
-            "state": lead.state or "",
-            "industry_category": lead.industry_type or "",
-            "lead_source": lead.lead_source or "",
-            "product_purchased": resolved_products,
-            # ✅ Auto-map new fields
-            "gst_number": lead.gst_number or "",
-            "pan_number": lead.pan_number or "",
-            "msme_number": lead.msme_number or "",
-            "project_value": float(lead.amount) if lead.amount else None,
-            "sales_executive": lead.assigned_executive_id,
-            "designation": "",
-            "website": lead.linkedin_profile_url or "",
-            "service_package": [],
-            "payment_terms": "",
-            "amc_start_date": None,
-            "amc_end_date": None,
-            "customer_status": "prospect",
-            "billing_address": lead.address or "",
-            "pin_code": "",
-        }
-    
-        customer_serializer = CustomerSerializer(data=customer_data)
-        
-        if customer_serializer.is_valid():
-            customer = customer_serializer.save()
-            
-            lead.converted_to_customer = customer
-            lead.is_converted = True
-            lead.status = LeadStatus.CLOSE_WIN
-            lead.save(update_fields=["converted_to_customer", "is_converted", "status", "updated_at"])
-            
+        customer = auto_convert_lead_to_customer(lead)
+        if customer:
             return Response({
                 "message": "Lead converted to customer successfully",
                 "customer_id": customer.id,
                 "customer_code": customer.customer_code,
                 "customer_name": customer.name
-            }, status=status.HTTP_201_CREATED)
+            }, status=status.HTTP_200_OK)
         else:
-            error_details = customer_serializer.errors
-            first_err = ""
-            for field, errs in error_details.items():
-                err_text = ", ".join([str(e) for e in errs]) if isinstance(errs, list) else str(errs)
-                first_err = f"{field}: {err_text}"
-                break
             return Response(
-                {
-                    "error": f"Failed to create customer ({first_err})" if first_err else "Failed to create customer",
-                    "details": error_details
-                },
+                {"error": "Failed to convert lead to customer"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
 
 
 class LeadFAQViewSet(viewsets.ModelViewSet):
